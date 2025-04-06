@@ -6,8 +6,8 @@ import {
   View,
   Alert,
 } from 'react-native';
-import CustomInput from '@/components/CustomInput';
-import CustomButton from '@/components/CustomButton';
+import CustomInput from '../../components/CustomInput';
+import CustomButton from '../../components/CustomButton';
 import { Link } from 'expo-router';
 
 import { useForm } from 'react-hook-form';
@@ -15,7 +15,7 @@ import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 
 import { isClerkAPIResponseError, useSignIn } from '@clerk/clerk-expo';
-import SignInWith from '@/components/SignInWith';
+import SignInWith from '../../components/SignInWith';
 
 const signInSchema = z.object({
   email: z.string({ message: 'Email is required' }).email('Invalid email'),

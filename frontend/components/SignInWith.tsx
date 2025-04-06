@@ -1,13 +1,9 @@
-import CustomButton from './CustomButton';
 import * as WebBrowser from 'expo-web-browser';
 import * as AuthSession from 'expo-auth-session';
 import { useEffect, useCallback } from 'react';
 import { useSSO } from '@clerk/clerk-expo';
-
-import googleButton from '../assets/social-providers/google.png';
-import facebookButton from '../assets/social-providers/facebook.png';
-import appleButton from '../asset/social-providers/apple.png';
-import { Pressable, Image } from 'react-native';
+import { Pressable, Text, StyleSheet } from 'react-native';
+import { FontAwesome } from '@expo/vector-icons';
 
 export const useWarmUpBrowser = () => {
   useEffect(() => {
@@ -28,10 +24,11 @@ type SignInWithProps = {
   strategy: 'oauth_google' | 'oauth_apple' | 'oauth_facebook';
 };
 
-const strategyIcons = {
-  oauth_google: googleButton,
-  oauth_apple: appleButton,
-  oauth_facebook: facebookButton,
+// Map strategies to FontAwesome icon names and colors
+const strategyConfig = {
+  oauth_google: { name: 'google', color: '#DB4437' },
+  oauth_apple: { name: 'apple', color: '#000000' },
+  oauth_facebook: { name: 'facebook', color: '#4267B2' },
 };
 
 export default function SignInWith({ strategy }: SignInWithProps) {
@@ -46,9 +43,6 @@ export default function SignInWith({ strategy }: SignInWithProps) {
       const { createdSessionId, setActive, signIn, signUp } =
         await startSSOFlow({
           strategy,
-          // For web, defaults to current path
-          // For native, you must pass a scheme, like AuthSession.makeRedirectUri({ scheme, path })
-          // For more info, see https://docs.expo.dev/versions/latest/sdk/auth-session/#authsessionmakeredirecturioptions
           redirectUrl: AuthSession.makeRedirectUri(),
         });
 
@@ -58,23 +52,38 @@ export default function SignInWith({ strategy }: SignInWithProps) {
       } else {
         // If there is no `createdSessionId`,
         // there are missing requirements, such as MFA
-        // Use the `signIn` or `signUp` returned from `startSSOFlow`
-        // to handle next steps
       }
     } catch (err) {
-      // See https://clerk.com/docs/custom-flows/error-handling
-      // for more info on error handling
       console.error(JSON.stringify(err, null, 2));
     }
-  }, []);
+  }, [strategy]);
+
+  const config = strategyConfig[strategy];
 
   return (
-    <Pressable onPress={onPress}>
-      <Image
-        source={strategyIcons[strategy]}
-        style={{ width: 62, height: 62 }}
-        resizeMode='contain'
-      />
+    <Pressable
+      style={({ pressed }) => [
+        styles.iconButton,
+        { backgroundColor: pressed ? `${config.color}DD` : config.color },
+      ]}
+      onPress={onPress}
+    >
+      <FontAwesome name={config.name as any} size={24} color="white" />
     </Pressable>
   );
 }
+
+const styles = StyleSheet.create({
+  iconButton: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 1.5,
+  },
+});
