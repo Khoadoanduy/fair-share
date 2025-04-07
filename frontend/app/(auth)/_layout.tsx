@@ -1,30 +1,54 @@
-import { Redirect, Stack } from 'expo-router';
-import { useAuth } from '@clerk/clerk-expo';
-import { ActivityIndicator, View } from 'react-native';
+import { Redirect, Stack } from "expo-router";
+import { useAuth } from "@clerk/clerk-expo";
+import { ActivityIndicator, View } from "react-native";
+import BackButton from "../../components/BackButton";
 
 export default function AuthLayout() {
-  console.log('Auth layout');
   const { isSignedIn, isLoaded } = useAuth();
 
   if (!isLoaded) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
         <ActivityIndicator />
       </View>
     );
   }
 
   if (isSignedIn) {
-    return <Redirect href={'/'} />;
+    return <Redirect href={"/(tabs)"} />;
   }
 
   return (
-    <Stack>
+    <Stack
+      screenOptions={{
+        headerShown: true,
+        headerShadowVisible: false,
+        headerStyle: { backgroundColor: "#fff" },
+        headerTitleStyle: { fontWeight: "bold" },
+        headerLeft: () => <BackButton />,
+      }}
+    >
       <Stack.Screen
-        name='sign-in'
-        options={{ headerShown: false, title: 'Sign in' }}
+        name="sign-in"
+        options={{
+          title: "Sign In",
+          headerBackVisible: false,
+        }}
       />
-      <Stack.Screen name='sign-up' options={{ title: 'Sign up' }} />
+      <Stack.Screen
+        name="sign-up"
+        options={{
+          title: "Sign Up",
+          headerBackVisible: false,
+        }}
+      />
+      <Stack.Screen
+        name="verify"
+        options={{
+          title: "Verify Email",
+          headerBackVisible: false,
+        }}
+      />
     </Stack>
   );
 }

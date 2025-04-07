@@ -3,8 +3,6 @@ import { useAuth } from '@clerk/clerk-expo';
 import { ActivityIndicator, View } from 'react-native';
 
 export default function ProtectedLayout() {
-  console.log('Protected layout');
-
   const { isSignedIn, isLoaded } = useAuth();
 
   if (!isLoaded) {
@@ -16,7 +14,7 @@ export default function ProtectedLayout() {
   }
 
   if (!isSignedIn) {
-    return <Redirect href='/sign-in' />;
+    return <Redirect href='/(tabs)/profile' />;
   }
 
   return <Slot />;

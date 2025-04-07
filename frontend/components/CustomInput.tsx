@@ -4,8 +4,8 @@ import {
   TextInputProps,
   Text,
   View,
-} from 'react-native';
-import { Control, Controller, FieldValues, Path } from 'react-hook-form';
+} from "react-native";
+import { Control, Controller, FieldValues, Path } from "react-hook-form";
 
 type CustomInputProps<T extends FieldValues> = {
   control: Control<T>; // custom fields
@@ -31,10 +31,11 @@ export default function CustomInput<T extends FieldValues>({
             value={value}
             onChangeText={onChange}
             onBlur={onBlur}
+            placeholderTextColor="#888"
             style={[
               styles.input,
               props.style,
-              { borderColor: error ? 'crimson' : 'gray' },
+              { borderColor: error ? "crimson" : "gray" },
             ]}
           />
           {error ? (
@@ -56,10 +57,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     padding: 10,
     borderRadius: 5,
-    borderColor: '#ccc',
+    borderColor: "#ccc",
+    color: "#000", // Ensuring text is black for good contrast
+    fontSize: 16, // Slightly larger text for better readability
   },
   error: {
-    color: 'crimson',
+    color: "crimson",
     minHeight: 18,
   },
 });
