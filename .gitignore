@@ -1,2 +1,8 @@
 .env
-.expo
+.expo*
+frontend/.expo/
+.vscode/
+node_modules/
+dist/
+build/
+*.log
