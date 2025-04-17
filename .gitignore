@@ -1,8 +1,9 @@
 .env
 .expo*
-frontend/.expo/
+.expo/
 .vscode/
 node_modules/
 dist/
 build/
 *.log
+ios/
