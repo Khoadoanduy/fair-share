@@ -11,7 +11,8 @@ import CustomButton from '../../components/CustomButton';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Link } from 'expo-router';
+import { Link, router } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { isClerkAPIResponseError, useSignUp } from '@clerk/clerk-expo';
 
@@ -51,7 +52,20 @@ export default function VerifyScreen() {
       });
 
       if (signUpAttempt.status === 'complete') {
-        setActive({ session: signUpAttempt.createdSessionId });
+        try {
+          // Set BOTH flags to create proper flow
+          await Promise.all([
+            AsyncStorage.setItem('needsUserOnboarding', 'true'),
+            AsyncStorage.setItem('onboardingComplete', 'true') // This is the critical addition
+          ]);
+          // Then activate the session
+          await setActive({ session: signUpAttempt.createdSessionId });
+
+          // Force navigation to refresh
+          router.replace("/");
+        } catch (err) {
+          console.error("Error:", err);
+        }
       } else {
         console.log('Verification failed');
         console.log(signUpAttempt);
