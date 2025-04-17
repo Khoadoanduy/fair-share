@@ -10,7 +10,8 @@ import prisma from "./lib/prisma.js";
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 8002;
+const PORT = process.env.PORT || 8080;
+
 
 // Middleware
 app.use(cors());
@@ -26,8 +27,8 @@ app.use("/api/users", userRoutes);
 app.use("/api/groups", groupRoutes);
 
 // Error handling
-app.use(notFound);
-app.use(errorHandler);
+//app.use(notFound);
+//app.use(errorHandler);
 
 // Connect to the database and start the server
 async function startServer() {

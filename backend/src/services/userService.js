@@ -11,7 +11,7 @@ export const userService = {
    * @returns {Promise<Object>} - The user object
    */
   async findOrCreateUser(userData) {
-    const { id: clerkId, email, fullName } = userData;
+    const { id: clerkId, email, fullName, dateOfBirth, phoneNumber, address } = userData;
     
     if (!clerkId || !email) {
       throw new ApiError(400, 'Missing required user data');
@@ -41,6 +41,18 @@ export const userService = {
             email,
             firstName,
             lastName,
+            dateOfBirth,
+            phoneNumber,
+            address: {
+              create: {
+                country: address.country,
+                street: address.street,
+                apartment: address.apartment,
+                city: address.city,
+                state: address.state,
+                zipCode: address.zipCode,
+              }
+            }
           },
         });
       }
@@ -68,6 +80,9 @@ export const userService = {
           lastName: true,
           createdAt: true,
           updatedAt: true,
+          phoneNumber: true,
+          dateOfBirth: true,
+          address: true
         },
       });
       

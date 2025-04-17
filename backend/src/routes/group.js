@@ -1,6 +1,6 @@
 import express from "express";
 import { authMiddleware } from "../middleware/auth.js";
-import { ApiError } from "../utils/errorHandler.js";
+//import { ApiError } from "../utils/errorHandler.js";
 import prisma from "../lib/prisma.js";
 
 const router = express.Router();

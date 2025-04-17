@@ -7,7 +7,7 @@ import prisma from "../lib/prisma.js";
 const router = express.Router();
 
 // Apply authentication middleware to all routes in this router
-router.use(authMiddleware);
+//router.use(authMiddleware);
 
 /**
  * Get current user profile
@@ -120,6 +120,16 @@ router.get("/dashboard", async (req, res, next) => {
       groups,
       recentExpenses,
     });
+  } catch (error) {
+    next(error);
+  }
+});
+
+//Create new user
+router.post("/create", async (req, res, next) => {
+  try {
+    const user = await userService.findOrCreateUser(req.body);
+    res.status(201).json({ message: "User created", user });
   } catch (error) {
     next(error);
   }
