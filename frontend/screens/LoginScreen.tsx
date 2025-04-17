@@ -117,8 +117,6 @@ export default function LoginScreen() {
 
       <View style={{ flexDirection: "row", gap: 10, marginHorizontal: "auto" }}>
         <SignInWith strategy="oauth_google" />
-        <SignInWith strategy="oauth_facebook" />
-        <SignInWith strategy="oauth_apple" />
       </View>
     </KeyboardAvoidingView>
   );

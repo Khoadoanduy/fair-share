@@ -17,12 +17,10 @@ import { isClerkAPIResponseError, useSignUp } from "@clerk/clerk-expo";
 import SignInWith from "../components/SignInWith";
 
 const signUpSchema = z.object({
-  firstName: z
-    .string({ message: "First name is required" })
-    .min(1, "First name is required"),
-  lastName: z
-    .string({ message: "Last name is required" })
-    .min(1, "Last name is required"),
+  username: z
+    .string({ message: "Username is required" })
+    .min(3, "Username must be at least 3 characters")
+    .max(30, "Username cannot exceed 30 characters"),
   email: z.string({ message: "Email is required" }).email("Invalid email"),
   password: z
     .string({ message: "Password is required" })
@@ -37,14 +35,13 @@ const mapClerkErrorToFormField = (error: any) => {
       return "email";
     case "password":
       return "password";
-    case "first_name":
-      return "firstName";
-    case "last_name":
-      return "lastName";
+    case "username":
+      return "username";
     default:
       return "root";
   }
 };
+
 
 export default function SignupScreen() {
   const {
@@ -63,8 +60,7 @@ export default function SignupScreen() {
 
     try {
       await signUp.create({
-        firstName: data.firstName,
-        lastName: data.lastName,
+        username: data.username,
         emailAddress: data.email,
         password: data.password,
       });
@@ -99,23 +95,15 @@ export default function SignupScreen() {
       <View style={styles.form}>
         <CustomInput
           control={control}
-          name="firstName"
-          placeholder="Legal First Name"
+          name="username"
+          placeholder="Username"
           autoFocus
-          autoCapitalize="words"
-          autoComplete="name-given"
+          autoCapitalize="none"
+          autoComplete="username"
         />
 
         <CustomInput
-          control={control}
-          name="lastName"
-          placeholder="Legal Last Name"
-          autoCapitalize="words"
-          autoComplete="name-family"
-        />
-
-        <CustomInput
-          control={control}
+          control={control} 
           name="email"
           placeholder="Email"
           autoCapitalize="none"
@@ -141,8 +129,6 @@ export default function SignupScreen() {
 
       <View style={{ flexDirection: "row", gap: 10, marginHorizontal: "auto" }}>
         <SignInWith strategy="oauth_google" />
-        <SignInWith strategy="oauth_facebook" />
-        <SignInWith strategy="oauth_apple" />
       </View>
     </KeyboardAvoidingView>
   );

@@ -21,14 +21,12 @@ export const useWarmUpBrowser = () => {
 WebBrowser.maybeCompleteAuthSession();
 
 type SignInWithProps = {
-  strategy: 'oauth_google' | 'oauth_apple' | 'oauth_facebook';
+  strategy: 'oauth_google';
 };
 
 // Map strategies to FontAwesome icon names and colors
 const strategyConfig = {
   oauth_google: { name: 'google', color: '#DB4437' },
-  oauth_apple: { name: 'apple', color: '#000000' },
-  oauth_facebook: { name: 'facebook', color: '#4267B2' },
 };
 
 export default function SignInWith({ strategy }: SignInWithProps) {
