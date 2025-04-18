@@ -14,10 +14,11 @@ export default function CustomButton({ text, ...props }: CustomButtonProps) {
 
 const styles = StyleSheet.create({
   button: {
-    backgroundColor: '#4353FD',
-    padding: 15,
-    borderRadius: 5,
+    backgroundColor: '#4353FD', // Change to pure black
+    borderRadius: 8,
+    paddingVertical: 16,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   buttonText: {
     color: 'white',

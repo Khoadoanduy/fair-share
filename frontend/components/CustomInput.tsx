@@ -1,68 +1,69 @@
-import {
-  TextInput,
-  StyleSheet,
-  TextInputProps,
-  Text,
-  View,
-} from "react-native";
-import { Control, Controller, FieldValues, Path } from "react-hook-form";
+import React from 'react';
+import { TextInput, StyleSheet, Text, View, TextInputProps } from 'react-native';
+import { Controller } from 'react-hook-form';
 
-type CustomInputProps<T extends FieldValues> = {
-  control: Control<T>; // custom fields
-  name: Path<T>;
-} & TextInputProps;
+interface CustomInputProps extends TextInputProps {
+  control: any;
+  name: string;
+  rules?: any;
+  placeholder: string;
+  secureTextEntry?: boolean;
+  style?: any;
+}
 
-export default function CustomInput<T extends FieldValues>({
+const CustomInput = ({
   control,
   name,
-  ...props
-}: CustomInputProps<T>) {
+  rules = {},
+  placeholder,
+  secureTextEntry,
+  style,
+  ...otherProps
+}: CustomInputProps) => {
   return (
     <Controller
       control={control}
       name={name}
-      render={({
-        field: { value, onChange, onBlur },
-        fieldState: { error },
-      }) => (
-        <View style={styles.container}>
+      rules={rules}
+      render={({ field: { value, onChange, onBlur }, fieldState: { error } }) => (
+        <>
           <TextInput
-            {...props}
             value={value}
             onChangeText={onChange}
             onBlur={onBlur}
-            placeholderTextColor="#888"
-            style={[
-              styles.input,
-              props.style,
-              { borderColor: error ? "crimson" : "gray" },
-            ]}
+            placeholder={placeholder}
+            placeholderTextColor="#9CA3AF"
+            secureTextEntry={secureTextEntry}
+            autoCorrect={false}
+            style={[styles.input, error && styles.inputError, style]}
+            {...otherProps}
           />
-          {error ? (
-            <Text style={styles.error}>{error.message}</Text>
-          ) : (
-            <View style={{ height: 18 }} />
-          )}
-        </View>
+          {error && <Text style={styles.error}>{error.message}</Text>}
+        </>
       )}
     />
   );
-}
+};
 
 const styles = StyleSheet.create({
-  container: {
-    gap: 4,
-  },
   input: {
-    borderWidth: 1,
-    padding: 10,
-    borderRadius: 5,
-    borderColor: "#ccc",
-    color: "#000", // Ensuring text is black for good contrast
-    fontSize: 16, // Slightly larger text for better readability
+    // Remove any padding that might interfere with alignment
+    // paddingHorizontal: 0,
+    fontSize: 16,
+  },
+  inputError: {
+    borderColor: '#EF4444',
   },
   error: {
-    color: "crimson",
-    minHeight: 18,
+    color: '#EF4444',
+    fontSize: 12,
+    position: 'absolute',
+    top: 55.5, // Position from top instead of bottom
+    left: 0,
+    width: '100%', // Allow text to use full width
+    flexWrap: 'wrap', // Enable text wrapping
+    lineHeight: 15, // Improve line spacing for wrapped text
   },
 });
+
+export default CustomInput;
