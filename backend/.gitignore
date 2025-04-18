@@ -3,5 +3,6 @@ node_modules
 .env
 
 # Prisma generated files
-src/generated/
+src/generated/prisma
+generated/
 dist/
