@@ -14,10 +14,23 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+type Address {
+  country     String
+  street      String
+  apartment   String?
+  city        String
+  state       String
+  zipCode     String
+}
+
+// Schemas
 model User {
-  id        String  @id @default(auto()) @map("_id") @db.ObjectId
-  clerkId   String  @unique
-  email     String  @unique
-  firstName String?
-  lastName  String?
+  id          String  @id @default(auto()) @map("_id") @db.ObjectId
+  clerkId     String  @unique
+  email       String  @unique
+  firstName   String
+  lastName    String
+  phoneNumber String?
+  dateOfBirth DateTime
+  address     Address
 }
