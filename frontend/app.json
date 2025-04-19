@@ -5,11 +5,12 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "myapp",
+    "scheme": "fairshare",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.fairshare.app"
     },
     "android": {
       "adaptiveIcon": {
@@ -38,4 +39,5 @@
       "typedRoutes": true
     }
   }
+  
 }

@@ -1,5 +1,5 @@
 import HomeScreen from "../../screens/HomeScreen";
 
-export default function TabHomeScreen() {
+export default function ProtectedHomeScreen() {
   return <HomeScreen />;
 }
