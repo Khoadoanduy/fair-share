@@ -6,7 +6,6 @@
 
 generator client {
   provider = "prisma-client-js"
-  output   = "../src/generated/prisma"
 }
 
 datasource db {
@@ -31,6 +30,6 @@ model User {
   firstName   String
   lastName    String
   phoneNumber String?
-  dateOfBirth DateTime
-  address     Address
+  dateOfBirth DateTime?
+  address     Address?
 }

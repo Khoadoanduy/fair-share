@@ -23,6 +23,9 @@ const signUpSchema = z.object({
   lastName: z
     .string({ message: "Last name is required" })
     .min(1, "Last name is required"),
+  username: z
+    .string({ message: "Username is required" })
+    .min(1, "Username is required"),
   email: z.string({ message: "Email is required" }).email("Invalid email"),
   password: z
     .string({ message: "Password is required" })
@@ -41,6 +44,8 @@ const mapClerkErrorToFormField = (error: any) => {
       return "firstName";
     case "last_name":
       return "lastName";
+    case "username":
+      return "username";
     default:
       return "root";
   }
@@ -65,6 +70,7 @@ export default function SignupScreen() {
       await signUp.create({
         firstName: data.firstName,
         lastName: data.lastName,
+        username: data.username,
         emailAddress: data.email,
         password: data.password,
       });
@@ -112,6 +118,15 @@ export default function SignupScreen() {
           placeholder="Legal Last Name"
           autoCapitalize="words"
           autoComplete="name-family"
+        />
+
+        <CustomInput
+          control={control}
+          name="username"
+          placeholder="Username"
+          autoFocus
+          autoCapitalize="words"
+          autoComplete="name-given"
         />
 
         <CustomInput
