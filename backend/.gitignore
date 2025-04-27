@@ -1,8 +1,8 @@
+node_modules
+# Keep environment variables out of version control
 .env
 
-frontend/.expo/
-.vscode/
-node_modules/
+# Prisma generated files
+src/generated/prisma
+generated/
 dist/
-build/
-*.log

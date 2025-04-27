@@ -19,14 +19,18 @@ import SignInWith from "../components/SignInWith";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 
-const signUpSchema = z
-  .object({
-    username: z
-      .string({ message: "Username is required" })
-      .min(3, "Username must be at least 3 characters")
-      .max(30, "Username cannot exceed 30 characters"),
-    email: z.string({ message: "Email is required" }).email("Invalid email"),
-    password: z
+const signUpSchema = z.object({
+  firstName: z
+    .string({ message: "First name is required" })
+    .min(1, "First name is required"),
+  lastName: z
+    .string({ message: "Last name is required" })
+    .min(1, "Last name is required"),
+  username: z
+    .string({ message: "Username is required" })
+    .min(1, "Username is required"),
+  email: z.string({ message: "Email is required" }).email("Invalid email"),
+  password: z
       .string({ message: "Password is required" })
       .min(8, "Password should be at least 8 characters long"),
     confirmPassword: z.string({ message: "Please confirm your password" }),
@@ -34,7 +38,8 @@ const signUpSchema = z
   .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords do not match",
     path: ["confirmPassword"],
-  });
+});
+
 
 type SignUpFields = z.infer<typeof signUpSchema>;
 
@@ -44,6 +49,10 @@ const mapClerkErrorToFormField = (error: any) => {
       return "email";
     case "password":
       return "password";
+    case "first_name":
+      return "firstName";
+    case "last_name":
+      return "lastName";
     case "username":
       return "username";
     default:
@@ -68,6 +77,8 @@ export default function SignupScreen() {
 
     try {
       await signUp.create({
+        firstName: data.firstName,
+        lastName: data.lastName,
         username: data.username,
         emailAddress: data.email,
         password: data.password,
@@ -94,127 +105,70 @@ export default function SignupScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={styles.container}
-      >
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
-          <View style={styles.headerSection}>
-            <Text style={styles.title}>Sign Up</Text>
-            <Text style={styles.subtitle}>
-              Join Fair Share to start splitting expenses with friends and family
-            </Text>
-            <View style={{ height: 30 }} />
-            <View style={styles.socialButtonContainer}>
-              <SignInWith
-                strategy="oauth_google"
-                style={styles.googleSignInButton}
-              />
-            </View>
-          </View>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      style={styles.container}
+    >
+      <Text style={styles.title}>Create an account</Text>
 
-          <View style={styles.dividerContainer}>
-            <View style={styles.divider} />
-            <Text style={styles.dividerText}>OR</Text>
-            <View style={styles.divider} />
-          </View>
+      <View style={styles.form}>
+        <CustomInput
+          control={control}
+          name="firstName"
+          placeholder="Legal First Name"
+          autoFocus
+          autoCapitalize="words"
+          autoComplete="name-given"
+        />
 
-          <View style={styles.form}>
-            <View style={styles.inputContainer}>
-              <Ionicons
-                name="person-outline"
-                size={20}
-                color="#888"
-                style={styles.inputIcon}
-              />
-              <CustomInput
-                control={control}
-                name="username"
-                placeholder="Username"
-                autoCapitalize="none"
-                autoComplete="username"
-                style={styles.input}
-              />
-            </View>
+        <CustomInput
+          control={control}
+          name="lastName"
+          placeholder="Legal Last Name"
+          autoCapitalize="words"
+          autoComplete="name-family"
+        />
 
-            <View style={styles.inputContainer}>
-              <Ionicons
-                name="mail-outline"
-                size={20}
-                color="#888"
-                style={styles.inputIcon}
-              />
-              <CustomInput
-                control={control}
-                name="email"
-                placeholder="Email"
-                autoCapitalize="none"
-                keyboardType="email-address"
-                autoComplete="email"
-                style={styles.input}
-              />
-            </View>
+        <CustomInput
+          control={control}
+          name="username"
+          placeholder="Username"
+          autoFocus
+          autoCapitalize="words"
+          autoComplete="name-given"
+        />
 
-            <View style={styles.inputContainer}>
-              <Ionicons
-                name="lock-closed-outline"
-                size={20}
-                color="#888"
-                style={styles.inputIcon}
-              />
-              <CustomInput
-                control={control}
-                name="password"
-                placeholder="Password"
-                secureTextEntry
-                style={styles.input}
-              />
-            </View>
+        <CustomInput
+          control={control}
+          name="email"
+          placeholder="Email"
+          autoCapitalize="none"
+          keyboardType="email-address"
+          autoComplete="email"
+        />
 
-            <View style={styles.inputContainer}>
-              <Ionicons
-                name="shield-checkmark-outline"
-                size={20}
-                color="#888"
-                style={styles.inputIcon}
-              />
-              <CustomInput
-                control={control}
-                name="confirmPassword"
-                placeholder="Confirm Password"
-                secureTextEntry
-                style={styles.input}
-              />
-            </View>
+        <CustomInput
+          control={control}
+          name="password"
+          placeholder="Password"
+          secureTextEntry
+        />
+        {errors.root && (
+          <Text style={{ color: "crimson" }}>{errors.root.message}</Text>
+        )}
+      </View>
 
-            {errors.root && (
-              <Text style={styles.errorText}>{errors.root.message}</Text>
-            )}
-          </View>
+      <CustomButton text="Sign up" onPress={handleSubmit(onSignUp)} />
+      <Link href="/sign-in" style={styles.link}>
+        Already have an account? Sign in
+      </Link>
 
-          <View style={styles.buttonSection}>
-            <CustomButton
-              text="Sign up"
-              onPress={handleSubmit(onSignUp)}
-              style={styles.signupButton}
-            />
-
-            <View style={styles.loginLinkContainer}>
-              <Text style={styles.loginText}>Already have an account?</Text>
-              <Link href="/sign-in" asChild>
-                <TouchableOpacity>
-                  <Text style={styles.loginLink}>Sign in</Text>
-                </TouchableOpacity>
-              </Link>
-            </View>
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+      <View style={{ flexDirection: "row", gap: 10, marginHorizontal: "auto" }}>
+        <SignInWith strategy="oauth_google" />
+        <SignInWith strategy="oauth_facebook" />
+        <SignInWith strategy="oauth_apple" />
+      </View>
+    </KeyboardAvoidingView>
   );
 }
 

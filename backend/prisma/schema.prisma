@@ -1,24 +1,35 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "mongodb"
-  url      = env("MONGO_CONNECTION_STRING")
+  url      = env("DATABASE_URL")
 }
 
-// User model that will be linked to Clerk users
+type Address {
+  country     String
+  street      String
+  apartment   String?
+  city        String
+  state       String
+  zipCode     String
+}
+
+// Schemas
 model User {
-  id        String   @id @default(uuid())
-  clerkId   String   @unique // Clerk user ID
-  email     String   @unique
-  firstName String?
-  lastName  String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String  @id @default(auto()) @map("_id") @db.ObjectId
+  clerkId     String  @unique
+  email       String  @unique
+  firstName   String
+  lastName    String
+  phoneNumber String? @unique
+  dateOfBirth DateTime?
+  address     Address?
 }
-
-
