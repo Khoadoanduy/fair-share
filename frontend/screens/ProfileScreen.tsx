@@ -13,14 +13,26 @@ export default function ProfileScreen() {
     router.push('/sign-in');
   };
 
-  const handleSignOutPress = () => {
-    signOut();
-    setJwt(null);
+  const handleSignOutPress = async () => {
+    try {
+      // Clear JWT state
+      setJwt(null);
+
+      // Sign out from Clerk
+      await signOut();
+
+      // Navigate to welcome screen after sign out completes
+      // Using replace instead of push prevents going back to the profile screen
+      router.replace('/(welcome)');
+
+    } catch (error) {
+      console.error('Error during sign out:', error);
+    }
   };
 
   const fetchJwt = async () => {
     if (!isSignedIn) return;
-    
+
     try {
       const token = await getToken();
       setJwt(token);
@@ -53,7 +65,7 @@ export default function ProfileScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.content}>
           <Text style={styles.title}>Profile</Text>
-          
+
           {user && (
             <View style={styles.userInfo}>
               <Text style={styles.userName}>
@@ -62,14 +74,14 @@ export default function ProfileScreen() {
               <Text style={styles.userEmail}>{user.primaryEmailAddress?.emailAddress}</Text>
             </View>
           )}
-          
+
           <View style={styles.tokenContainer}>
             <Text style={styles.tokenTitle}>Your JWT Token:</Text>
             <ScrollView style={styles.tokenScroll}>
               <Text style={styles.tokenText}>{jwt || 'Loading token...'}</Text>
             </ScrollView>
           </View>
-          
+
           <CustomButton text="Sign Out" onPress={handleSignOutPress} />
         </View>
       </ScrollView>

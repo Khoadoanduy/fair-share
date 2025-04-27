@@ -19,7 +19,7 @@ export const useWarmUpBrowser = () => {
 // Handle any pending authentication sessions
 WebBrowser.maybeCompleteAuthSession();
 
-type SignInWithProps = {
+type LogInWithProps = {
   strategy: 'oauth_google';
   style?: object;
 };
@@ -29,7 +29,7 @@ const strategyConfig = {
   oauth_google: { name: 'google', color: '#DB4437' },
 };
 
-export default function SignInWith({ strategy, style }: SignInWithProps) {
+export default function LogInWith({ strategy, style }: LogInWithProps) {
   useWarmUpBrowser();
 
   // Use the `useSSO()` hook to access the `startSSOFlow()` method
@@ -65,7 +65,7 @@ export default function SignInWith({ strategy, style }: SignInWithProps) {
         <View style={styles.logoContainer}>
           <Image source={require('../assets/social-providers/google.png')} style={styles.icon} />
         </View>
-        <Text style={styles.buttonText}>Sign up with Google</Text>
+        <Text style={styles.buttonText}>Log in with Google</Text>
       </View>
     </TouchableOpacity>
   );
@@ -73,7 +73,7 @@ export default function SignInWith({ strategy, style }: SignInWithProps) {
 
 const styles = StyleSheet.create({
   button: {
-    backgroundColor: "#4353FD", // Match the sign-up button color
+    backgroundColor: "#4353FD", // Match the login button color
     borderRadius: 8,
     paddingVertical: 16,
     paddingHorizontal: 16,
