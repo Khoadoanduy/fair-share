@@ -10,7 +10,6 @@
     "web": "expo start --web",
     "test": "jest --watchAll",
     "lint": "expo lint"
-    
   },
   "jest": {
     "preset": "jest-expo"
@@ -22,7 +21,7 @@
     "@react-native-async-storage/async-storage": "1.23.1",
     "@react-navigation/bottom-tabs": "^7.2.0",
     "@react-navigation/native": "^7.0.14",
-    "expo": "~52.0.42",
+    "expo": "^53.0.7",
     "expo-blur": "~14.0.3",
     "expo-constants": "~17.0.8",
     "expo-font": "~13.0.4",
@@ -63,5 +62,6 @@
     "tsx": "^4.19.3",
     "typescript": "^5.8.3"
   },
-  "private": true
+  "private": true,
+  "type": "module"
 }
