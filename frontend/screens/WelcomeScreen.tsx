@@ -24,13 +24,13 @@ export default function WelcomeScreen() {
           <CustomButton
             text="Sign Up"
             style={styles.signUpButton}
+            textStyle={styles.signUpText}
             onPress={handleSignUp}
           />
 
           <CustomButton
             text="Log In"
             style={styles.logInButton}
-            textStyle={styles.logInText}
             onPress={handleLogIn}
           />
         </View>
@@ -94,7 +94,7 @@ const styles = StyleSheet.create({
     borderColor: '#ffffff',
     alignItems: 'center',
   },
-  logInText: {
-    color: 'white'
+  signUpText: {
+    color: 'black'
   }
 });

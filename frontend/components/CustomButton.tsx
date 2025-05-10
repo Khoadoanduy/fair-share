@@ -23,8 +23,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   buttonText: {
-    color: 'black',
-    fontSize: 16,
-    fontWeight: '600',
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '500',
   },
 });
