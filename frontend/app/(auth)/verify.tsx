@@ -85,12 +85,24 @@ export default function VerifyScreen() {
     }
   };
 
+  const handleResend = async () => {
+    if (!isLoaded || !signUp) return;
+
+    try {
+      await signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
+      console.log('Verification code resent!');
+    } catch (err) {
+      console.error('Failed to resend code:', err);
+    }
+  };
+
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={styles.container}
     >
       <Text style={styles.title}>Verify your email</Text>
+      <Text style={styles.subtitle}>Enter the 6-digit code we just sent to example@gmail.com</Text>
 
       <CustomInput
         control={control}
@@ -100,9 +112,16 @@ export default function VerifyScreen() {
         autoCapitalize='none'
         keyboardType='number-pad'
         autoComplete='one-time-code'
+        style={styles.codeInput}
       />
 
       <CustomButton text='Verify' onPress={handleSubmit(onVerify)} />
+      <Text style={styles.resend}>
+        Didn’t receive the code?{' '}
+        <Text onPress={handleResend} style={styles.resendText}>
+          Resend
+        </Text>
+      </Text>
     </KeyboardAvoidingView>
   );
 }
@@ -112,6 +131,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff',
     justifyContent: 'center',
+    alignContent: 'center',
     padding: 20,
     gap: 20,
   },
@@ -119,11 +139,37 @@ const styles = StyleSheet.create({
     gap: 5,
   },
   title: {
-    fontSize: 24,
+    fontSize: 30,
     fontWeight: '600',
+    color: '#4A3DE3',
+    textAlign: 'center'
+  },
+  subtitle: {
+    fontSize: 16,
+    textAlign: 'center'
   },
   link: {
     color: '#4353FD',
     fontWeight: '600',
   },
+  resend: {
+    textAlign: 'center',
+    fontWeight: '600',
+    fontSize: 16
+  },
+  resendText: {
+    color: '#4A3DE3',
+    fontWeight: '600',
+    fontSize: 16
+  },
+  codeInput: {
+    fontSize: 28,
+    letterSpacing: 12,
+    fontFamily: Platform.select({ ios: 'Menlo', android: 'monospace' }),
+    textAlign: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 2,
+    borderColor: '#4A3DE3',
+    color: '#000',
+  }
 });
