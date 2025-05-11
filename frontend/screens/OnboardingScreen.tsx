@@ -174,7 +174,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginVertical: 20
+    marginVertical: 20,
+    marginBottom: 10
   },
   dot: {
     width: 8,
@@ -210,8 +211,8 @@ const styles = StyleSheet.create({
   },
   imageBox: {
     width: 345,
-    height: 374,
+    height: 354,
     borderRadius: 20,
-    marginBottom: 20
+    marginBottom: 20,
   }
 });
