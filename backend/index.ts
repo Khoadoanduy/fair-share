@@ -2,6 +2,7 @@ import express from 'express';
 import dotenv from 'dotenv';
 import webhookRouter from './src/webhooks/clerk/route'; // Adjust path if renamed to webhookRouter.ts
 import customerRoutes from './routes/stripe_customer';
+import paymentRoutes from './routes/stripe_payment';
 
 dotenv.config();
 
@@ -14,11 +15,8 @@ app.use(express.json());
 app.use('/', webhookRouter);
 
 app.use('/api/stripe', customerRoutes);
+app.use('/api/stripe', paymentRoutes);
 
-// app.post('/api/hello', async function(request,response) {
-//   console.log("Hello World");
-//   response.json()
-// })
 
 app.listen(PORT, () => {
   console.log(`✅ Server is running on ${PORT}`);
@@ -30,8 +28,4 @@ export interface CustomerRequest {
   phone?: string;
   description?: string;
   metadata?: Record<string, string | number | boolean>;
-}
-
-export interface CustomerWithPaymentMethodRequest extends CustomerRequest {
-  paymentMethodId: string;
 }

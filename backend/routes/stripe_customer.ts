@@ -17,19 +17,6 @@ const stripe = require('stripe')(
 
 const router: Router = express.Router();
 
-// Define interfaces for request bodies
-// interface CreateCustomerRequest {
-//   email: string;
-//   name?: string;
-//   // phone?: string;
-//   // description?: string;
-//   metadata?: Record<string, string | number | boolean>;
-// }
-
-// interface CreateCustomerWithPaymentMethodRequest extends CreateCustomerRequest {
-//   paymentMethodId: string;
-// }
-
 router.post('/create-customer', async function (request, response) {
   try {
     console.log("create customer called")
@@ -49,90 +36,6 @@ router.post('/create-customer', async function (request, response) {
     response.status(500).json({err});
   }
 });
-
-
-// 2. Creating a customer with a payment method
-router.post('/create-customer-with-payment-method', async (req: Request<{}, {}, CreateCustomerWithPaymentMethodRequest>, res: Response) => {
-  try {
-    const { email, name, paymentMethodId } = req.body;
-    
-    if (!email) {
-      return res.status(400).json({ error: 'Email is required' });
-    }
-    
-    if (!paymentMethodId) {
-      return res.status(400).json({ error: 'Payment method ID is required' });
-    }
-    
-    // Create a customer
-    const customer = await stripe.customers.create({
-      email,
-      name,
-    });
-    
-    // Attach the payment method to the customer
-    await stripe.paymentMethods.attach(paymentMethodId, {
-      customer: customer.id,
-    });
-    
-    // Set the payment method as the default
-    await stripe.customers.update(customer.id, {
-      invoice_settings: {
-        default_payment_method: paymentMethodId,
-      },
-    });
-    
-    // Return the customer object
-    res.json({ success: true, customer });
-  } catch (error) {
-    console.error('Error creating customer with payment method:', error);
-    res.status(500).json({ 
-      error: error instanceof Error ? error.message : 'An unknown error occurred'
-    });
-  }
-});
-
-//create customer with payment method all in one step
-// router.post('/create-customer-withPayemnt', async function (request, response) {
-//   try {
-//     console.log("create customer called")
-//     const { email, name, phone } = request.body;
-//     console.log(request.body)
-
-//     const customerData = { email, name, phone };
-
-//     const stripeCustomer = await stripe.customers.create(customerData);
-
-//     return response.status(200).json({ customer: stripeCustomer });
-//   } catch (err) {
-//     // Log for your own debugging
-//     console.error('Error creating Stripe customer:', err);
-
-//     // Send back the Stripe (or other) error message
-//     response.status(500).json({err});
-//   }
-// });
-
-router.post('/create-PaymentMethod', async function (request, response) {
-  try {
-    // console.log("create customer called")
-    const { email, name, phone } = request.body;
-    console.log(request.body)
-
-    const customerData = { email, name, phone };
-
-    const stripeCustomer = await stripe.customers.create(customerData);
-
-    return response.status(200).json({ customer: stripeCustomer });
-  } catch (err) {
-    // Log for your own debugging
-    console.error('Error creating Stripe customer:', err);
-
-    // Send back the Stripe (or other) error message
-    response.status(500).json({err});
-  }
-});
-
 
 // 3. Get customer by ID
 router.get('/customers/:customerId', async (req: Request<{ customerId: string }>, res: Response) => {
