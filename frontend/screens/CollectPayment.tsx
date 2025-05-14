@@ -3,16 +3,39 @@ import { View, Text, TextInput, Button, StyleSheet, Alert, ActivityIndicator, Sc
 import { useStripe } from '@stripe/stripe-react-native';
 import { router } from 'expo-router';
 import axios from "axios";
+import { useAuth, useUser } from '@clerk/clerk-expo';
 const API_URL = 'http://localhost:3000';
     
 export default function CollectPaymentScreen() {
+    // Get user object 
+    const { user } = useUser();
+    const userId = user?.id; // Get Clerk user ID
     const { initPaymentSheet, presentPaymentSheet } = useStripe();
     const [loading, setLoading] = useState(false);
-    
+    const userFromMongo = async () => {
+        try{
+            const response = await axios.get(`${API_URL}/api/user/`,{
+                params:{
+                    clerkID : userId
+                }
+            })
+            return response.data.email
+        }
+        catch(error){
+            console.error("Error fetching user data:", error);
+        }
+    }
     const fetchPaymentSheetParams = async () => {
         try {
-            const response = await axios.post(`${API_URL}/api/stripe/payment-sheet`, {});
+            const customerInfo = await userFromMongo();
+            const response = await axios.post(`${API_URL}/api/stripe/payment-sheet`, {customerInfo});
             const { setupIntent, ephemeralKey, customer} = response.data; 
+            await axios.put(
+                `${API_URL}/api/user/${userId}`, 
+                { 
+                    name: customer 
+                }
+              );
             return {
                 setupIntent,
                 ephemeralKey,
@@ -29,9 +52,7 @@ export default function CollectPaymentScreen() {
     const initializePaymentSheet = async () => {
         try {
             setLoading(true);
-            console.log("hello, I'm at initializePayment");
             const params = await fetchPaymentSheetParams();
-            console.log("params from fetchPaymentSheet",params)
 
             if (!params) {
                 throw new Error("Stripe params are missing");

@@ -15,9 +15,10 @@ const router: Router = express.Router();
 
 router.post('/payment-sheet', async function (request, response) {
     try {
-        console.log(process.env.STRIPE_SECRET_KEY);
-        const customer = await stripe.customers.create();
-        console.log(customer);
+        const customerInfo = request.body.customerInfo;
+        const customer = await stripe.customers.create({
+            email: customerInfo
+        });
         const ephemeralKey = await stripe.ephemeralKeys.create(
             {customer: customer.id},
             {apiVersion: '2025-03-31.basil'}
@@ -30,11 +31,10 @@ router.post('/payment-sheet', async function (request, response) {
         response.json({
             setupIntent: setupIntent.client_secret,
             ephemeralKey: ephemeralKey.secret,
-            customer: customer.id,
-            publishableKey: 'pk_test_TYooMQauvdEDq54NiTphI7jx'
+            customer: customer.id
           });
         } catch (err) {
-          // Log for your own debugging
+          // Log for debugging
           console.error('Error creating Stripe paymentSheet:', err);
       
           // Send back the Stripe (or other) error message

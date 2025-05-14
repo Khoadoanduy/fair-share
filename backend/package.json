@@ -21,7 +21,7 @@
   },
   "dependencies": {
     "@clerk/clerk-sdk-node": "^4.13.23",
-    "@prisma/client": "^6.6.0",
+    "@prisma/client": "^6.7.0",
     "backend": "file:",
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",

@@ -5,6 +5,8 @@
 import dotenv from 'dotenv';
 import express, { Request, Response, Router } from 'express';
 import Stripe from 'stripe';
+// import axios from "axios";
+// const API_URL = 'http://localhost:3000';
 
 // Initialize environment variables
 dotenv.config();
@@ -19,9 +21,8 @@ const router: Router = express.Router();
 
 router.post('/create-customer', async function (request, response) {
   try {
-    console.log("create customer called")
     const { email, name, phone } = request.body;
-    console.log(request.body)
+
 
     const customerData = { email, name, phone };
 
