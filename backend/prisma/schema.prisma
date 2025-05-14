@@ -49,6 +49,7 @@ model Group {
   startDate        DateTime?
   endDate          DateTime?
   GroupInvitation  GroupInvitation[]
+  status           String            @default("pending") //pending, active
 }
 
 //junction table between User and Group

@@ -1,11 +1,20 @@
+import CustomButton from '@/components/CustomButton';
 import { View, Text, StyleSheet, SafeAreaView } from 'react-native';
+import { Link, useRouter } from 'expo-router';
+
 
 export default function GroupsScreen() {
+  const router = useRouter();
+  const handleCreateGroup = () => {
+    router.push('/groups/createGroupName')
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
         <Text style={styles.title}>Groups</Text>
         <Text>Your groups will appear here</Text>
+        <CustomButton text='Create Group' onPress={handleCreateGroup} />
       </View>
     </SafeAreaView>
   );
