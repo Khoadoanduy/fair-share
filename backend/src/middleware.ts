@@ -44,20 +44,20 @@ export const authErrorHandler = (err: any, req: Request, res: Response, next: Ne
 };
 
 // Helper to create a middleware that requires specific roles
-export const requireRoles = (allowedRoles: string[]) => {
-  return (req: Request, res: Response, next: NextFunction) => {
-    // This assumes you store user roles in the auth object or your database
-    const userRoles = req.auth?.claims?.roles || [];
+// export const requireRoles = (allowedRoles: string[]) => {
+//   return (req: Request, res: Response, next: NextFunction) => {
+//     // This assumes you store user roles in the auth object or your database
+//     const userRoles = req.auth?.claims?.roles || [];
     
-    const hasPermission = allowedRoles.some(role => userRoles.includes(role));
+//     const hasPermission = allowedRoles.some(role => userRoles.includes(role));
     
-    if (!hasPermission) {
-      return res.status(403).json({
-        success: false,
-        message: 'Insufficient permissions'
-      });
-    }
+//     if (!hasPermission) {
+//       return res.status(403).json({
+//         success: false,
+//         message: 'Insufficient permissions'
+//       });
+//     }
     
-    next();
-  };
-};
+//     next();
+//   };
+// };

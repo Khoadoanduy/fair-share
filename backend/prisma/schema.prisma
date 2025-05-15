@@ -31,5 +31,6 @@ model User {
   lastName    String
   phoneNumber String? 
   dateOfBirth DateTime?
-  address     String?
+  address     Address?
 }
+

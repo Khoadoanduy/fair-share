@@ -1,7 +1,7 @@
 import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
-import { router } from './routes/index';
+import userRouter from './routes/user';
 import webhookRouter from './src/webhooks/clerk/route';
 import { authMiddleware, authErrorHandler } from './src/middleware';
 
@@ -18,7 +18,7 @@ app.use(cors());
 app.use('/webhooks', webhookRouter);
 
 // API routes with authentication middleware
-app.use('/api', authMiddleware, router);
+app.use('/api/user', userRouter);
 
 // Error handling (must be after all routes)
 app.use(authErrorHandler);
