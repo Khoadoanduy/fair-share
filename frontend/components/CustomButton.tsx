@@ -6,7 +6,7 @@ type CustomButtonProps = {
 
 export default function CustomButton({ text, ...props }: CustomButtonProps) {
   return (
-    <Pressable {...props} style={[styles.button]}>
+    <Pressable {...props} style={[styles.button, props.style]}>
       <Text style={styles.buttonText}>{text}</Text>
     </Pressable>
   );
@@ -14,7 +14,7 @@ export default function CustomButton({ text, ...props }: CustomButtonProps) {
 
 const styles = StyleSheet.create({
   button: {
-    backgroundColor: '#4353FD', // Change to pure black
+    backgroundColor: '#4A3DE3',
     borderRadius: 8,
     paddingVertical: 16,
     alignItems: 'center',

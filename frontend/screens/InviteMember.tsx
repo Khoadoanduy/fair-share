@@ -1,14 +1,4 @@
-import {
-  View,
-  Text,
-  StyleSheet,
-  SafeAreaView,
-  TextInput,
-  FlatList,
-  ActivityIndicator,
-  Alert,
-  Image,
-} from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, TextInput, FlatList, ActivityIndicator, Alert, Image } from 'react-native';
 import CustomButton from '@/components/CustomButton';
 import InviteButton from '@/components/InviteButton';
 import { useState } from 'react';
@@ -29,21 +19,12 @@ export default function InviteMemberScreen() {
   const [search, setSearch] = useState('');
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
-  const [invited, setInvited] = useState<string[]>([]);
   
   const API_URL = process.env.EXPO_PUBLIC_API_URL;
   const router = useRouter();
 
-  const {
-    groupName,
-    subscriptionName,
-    planName,
-    amount,
-    cycle,
-    startDate,
-    endDate,
-    virtualCardId,
-  } = useLocalSearchParams();
+  
+  const { groupId } = useLocalSearchParams();
 
   const handleSearch = async (text: string) => {
     console.log('Searching for: ', text);
@@ -54,56 +35,28 @@ export default function InviteMemberScreen() {
     }
     setLoading(true);
     try {
-      console.log("I'm at the try")
       const response = await axios.get(`${API_URL}/api/groups/search-user/${text}`,{
         timeout: 10000
       });
-      console.log(response)
-      // Ensure the response data is an array and not just an object
+      //Return an array of users that contains that username entered
       if (response.data?.users) {
-        setUsers(response.data.users); // Assuming the response contains a list of users
+        setUsers(response.data.users); 
       } else {
         setUsers([]);
       }
     } catch (error) {
       console.log(error)
-      Alert.alert('Error', 'User not found');
       setUsers([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleInvite = (userId: string) => {
-    if (!invited.includes(userId)) {
-      setInvited((prev) => [...prev, userId]);
-    }
-  };
 
-  const handleCreateGroup = async () => {
-    try {
-      const response = await axios.post(`${API_URL}/api/groups/create-group`, {
-        groupName,
-        subscriptionName,
-        planName,
-        amount: parseFloat(amount as string),
-        cycle,
-        startDate,
-        endDate,
-        virtualCardId,
-      });
-
-      Alert.alert('Success', 'Group created successfully!', [
-        { text: 'OK', onPress: () => router.push('/(tabs)') },
-      ]);
-    } catch (error) {
-      console.error(error);
-      Alert.alert('Error', 'Failed to create group');
-    }
-  };
 
   return (
     <SafeAreaView style={styles.container}>
+      <View style={styles.content}>
       <Text style={styles.title}>Invite Members</Text>
 
       <View style={styles.searchbar}>
@@ -125,61 +78,88 @@ export default function InviteMemberScreen() {
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
           <View style={styles.eachUser}>
-            <Text>{item.username}</Text>
+            <Text style={styles.username}>{item.username}</Text>
             <InviteButton
               userId={item.id}
-              groupName={typeof groupName === 'string' ? groupName : ''}
-              subscriptionName={typeof subscriptionName === 'string' ? subscriptionName : ''}
-              planName={typeof planName === 'string' ? planName : ''}
-              amount={typeof amount === 'string' ? parseFloat(amount) : undefined}
-              cycle={typeof cycle === 'string' ? cycle : ''}
-              startDate={typeof startDate === 'string' ? startDate : undefined}
-              endDate={typeof endDate === 'string' ? endDate : undefined}
-              virtualCardId={typeof virtualCardId === 'string' ? virtualCardId : undefined}
+              groupId={groupId}
             />
           </View>
         )}
+        ListEmptyComponent={
+          !loading && search.length > 0 ? (
+            <Text style={styles.emptyText}>No users found.</Text>
+          ) : null
+        }
       />
-
-      <CustomButton text="Create Group" onPress={handleCreateGroup} />
+      <CustomButton text="Back to homepage" onPress={() => router.push('/(tabs)')} style={styles.button} />
+      </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    padding: 20,
+    paddingHorizontal: 20,
+    paddingTop: 20,
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: 'white',
+  },
+  content: {
+    marginLeft: 20,
+    marginRight: 20,
+    marginTop: 40
   },
   title: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 10,
+    fontSize: 24,
+    fontWeight: '600',
+    marginBottom: 20,
+    color: '#333',
   },
   searchbar: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1,
-    borderRadius: 6,
-    paddingHorizontal: 10,
-    marginBottom: 10,
+    backgroundColor: '#D9D9D9',
+    borderRadius: 12,
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    marginBottom: 20,
+    height: 48
+
   },
   icon: {
     width: 20,
     height: 20,
     marginRight: 8,
+    tintColor: 'black',
   },
   searchText: {
     flex: 1,
     fontSize: 16,
+    color: '#333',
   },
   eachUser: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderColor: '#eee',
+    backgroundColor: '#D9D9D9',
+    paddingVertical: 12,
+    paddingHorizontal: 15,
+    borderRadius: 10,
+    marginBottom: 12,
   },
+  username: {
+    fontSize: 16,
+    color: 'black',
+    fontWeight: '500',
+  },
+  emptyText: {
+    textAlign: 'center',
+    marginTop: 20,
+    color: '#999',
+    fontSize: 16,
+  },
+  button: {
+    backgroundColor: 'black',
+    marginTop: 30
+  }
 });

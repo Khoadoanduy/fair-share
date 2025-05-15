@@ -45,11 +45,10 @@ model Group {
   amount           Float
   virtualCardId    String?           @unique
   members          GroupMember[]
-  cycle            String?
+  cycle            String
   startDate        DateTime?
   endDate          DateTime?
   GroupInvitation  GroupInvitation[]
-  status           String            @default("pending") //pending, active
 }
 
 //junction table between User and Group

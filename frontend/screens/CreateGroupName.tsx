@@ -9,8 +9,9 @@ type FormatData = {
   groupName: string;
 };
 
+//User create a group name
 export default function CreateGroupName() {
-  const { control, handleSubmit, watch } = useForm<FormatData>();
+  const { control, handleSubmit } = useForm<FormatData>();
   const router = useRouter();
 
   const onNext: SubmitHandler<FormatData> = (data) => {
@@ -19,8 +20,9 @@ export default function CreateGroupName() {
       return;
     }
 
+    //move and pass the group name to the next page
     router.push({
-      pathname: '/groups/subscription',
+      pathname: '/(tabs)/(group)/subscription',
       params: { groupName: data.groupName },
     });
   };
@@ -51,9 +53,12 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   input: {
-    marginBottom: 20,
+    marginBottom: 40,
     borderBottomWidth: 1,
     borderColor: '#ccc',
-    padding: 8,
+    padding: 12,
+    borderWidth: 1,
+    borderRadius: 6,
+    fontSize: 16
   },
 });

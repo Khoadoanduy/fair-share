@@ -6,7 +6,7 @@ import { Link, useRouter } from 'expo-router';
 export default function GroupsScreen() {
   const router = useRouter();
   const handleCreateGroup = () => {
-    router.push('/groups/createGroupName')
+    router.push('/(tabs)/(group)/createGroupName')
   }
 
   return (
