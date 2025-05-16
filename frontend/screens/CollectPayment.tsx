@@ -9,14 +9,14 @@ const API_URL = 'http://localhost:3000';
 export default function CollectPaymentScreen() {
     // Get user object 
     const { user } = useUser();
-    const userId = user?.id; // Get Clerk user ID
+    const clerkId = user?.id; // Get Clerk user ID
     const { initPaymentSheet, presentPaymentSheet } = useStripe();
     const [loading, setLoading] = useState(false);
     const userFromMongo = async () => {
         try{
             const response = await axios.get(`${API_URL}/api/user/`,{
                 params:{
-                    clerkID : userId
+                    clerkID : clerkId
                 }
             })
             return response.data.email
@@ -31,7 +31,7 @@ export default function CollectPaymentScreen() {
             const response = await axios.post(`${API_URL}/api/stripe/payment-sheet`, {customerInfo});
             const { setupIntent, ephemeralKey, customer} = response.data; 
             await axios.put(
-                `${API_URL}/api/user/${userId}`, 
+                `${API_URL}/api/user/${clerkId}`, 
                 { 
                     name: customer 
                 }
