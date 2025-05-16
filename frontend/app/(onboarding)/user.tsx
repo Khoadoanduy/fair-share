@@ -1,5 +1,4 @@
-import PostSignupOnboardingScreen from '../../screens/PostSignupOnboardingScreen';
-
+import EmailVerified from "@/screens/EmailVerified";
 export default function UserOnboarding() {
-  return <PostSignupOnboardingScreen />;
+  return <EmailVerified />;
 }

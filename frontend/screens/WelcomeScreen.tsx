@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View, Image } from 'react-native';
 import { router } from 'expo-router';
 import CustomButton from '../components/CustomButton';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -16,15 +16,15 @@ export default function WelcomeScreen() {
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
         <View style={styles.logoContainer}>
-          <View style={styles.logoBox} />
+          <Image source={require('../assets/FairShare_logo.png')} style={styles.logoBox}></Image>
           <Text style={styles.title}>Fair Share</Text>
-          <Text style={styles.subtitle}>Split expenses easily with friends and family</Text>
+          <Text style={styles.subtitle}>Shared subscriptions, simplified.</Text>
         </View>
-
         <View style={styles.buttonContainer}>
           <CustomButton
             text="Sign Up"
             style={styles.signUpButton}
+            textStyle={styles.signUpText}
             onPress={handleSignUp}
           />
 
@@ -42,7 +42,7 @@ export default function WelcomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#4A3DE3',
   },
   content: {
     flex: 1,
@@ -55,35 +55,46 @@ const styles = StyleSheet.create({
     marginBottom: 80,
   },
   logoBox: {
-    width: 120,
-    height: 120,
-    backgroundColor: '#F0F2F5',
+    width: 149,
+    height: 149,
+    backgroundColor: '#4A3DE3',
     marginBottom: 20,
     borderRadius: 24,
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
+    fontSize: 30,
+    fontWeight: 600,
+    color: '#FCFBFF',
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
-    color: '#333',
+    color: '#FCFBFF',
     textAlign: 'center',
     marginHorizontal: 20,
   },
   buttonContainer: {
-    width: '100%',
-    gap: 16,
+    position: 'absolute',
+    bottom: 40,
+    gap: 10,
+    width: 345,
+    height: 90,
   },
   signUpButton: {
-    backgroundColor: '#0F172A',
-    borderRadius: 8,
+    backgroundColor: 'white',
+    borderRadius: 10,
+    paddingVertical: 14,
+    alignItems: 'center',
   },
   logInButton: {
     backgroundColor: 'transparent',
-    borderRadius: 8,
+    borderRadius: 10,
+    paddingVertical: 14,
     borderWidth: 1,
-    borderColor: '#0F172A',
+    borderColor: '#ffffff',
+    alignItems: 'center',
   },
+  signUpText: {
+    color: 'black'
+  }
 });
