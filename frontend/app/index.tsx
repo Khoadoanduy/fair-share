@@ -44,18 +44,18 @@ export default function Index() {
     );
   }
   // Signed-up & logged-in user who needs post-signup onboarding
-  if (needsUserOnboarding && isSignedIn) {
-    return <Redirect href="/(onboarding)/user" />;
-  }
 
   // First-time visitor sees initial onboarding
   if (!onboardingComplete) {
+    console.log("First time");
     return <Redirect href="/(onboarding)" />;
+    
   }
 
   // Not signed in user sees welcome screen
   if (!isSignedIn) {
-    return <Redirect href="/(welcome)" />;
+    console.log("Not signed in");
+    return <Redirect href="/(onboarding)" />;
   }
 
   // Otherwise go to main app

@@ -1,14 +1,20 @@
+import React from 'react';
 import { StyleSheet, Text, View, Image } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import CustomButton from '../components/CustomButton';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useAuthContext } from '../contexts/AuthContext';
 
 export default function WelcomeScreen() {
+  const { markOnboardingComplete } = useAuthContext();
+
   const handleSignUp = () => {
+    markOnboardingComplete();
     router.push('/(auth)/sign-up');
   };
 
   const handleLogIn = () => {
+    markOnboardingComplete();
     router.push('/(auth)/sign-in');
   };
 
@@ -16,25 +22,31 @@ export default function WelcomeScreen() {
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
         <View style={styles.logoContainer}>
-          <Image source={require('../assets/FairShare_logo.png')} style={styles.logoBox}></Image>
+          <Image
+            source={require('../assets/FairShare_logo.png')}
+            style={styles.logoBox}
+          />
           <Text style={styles.title}>Fair Share</Text>
           <Text style={styles.subtitle}>Shared subscriptions, simplified.</Text>
         </View>
-        <View style={styles.buttonContainer}>
-          <CustomButton
-            text="Sign Up"
-            style={styles.signUpButton}
-            textStyle={styles.signUpText}
-            onPress={handleSignUp}
-          />
-
-          <CustomButton
-            text="Log In"
-            style={styles.logInButton}
-            onPress={handleLogIn}
-          />
-        </View>
       </View>
+
+      {/* Button group at bottom */}
+      <View style={styles.footer}>
+        <CustomButton
+          text="Sign Up"
+          onPress={handleSignUp}
+          style={styles.signUpButton}
+          textStyle={styles.signUpText}
+        />
+        <CustomButton
+          text="Log In"
+          onPress={handleLogIn}
+          style={styles.logInButton}
+          textStyle={styles.logInText}
+        />
+      </View>
+      
     </SafeAreaView>
   );
 }
@@ -63,7 +75,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 30,
-    fontWeight: 600,
+    fontWeight: '600',
     color: '#FCFBFF',
     marginBottom: 8,
   },
@@ -73,12 +85,14 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginHorizontal: 20,
   },
-  buttonContainer: {
+  footer: {
     position: 'absolute',
-    bottom: 40,
-    gap: 10,
-    width: 345,
-    height: 90,
+    bottom: 20,
+    left: 0,
+    right: 0,
+    flexDirection: 'column',
+    justifyContent: 'space-evenly',
+    paddingHorizontal: 20,
   },
   signUpButton: {
     backgroundColor: 'white',
@@ -86,15 +100,20 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     alignItems: 'center',
   },
+  signUpText: {
+    color: 'black',
+    fontWeight: '600',
+  },
   logInButton: {
     backgroundColor: 'transparent',
     borderRadius: 10,
     paddingVertical: 14,
-    borderWidth: 1,
-    borderColor: '#ffffff',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#FFFFFF',
   },
-  signUpText: {
-    color: 'black'
-  }
+  logInText: {
+    color: '#FCFBFF',
+    fontWeight: '600',
+  },
 });
