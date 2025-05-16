@@ -24,12 +24,51 @@ type Address {
 
 // Schemas
 model User {
-  id          String  @id @default(auto()) @map("_id") @db.ObjectId
-  clerkId     String  @unique
-  email       String  @unique
-  firstName   String
-  lastName    String
-  phoneNumber String? @unique
-  dateOfBirth DateTime?
-  address     Address?
+  id              String            @id @default(auto()) @map("_id") @db.ObjectId
+  clerkId         String            @unique
+  email           String            @unique
+  customerId      String?           @unique
+  cardholderId    String?           @unique
+  firstName       String
+  lastName        String
+  username        String?           @unique
+  phoneNumber     String?           @unique
+  dateOfBirth     DateTime?
+  address         Address?
+  groups          GroupMember[]
+  GroupInvitation GroupInvitation[]
 }
+
+model Group {
+  id               String            @id @default(auto()) @map("_id") @db.ObjectId
+  groupName        String
+  subscriptionName String
+  planName         String?
+  amount           Float
+  virtualCardId    String?           @unique
+  members          GroupMember[]
+  cycle            String?
+  startDate        DateTime?
+  endDate          DateTime?
+  GroupInvitation  GroupInvitation[]
+}
+
+//junction table between User and Group
+model GroupMember {
+  id      String @id @default(auto()) @map("_id") @db.ObjectId
+  user    User   @relation(fields: [userId], references: [id])
+  userId  String @db.ObjectId
+  group   Group  @relation(fields: [groupId], references: [id])
+  groupId String @db.ObjectId
+}
+
+model GroupInvitation {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String   @db.ObjectId
+  group     Group    @relation(fields: [groupId], references: [id])
+  groupId   String   @db.ObjectId
+  status    String   @default("pending") //pending, accepted, rejected
+  createdAt DateTime @default(now())
+}
+
