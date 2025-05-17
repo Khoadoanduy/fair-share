@@ -1,5 +1,10 @@
-import { useRef, useState, useEffect } from 'react';
-import { NativeSyntheticEvent, NativeScrollEvent, Animated } from 'react-native';
+import { useRef, useState, useEffect } from "react";
+import {
+  NativeSyntheticEvent,
+  NativeScrollEvent,
+  Animated,
+  TouchableOpacity,
+} from "react-native";
 import {
   StyleSheet,
   Text,
@@ -8,15 +13,14 @@ import {
   Image,
   FlatList,
   Dimensions,
-} from 'react-native';
-import { Redirect } from 'expo-router';
-import WelcomeScreen from './WelcomeScreen';
-import CustomButton from '@/components/CustomButton';
-import { router } from 'expo-router';
-import { useAuthContext } from '../contexts/AuthContext';
-import { useAuth } from '@clerk/clerk-expo';
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { Redirect, router } from "expo-router";
+import CustomButton from "@/components/CustomButton";
+import { useAuthContext } from "../contexts/AuthContext";
+import { useAuth } from "@clerk/clerk-expo";
 
-const { width } = Dimensions.get('window');
+const { width } = Dimensions.get("window");
 
 type Feature = {
   id: string;
@@ -31,13 +35,13 @@ export default function OnboardingScreen() {
   const [redirectReady, setRedirectReady] = useState(false);
   const { markOnboardingComplete, onboardingComplete } = useAuthContext();
   const { isSignedIn } = useAuth();
-  
+
   // Animated value for background color transition
   const scrollX = useRef(new Animated.Value(0)).current;
   const animatedBackgroundColor = scrollX.interpolate({
     inputRange: [0, width, width * 2],
-    outputRange: ['#4A3DE3', '#FFFFFF', '#FFFFFF'],
-    extrapolate: 'clamp',
+    outputRange: ["#4A3DE3", "#FFFFFF", "#FFFFFF"],
+    extrapolate: "clamp",
   });
 
   useEffect(() => {
@@ -48,24 +52,39 @@ export default function OnboardingScreen() {
   }, [isSignedIn]);
 
   const features: Feature[] = [
-    { id: '1', component: <WelcomeScreen /> },
     {
-      id: '2',
-      title: 'Your subscriptions, all in one place.',
-      description:
-        "Manage all your subscriptions, both personal and shared, and keep track of what's active, upcoming, or on trial.",
+      id: "1",
+      component: (
+        <View style={welcomeStyles.content}>
+          <View style={welcomeStyles.logoContainer}>
+            <Image
+              source={require("../assets/FairShare_logo.png")}
+              style={welcomeStyles.logoBox}
+            />
+            <Text style={welcomeStyles.title}>Fair Share</Text>
+            <Text style={welcomeStyles.subtitle}>
+              Shared subscriptions, simplified.
+            </Text>
+          </View>
+        </View>
+      ),
     },
     {
-      id: '3',
-      title: 'Share subscriptions seamlessly.',
-      description:
-        'Start or join groups, add members, and manage shared subscriptions together. From payments to renewals, keep things in sync.',
+      id: "2",
+      title: "Your subscriptions, all in one place.",
+      description:"Manage all your subscriptions, both personal and shared, and keep track of what's active, upcoming, or on trial.",
     },
     {
-      id: '4',
-      title: 'Get notified and stay in control.',
+      id: "3",
+      title: "Share subscriptions seamlessly.",
       description:
-        'Never miss a renewal, OTP, or group update. Smart reminders and real-time alerts keep your subscriptions running smoothly.',
+        "Start or join groups, add members, and manage shared subscriptions together. From payments to renewals, keep things in sync.",
+    },
+    {
+      id: "4",
+      title: "Get notified and stay in control.",
+      description:
+        "Never miss a renewal, OTP, or group update. Smart reminders and real-time alerts keep your subscriptions running smoothly.",
     },
   ];
 
@@ -74,32 +93,60 @@ export default function OnboardingScreen() {
     setCurrentFeature(idx);
   };
 
+  const footerOpacity = scrollX.interpolate({
+    inputRange: [width * 2, width * 3],
+    outputRange: [0, 1],
+    extrapolate: "clamp",
+  });
+
   const handleScrollEvent = Animated.event(
     [{ nativeEvent: { contentOffset: { x: scrollX } } }],
     { useNativeDriver: false }
   );
 
   const handleSignUp = () => {
-    router.push('/(auth)/sign-up').then(() => {
-      markOnboardingComplete();
-    });
+    if (isSignedIn) {
+      router.replace("/(tabs)");
+      return;
+    }
+    markOnboardingComplete();
+    router.push("/(auth)/sign-up");
   };
 
   const handleLogIn = () => {
+    if (isSignedIn) {
+      router.replace("/(tabs)");
+      return;
+    }
     markOnboardingComplete();
-    router.push('/(auth)/sign-in');
+    router.push("/(auth)/sign-in");
+  };
+
+  const goBack = () => {
+    if (currentFeature > 0) {
+      const prev = currentFeature - 1;
+      flatListRef.current?.scrollToOffset({
+        offset: prev * width,
+        animated: true,
+      });
+      setCurrentFeature(prev);
+    }
   };
 
   if (redirectReady || onboardingComplete) {
-    return <Redirect href={isSignedIn ? '/(tabs)' : '/(welcome)'} />;
+    return <Redirect href={isSignedIn ? "/(tabs)" : "/(welcome)"} />;
   }
 
   const renderItem = ({ item, index }: { item: Feature; index: number }) => {
-    const inputRange = [(index - 1) * width, index * width, (index + 1) * width];
+    const inputRange = [
+      (index - 1) * width,
+      index * width,
+      (index + 1) * width,
+    ];
     const opacity = scrollX.interpolate({
       inputRange,
       outputRange: [0, 1, 0],
-      extrapolate: 'clamp',
+      extrapolate: "clamp",
     });
 
     return (
@@ -107,7 +154,7 @@ export default function OnboardingScreen() {
         style={[
           styles.pageContainer,
           { width },
-          // Only fade the first two screens
+          index === 0 ? { backgroundColor: "#4A3DE3" } : null,
           (index === 0 || index === 1) && { opacity },
         ]}
       >
@@ -116,7 +163,7 @@ export default function OnboardingScreen() {
         ) : (
           <View style={styles.contentContainer}>
             <Image
-              source={require('../assets/placeholderFrame.png')}
+              source={require("../assets/placeholderFrame.png")}
               style={styles.imageBox}
             />
             <Text style={styles.featureTitle}>{item.title}</Text>
@@ -129,12 +176,16 @@ export default function OnboardingScreen() {
 
   return (
     <Animated.View
-      style={[
-        styles.container,
-        { backgroundColor: animatedBackgroundColor },
-      ]}
+      style={[styles.container, { backgroundColor: animatedBackgroundColor }]}
     >
       <SafeAreaView style={styles.safeArea}>
+        {/* Back button */}
+        {currentFeature > 0 && (
+          <TouchableOpacity style={styles.backButton} onPress={goBack}>
+            <Ionicons name="chevron-back" size={24} color="#4A3DE3" />
+          </TouchableOpacity>
+        )}
+
         <Animated.View style={styles.dotsContainer}>
           {features.map((_, i) => (
             <Animated.View
@@ -144,17 +195,19 @@ export default function OnboardingScreen() {
                 {
                   width: i === currentFeature ? 24 : 8,
                   backgroundColor:
-                    i === currentFeature
-                      ? (i === 0
-                          ? scrollX.interpolate({
-                              inputRange: [0, width / 2],
-                              outputRange: ['#FFFFFF', '#000000'],
-                              extrapolate: 'clamp',
-                            })
-                          : 'black')
-                      : (i === 0
-                          ? 'rgba(255,255,255,0.5)'
-                          : '#D3D3D3'),
+                    currentFeature > 0
+                      ? // After first screen - use these colors
+                        i === currentFeature
+                        ? "#4A3DE3"
+                        : "#D3D3D3" // Active dot is purple, inactive is light gray
+                      : // First screen (currentFeature = 0) - use original colors
+                      i === currentFeature
+                      ? scrollX.interpolate({
+                          inputRange: [0, width / 4],
+                          outputRange: ["#FFFFFF", "#4A3DE3"],
+                          extrapolate: "clamp",
+                        })
+                      : "rgba(255,255,255,0.5)",
                 },
               ]}
             />
@@ -174,9 +227,12 @@ export default function OnboardingScreen() {
           scrollEventThrottle={30}
         />
 
-        {/* only show footer on slides 2+ */}
-        {currentFeature !== 0 && (
-          <View style={styles.footer}>
+        {currentFeature == 3 && (
+          <Animated.View
+            style={[styles.footer, { opacity: footerOpacity }]}
+            // set pointerEvents to auto as conditional check with Animated value is unsupported
+            pointerEvents="auto"
+          >
             <CustomButton
               text="Sign Up"
               onPress={handleSignUp}
@@ -189,50 +245,83 @@ export default function OnboardingScreen() {
               style={styles.logInButton}
               textStyle={styles.logInText}
             />
-          </View>
+          </Animated.View>
         )}
       </SafeAreaView>
     </Animated.View>
   );
 }
 
+// Imported styles from Welcome Screen
+const welcomeStyles = StyleSheet.create({
+  content: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 40,
+  },
+  logoContainer: {
+    alignItems: "center",
+    marginBottom: 80,
+  },
+  logoBox: {
+    width: 149,
+    height: 149,
+    backgroundColor: "#4A3DE3",
+    marginBottom: 20,
+    borderRadius: 24,
+  },
+  title: {
+    fontSize: 30,
+    fontWeight: "600",
+    color: "#FCFBFF",
+    marginBottom: 8,
+  },
+  subtitle: {
+    fontSize: 16,
+    color: "#FCFBFF",
+    textAlign: "center",
+    marginHorizontal: 20,
+  },
+});
+
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    position: 'relative',
+  container: {
+    flex: 1,
+    position: "relative",
   },
   safeArea: {
     flex: 1,
   },
-  pageContainer: { 
-    flex: 1, 
+  pageContainer: {
+    flex: 1,
   },
   contentContainer: {
     flex: 1,
-    backgroundColor: 'white',
+    backgroundColor: "white",
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     padding: 25,
     paddingBottom: 140,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   featureTitle: {
     fontSize: 28,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginBottom: 16,
-    textAlign: 'left',
+    textAlign: "left",
   },
   featureDescription: {
     fontSize: 16,
     lineHeight: 24,
-    color: '#666',
+    color: "#666",
     marginBottom: 30,
-    textAlign: 'left',
+    textAlign: "left",
   },
   dotsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
+    flexDirection: "row",
+    justifyContent: "center",
     marginVertical: 20,
   },
   dot: {
@@ -240,37 +329,39 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     marginHorizontal: 4,
   },
-
+  backButton: {
+    position: "absolute",
+    top: 80,
+    left: 20,
+    zIndex: 10,
+  },
   footer: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 20,
     left: 0,
     right: 0,
-    flexDirection: 'column',
-    justifyContent: 'space-evenly',
+    flexDirection: "column",
+    justifyContent: "space-evenly",
     paddingHorizontal: 20,
   },
-
   signUpButton: {
-    backgroundColor: '#4A3DE3',
+    backgroundColor: "#4A3DE3",
     borderRadius: 10,
     paddingVertical: 14,
     paddingHorizontal: 32,
   },
-  signUpText: { color: 'white' },
-
+  signUpText: { color: "white" },
   logInButton: {
-    backgroundColor: 'transparent',
+    backgroundColor: "transparent",
     borderRadius: 10,
     marginTop: 10,
     marginBottom: 20,
     paddingVertical: 14,
     paddingHorizontal: 32,
     borderWidth: 1,
-    borderColor: '#4A3DE3',
+    borderColor: "#4A3DE3",
   },
-  logInText: { color: '#4A3DE3' },
-
+  logInText: { color: "#4A3DE3" },
   imageBox: {
     width: 345,
     height: 354,

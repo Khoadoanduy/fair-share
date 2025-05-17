@@ -38,10 +38,11 @@ import React, {
           const storedOnboarding = await AsyncStorage.getItem(
             "onboardingComplete"
           );
-          setOnboardingComplete(storedOnboarding === "true");
+          setOnboardingComplete(storedOnboarding === "false");
   
           // 2) Post–signup “user onboarding” only once you’re actually signed in
           if (isSignedIn) {
+            setOnboardingComplete(storedOnboarding === "true");
             const storedUserOnboarding = await AsyncStorage.getItem(
               "needsUserOnboarding"
             );
@@ -49,6 +50,7 @@ import React, {
             if (storedUserOnboarding === null) {
               setNeedsUserOnboarding(true);
             } else {
+              
               setNeedsUserOnboarding(storedUserOnboarding === "true");
             }
           } else {

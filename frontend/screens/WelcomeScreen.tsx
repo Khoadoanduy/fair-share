@@ -1,12 +1,12 @@
-import React from 'react';
+// src/screens/WelcomeScreen.tsx
 import { StyleSheet, Text, View, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import CustomButton from '../components/CustomButton';
-import { useAuthContext } from '../contexts/AuthContext';
+import { useAuthContext as useAuthContextFromProvider } from '../contexts/AuthContext';
 
 export default function WelcomeScreen() {
-  const { markOnboardingComplete } = useAuthContext();
+  const { markOnboardingComplete } = useAuthContextFromProvider();
 
   const handleSignUp = () => {
     markOnboardingComplete();
@@ -32,7 +32,7 @@ export default function WelcomeScreen() {
       </View>
 
       {/* Button group at bottom */}
-      <View style={styles.footer}>
+      <View style={styles.buttonContainer}>
         <CustomButton
           text="Sign Up"
           onPress={handleSignUp}
@@ -46,7 +46,6 @@ export default function WelcomeScreen() {
           textStyle={styles.logInText}
         />
       </View>
-      
     </SafeAreaView>
   );
 }
@@ -85,14 +84,13 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginHorizontal: 20,
   },
-  footer: {
+  buttonContainer: {
     position: 'absolute',
-    bottom: 20,
-    left: 0,
-    right: 0,
-    flexDirection: 'column',
-    justifyContent: 'space-evenly',
+    bottom: 40,
+    width: '100%',
     paddingHorizontal: 20,
+    flexDirection: 'column',
+    gap: 10,
   },
   signUpButton: {
     backgroundColor: 'white',
@@ -117,3 +115,101 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 });
+
+// src/contexts/AuthContext.tsx
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { useAuth } from '@clerk/clerk-expo';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+export type AuthContextType = {
+  isSignedIn: boolean;
+  isLoaded: boolean;
+  onboardingComplete: boolean;
+  needsUserOnboarding: boolean;
+  loading: boolean;
+  markOnboardingComplete: () => Promise<void>;
+  markUserOnboardingComplete: () => Promise<void>;
+};
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const { isSignedIn, isLoaded } = useAuth();
+  const [loading, setLoading] = useState(true);
+  const [onboardingComplete, setOnboardingComplete] = useState(false);
+  const [needsUserOnboarding, setNeedsUserOnboarding] = useState(false);
+
+  // Load flags from AsyncStorage on auth load
+  useEffect(() => {
+    if (!isLoaded) return;
+    setLoading(true);
+    (async () => {
+      try {
+        const storedOnboarding = await AsyncStorage.getItem('onboardingComplete');
+        setOnboardingComplete(storedOnboarding === 'true');
+
+        if (isSignedIn) {
+          const storedUserOnboarding = await AsyncStorage.getItem('needsUserOnboarding');
+          setNeedsUserOnboarding(
+            storedUserOnboarding === null ? true : storedUserOnboarding === 'true'
+          );
+        } else {
+          setNeedsUserOnboarding(false);
+        }
+      } catch (err) {
+        console.error('Error loading onboarding flags:', err);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [isLoaded, isSignedIn]);
+
+  // Clear onboardingComplete when user signs out
+  useEffect(() => {
+    if (!isSignedIn) {
+      AsyncStorage.setItem('onboardingComplete', 'false')
+        .catch(err => console.error('Error resetting onboarding flag:', err));
+      setOnboardingComplete(false);
+    }
+  }, [isSignedIn]);
+
+  const markOnboardingComplete = async () => {
+    try {
+      await AsyncStorage.setItem('onboardingComplete', 'true');
+      setOnboardingComplete(true);
+    } catch (err) {
+      console.error('Failed to save onboardingComplete:', err);
+    }
+  };
+
+  const markUserOnboardingComplete = async () => {
+    try {
+      await AsyncStorage.setItem('needsUserOnboarding', 'false');
+      setNeedsUserOnboarding(false);
+    } catch (err) {
+      console.error('Failed to save needsUserOnboarding:', err);
+    }
+  };
+
+  return (
+    <AuthContext.Provider
+      value={{
+        isSignedIn: isSignedIn || false,
+        isLoaded,
+        onboardingComplete,
+        needsUserOnboarding,
+        loading,
+        markOnboardingComplete,
+        markUserOnboardingComplete,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
+export function useAuthContext() {
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error('useAuthContext must be used within AuthProvider');
+  return ctx;
+}
