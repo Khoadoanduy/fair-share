@@ -26,7 +26,7 @@ export default function Index() {
   // Completed onboarding but not signed in: welcome/sign-up
   if (!isSignedIn) {
     console.log('not signed in');
-    return <Redirect href="/(onboarding)" />;
+    return <Redirect href="/(welcome)" />;
   }
 
   // Signed in and onboarded: main app tabs

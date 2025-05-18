@@ -17,6 +17,7 @@ if (!WEBHOOK_SECRET) {
 
 // Define the webhook endpoint to handle POST requests from Clerk
 webhookRouter.post('/webhook', async (req: Request, res: Response) => {
+  console.log("Received webhook request");
     // Extract Svix headers needed to verify the webhook
   const svix_id = req.headers['svix-id'] as string;
   const svix_timestamp = req.headers['svix-timestamp'] as string;
@@ -49,7 +50,7 @@ webhookRouter.post('/webhook', async (req: Request, res: Response) => {
 
   // Handle the 'user.created' event from Clerk
   if (eventType === 'user.created') {
-    const { id, email_addresses, first_name, last_name } = evt.data;
+    const { id, email_addresses, first_name, last_name,userName} = evt.data;
 
     if (!id || !email_addresses?.length) {
       return res.status(400).send('Missing required user data');
@@ -61,6 +62,7 @@ webhookRouter.post('/webhook', async (req: Request, res: Response) => {
       email: email_addresses[0].email_address,
       firstName: first_name || '',
       lastName: last_name || '',
+      username: userName || '',
     };
 
     try {

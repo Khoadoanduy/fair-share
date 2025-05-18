@@ -10,6 +10,7 @@ interface GetUserParams {
 //  Use CreateUserInput type
 async function createUser(data: CreateUserInput) {
   try {
+    console.log('Attempting to create user:', data);
     const user = await prisma.user.create({ data });
     return { user };
   } catch (error) {
@@ -19,3 +20,4 @@ async function createUser(data: CreateUserInput) {
 }
 
 export { createUser };
+
