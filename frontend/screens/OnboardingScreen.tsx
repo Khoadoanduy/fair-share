@@ -52,37 +52,33 @@ export default function OnboardingScreen() {
   }, [isSignedIn]);
 
   const features: Feature[] = [
-    {
+    { 
       id: "1",
       component: (
         <View style={welcomeStyles.content}>
           <View style={welcomeStyles.logoContainer}>
             <Image
-              source={require("../assets/FairShare_logo.png")}
+              source={require('../assets/FairShare_logo.png')}
               style={welcomeStyles.logoBox}
             />
             <Text style={welcomeStyles.title}>Fair Share</Text>
-            <Text style={welcomeStyles.subtitle}>
-              Shared subscriptions, simplified.
-            </Text>
+            <Text style={welcomeStyles.subtitle}>Shared subscriptions, simplified.</Text>
           </View>
         </View>
-      ),
+      )
     },
     {
       id: "2",
-      title: "Your subscriptions, all in one place.",
-      description:"Manage all your subscriptions, both personal and shared, and keep track of what's active, upcoming, or on trial.",
+      description:
+        "Manage all your subscriptions, both personal and shared, and keep track of what's active, upcoming, or on trial.",
     },
     {
       id: "3",
-      title: "Share subscriptions seamlessly.",
       description:
         "Start or join groups, add members, and manage shared subscriptions together. From payments to renewals, keep things in sync.",
     },
     {
       id: "4",
-      title: "Get notified and stay in control.",
       description:
         "Never miss a renewal, OTP, or group update. Smart reminders and real-time alerts keep your subscriptions running smoothly.",
     },
@@ -92,7 +88,7 @@ export default function OnboardingScreen() {
     const idx = Math.round(e.nativeEvent.contentOffset.x / width);
     setCurrentFeature(idx);
   };
-
+  
   const footerOpacity = scrollX.interpolate({
     inputRange: [width * 2, width * 3],
     outputRange: [0, 1],
@@ -149,12 +145,38 @@ export default function OnboardingScreen() {
       extrapolate: "clamp",
     });
 
+    const renderTitle = () => {
+      if (index === 1) {
+        return (
+          <View style={styles.titleContainer}>
+            <Text style={styles.featureTitle}>Your subscriptions,</Text>
+            <Text style={styles.featureTitle}>all in <Text style={styles.highlightedText}>one place.</Text></Text>
+          </View>
+        );
+      } else if (index === 2) {
+        return (
+          <View style={styles.titleContainer}>
+            <Text style={styles.featureTitle}>Share subscriptions</Text>
+            <Text style={styles.highlightedText}>seamlessly.</Text>
+          </View>
+        );
+      } else if (index === 3) {
+        return (
+          <View style={styles.titleContainer}>
+            <Text style={styles.featureTitle}>Get <Text style={styles.highlightedText}>notified</Text></Text>
+            <Text style={styles.featureTitle}>and stay <Text style={styles.highlightedText}>in control.</Text></Text>
+          </View>
+        );
+      }
+      return null;
+    };
+
     return (
       <Animated.View
         style={[
           styles.pageContainer,
           { width },
-          index === 0 ? { backgroundColor: "#4A3DE3" } : null,
+          index === 0 ? { backgroundColor: '#4A3DE3' } : null,
           (index === 0 || index === 1) && { opacity },
         ]}
       >
@@ -166,7 +188,9 @@ export default function OnboardingScreen() {
               source={require("../assets/placeholderFrame.png")}
               style={styles.imageBox}
             />
-            <Text style={styles.featureTitle}>{item.title}</Text>
+            
+            {renderTitle()}
+            
             <Text style={styles.featureDescription}>{item.description}</Text>
           </View>
         )}
@@ -182,7 +206,11 @@ export default function OnboardingScreen() {
         {/* Back button */}
         {currentFeature > 0 && (
           <TouchableOpacity style={styles.backButton} onPress={goBack}>
-            <Ionicons name="chevron-back" size={24} color="#4A3DE3" />
+            <Ionicons
+              name="chevron-back"
+              size={24}
+              color="#4A3DE3"
+            />
           </TouchableOpacity>
         )}
 
@@ -194,20 +222,20 @@ export default function OnboardingScreen() {
                 styles.dot,
                 {
                   width: i === currentFeature ? 24 : 8,
-                  backgroundColor:
-                    currentFeature > 0
-                      ? // After first screen - use these colors
-                        i === currentFeature
-                        ? "#4A3DE3"
-                        : "#D3D3D3" // Active dot is purple, inactive is light gray
-                      : // First screen (currentFeature = 0) - use original colors
-                      i === currentFeature
-                      ? scrollX.interpolate({
-                          inputRange: [0, width / 4],
-                          outputRange: ["#FFFFFF", "#4A3DE3"],
-                          extrapolate: "clamp",
-                        })
-                      : "rgba(255,255,255,0.5)",
+                  backgroundColor: 
+                    currentFeature > 0 ? (
+                      // After first screen - use these colors
+                      i === currentFeature ? "#4A3DE3" : "#D3D3D3"  // Active dot is purple, inactive is light gray
+                    ) : (
+                      // First screen (currentFeature = 0) - use original colors
+                      i === currentFeature 
+                        ? scrollX.interpolate({
+                            inputRange: [0, width / 2],
+                            outputRange: ["#FFFFFF", "#000000"],
+                            extrapolate: "clamp",
+                          })
+                        : "rgba(255,255,255,0.5)"
+                    ),
                 },
               ]}
             />
@@ -256,31 +284,31 @@ export default function OnboardingScreen() {
 const welcomeStyles = StyleSheet.create({
   content: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: 'center',
+    alignItems: 'center',
     paddingHorizontal: 40,
   },
   logoContainer: {
-    alignItems: "center",
+    alignItems: 'center',
     marginBottom: 80,
   },
   logoBox: {
     width: 149,
     height: 149,
-    backgroundColor: "#4A3DE3",
+    backgroundColor: '#4A3DE3',
     marginBottom: 20,
     borderRadius: 24,
   },
   title: {
     fontSize: 30,
-    fontWeight: "600",
-    color: "#FCFBFF",
+    fontWeight: '600',
+    color: '#FCFBFF',
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
-    color: "#FCFBFF",
-    textAlign: "center",
+    color: '#FCFBFF',
+    textAlign: 'center',
     marginHorizontal: 20,
   },
 });
@@ -306,11 +334,20 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
+  titleContainer: {
+    alignSelf: 'flex-start',
+    marginBottom: 16,
+  },
   featureTitle: {
     fontSize: 28,
     fontWeight: "bold",
-    marginBottom: 16,
+    marginBottom: 0,
     textAlign: "left",
+  },
+  highlightedText: {
+    fontSize: 28,
+    color: '#4A3DE3',
+    fontWeight: 'bold',
   },
   featureDescription: {
     fontSize: 16,
@@ -344,6 +381,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-evenly",
     paddingHorizontal: 20,
   },
+  
   signUpButton: {
     backgroundColor: "#4A3DE3",
     borderRadius: 10,
@@ -367,5 +405,5 @@ const styles = StyleSheet.create({
     height: 354,
     borderRadius: 20,
     marginBottom: 20,
-  },
+  }
 });

@@ -22,6 +22,9 @@ export default function Index() {
   if (onboardingComplete==false) {
     return <Redirect href="/(onboarding)" />;
   }
+  if(onboardingComplete && !isSignedIn){
+    return <Redirect href="/(onboarding)/user" />;
+  }
 
   // Completed onboarding but not signed in: welcome/sign-up
   if (!isSignedIn) {
