@@ -2,12 +2,21 @@ import { Pressable, Text, StyleSheet, PressableProps, TextStyle } from 'react-na
 
 type CustomButtonProps = {
   text: string;
-  textStyle?: TextStyle;
+  textStyle?: TextStyle | TextStyle[];
 } & PressableProps;
 
-export default function CustomButton({ text, textStyle, ...props }: CustomButtonProps) {
+export default function CustomButton({ text, textStyle, style, ...props }: CustomButtonProps) {
   return (
-    <Pressable {...props} style={[styles.button, props.style]}>
+    <Pressable 
+      {...props} 
+      style={(state) => {
+        const baseStyle = [styles.button];
+        if (typeof style === 'function') {
+          return [...baseStyle, style(state)];
+        }
+        return [...baseStyle, style];
+      }}
+    >
       <Text style={[styles.buttonText, textStyle]}>{text}</Text>
     </Pressable>
   );

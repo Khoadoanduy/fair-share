@@ -39,6 +39,13 @@ export default function AuthLayout() {
         }}
     />
     <Stack.Screen
+        name="customSubscription"
+        options={{
+            title: "",
+            headerTitle: () => null,
+        }}
+    />
+    <Stack.Screen
         name="inviteMember"
         options={{
             title: "",
