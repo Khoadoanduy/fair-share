@@ -22,12 +22,15 @@
   "dependencies": {
     "@clerk/clerk-sdk-node": "^4.13.23",
     "@prisma/client": "^6.7.0",
+    "@types/ws": "^8.18.1",
     "backend": "file:",
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.2",
     "stripe": "^18.1.0",
-    "svix": "^1.64.1"
+    "svix": "^1.64.1",
+    "ts-node": "^10.9.2",
+    "ws": "^8.18.2"
   }
 }

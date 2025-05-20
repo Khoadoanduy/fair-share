@@ -1,6 +1,7 @@
 import { View, Text, Image, StyleSheet, SafeAreaView } from "react-native";
 import { useUser } from "@clerk/clerk-expo";
 import PaymentMethod from "@/components/PaymentMethod";
+import Noti from "@/components/TestNoti";
 
 export default function HomeScreen() {
   const { user } = useUser();
@@ -8,6 +9,7 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
+        <Noti />
         <PaymentMethod/>
         {user ? (
           <>
