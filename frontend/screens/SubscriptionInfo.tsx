@@ -27,7 +27,7 @@ export default function SubscriptionScreen() {
 
   const [subscriptionImage, setSubscriptionImage] = useState<string | null>(null);
 
-  // Request permission on mount
+  // Request permission to access photo library
   useEffect(() => {
     (async () => {
       if (Platform.OS !== 'web') {
@@ -39,17 +39,17 @@ export default function SubscriptionScreen() {
     })();
   }, []);
 
+  //Users pick image from library
   const pickImage = async () => {
     try {
       let result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true, // lets user crop the image
-        aspect: [1, 1], // force square aspect ratio (perfect for circle)
+        aspect: [1, 1],
         quality: 1,
       });
 
       if (!result.canceled) {
-        // For newer versions result.assets is an array
         const uri = result.assets[0].uri;
         setSubscriptionImage(uri);
       }

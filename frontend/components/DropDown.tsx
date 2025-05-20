@@ -70,7 +70,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: '#fafafa',
   },
-  text: { fontSize: 16, color: '#000' },
+  text: { fontSize: 16, color: '#94A3B8' },
   dropdown: {
     position: 'absolute',
     top: '100%',
