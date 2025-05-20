@@ -79,7 +79,10 @@ export default function InviteMemberScreen() {
             keyExtractor={(item) => item.id}
             renderItem={({ item }) => (
               <View style={styles.eachUser}>
-                <Text style={styles.username}>{item.username}</Text>
+                <View>
+                  <Text style={styles.username}>{item.firstName} {item.lastName}</Text>
+                  <Text style={styles.inviteFriends}>{item.username}</Text>
+                </View>
                 <InviteButton
                   userId={item.id}
                   groupId={groupId}
@@ -99,7 +102,7 @@ export default function InviteMemberScreen() {
         ) :<Text style={styles.emptyText}>No users found.</Text> }
       </View>
       <ProgressDots totalSteps={3} currentStep={3}/>      
-      <CustomButton text="Back to homepage" onPress={() => router.push('/(tabs)')} style={styles.button} />
+      <CustomButton text="Back to homepage" onPress={() => router.push('/(tabs)/groups')} style={styles.button} />
     </SafeAreaView>
   );
 }
@@ -133,6 +136,7 @@ const styles = StyleSheet.create({
   inviteFriends: {
     color: '#64748B',
     fontSize: 14,
+    marginTop: 8
   },
   searchbar: {
     marginTop: 50,
@@ -147,7 +151,8 @@ const styles = StyleSheet.create({
   },
   linkInvite: {
     flexDirection: 'row',
-    justifyContent: 'space-between'
+    justifyContent: 'space-between',
+    marginTop: 8
   },
   userContainer: {
     backgroundColor: 'white',
@@ -185,7 +190,6 @@ const styles = StyleSheet.create({
   eachUser: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
     paddingVertical: 12,
     paddingHorizontal: 15,
     borderRadius: 10,

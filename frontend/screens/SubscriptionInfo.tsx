@@ -245,14 +245,14 @@ const styles = StyleSheet.create({
   },
   dayInput: {
     width: 173.5,
-    marginRight: 10
+    marginRight: 5
   },
   cycle: {
     width: 150,
   },
   currency: {
     width: 100,
-    marginRight: 10,
+    marginRight: 5,
   },
   amount: {
     flex: 1
