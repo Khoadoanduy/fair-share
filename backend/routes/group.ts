@@ -11,12 +11,13 @@ const prisma = new PrismaClient();
 router.post('/create', async function (request, response) {
   try {
     console.log("create group called")
-    const { groupName, subscriptionName, planName, amount, cycle } = request.body;    
+    const { groupName, subscriptionName, subscriptionId, planName, amount, cycle } = request.body;    
 
     const group = await prisma.group.create({
       data: {
         groupName,
-        subscriptionName,
+        subscriptionId,  // This is optional and might be null for custom subscriptions
+        subscriptionName, // Required for all groups
         planName,
         amount,
         cycle,
