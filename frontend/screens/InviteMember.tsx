@@ -4,7 +4,7 @@ import InviteButton from '@/components/InviteButton';
 import { useState } from 'react';
 import axios from 'axios';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-
+import ProgressDots from '@/components/ProgressDots';
 
 
 type User = {
@@ -53,46 +53,53 @@ export default function InviteMemberScreen() {
   };
 
 
-
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
-      <Text style={styles.title}>Invite Members</Text>
+        <Text style={styles.title}>Add members</Text>
+        <Text style={styles.subtitle}>Send invitation to members to join the group</Text>
+        <View style={styles.searchbar}>
+          <Image source={require('../assets/search.png')} style={styles.icon} />
+          <TextInput
+            style={styles.searchText}
+            placeholder="Search"
+            value={search}
+            onChangeText={setSearch}
+            onSubmitEditing={() => handleSearch(search)}
+            returnKeyType="search"
+          />
+          <Image source={require('../assets/nav-arrow-down.png')} style={styles.icon} />
+        </View>
 
-      <View style={styles.searchbar}>
-        <Image source={require('../assets/search.png')} style={styles.icon} />
-        <TextInput
-          style={styles.searchText}
-          placeholder="Enter username"
-          value={search}
-          onChangeText={setSearch}
-          onSubmitEditing={() => handleSearch(search)}
-          returnKeyType="search"
-        />
-      </View>
-
-      {loading && <ActivityIndicator size="small" color="#555" />}
-
-      <FlatList
-        data={users}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <View style={styles.eachUser}>
-            <Text style={styles.username}>{item.username}</Text>
-            <InviteButton
-              userId={item.id}
-              groupId={groupId}
-            />
+        {loading && <ActivityIndicator size="small" color="#555" />}
+        {users.length > 0 ? (
+        <View style={styles.userContainer}>
+          <FlatList
+            data={users}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item }) => (
+              <View style={styles.eachUser}>
+                <Text style={styles.username}>{item.username}</Text>
+                <InviteButton
+                  userId={item.id}
+                  groupId={groupId}
+                />
+              </View>
+            )}
+          />
+          <Image source={require('../assets/line.png')} style={styles.line}/>
+          <View style={styles.linkInvite}>
+            <View>
+              <Text style={styles.username}>Looking for someone else?</Text>
+              <Text style={styles.inviteFriends}>Invite friends to FairShare</Text>
+            </View>
+            <CustomButton text="Invite" style={styles.buttonLink}/>
           </View>
-        )}
-        ListEmptyComponent={
-          !loading && search.length > 0 ? (
-            <Text style={styles.emptyText}>No users found.</Text>
-          ) : null
-        }
-      />
-      <CustomButton text="Back to homepage" onPress={() => router.push('/(tabs)')} style={styles.button} />
+        </View>
+        ) :<Text style={styles.emptyText}>No users found.</Text> }
       </View>
+      <ProgressDots totalSteps={3} currentStep={3}/>      
+      <CustomButton text="Back to homepage" onPress={() => router.push('/(tabs)')} style={styles.button} />
     </SafeAreaView>
   );
 }
@@ -103,19 +110,32 @@ const styles = StyleSheet.create({
     paddingTop: 20,
     flex: 1,
     backgroundColor: 'white',
+    justifyContent: 'space-between'
   },
   content: {
     marginLeft: 20,
     marginRight: 20,
-    marginTop: 40
+    marginTop: 40,
+    flex: 1,
   },
   title: {
     fontSize: 24,
     fontWeight: '600',
-    marginBottom: 20,
-    color: '#333',
+    marginBottom: 10,
+    color: '#4A3DE3',
+    alignSelf: 'center'
+  },
+  subtitle: {
+    alignSelf:'center',
+    color: '#64748B',
+    fontSize: 14,
+  },
+  inviteFriends: {
+    color: '#64748B',
+    fontSize: 14,
   },
   searchbar: {
+    marginTop: 50,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#D9D9D9',
@@ -124,7 +144,32 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     marginBottom: 20,
     height: 48
-
+  },
+  linkInvite: {
+    flexDirection: 'row',
+    justifyContent: 'space-between'
+  },
+  userContainer: {
+    backgroundColor: 'white',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  line: {
+    alignSelf: 'center',
+    width: '100%',
+    marginBottom: 10
+  },
+  buttonLink: {
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
   },
   icon: {
     width: 20,
@@ -141,7 +186,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#D9D9D9',
     paddingVertical: 12,
     paddingHorizontal: 15,
     borderRadius: 10,
@@ -159,7 +203,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   button: {
-    backgroundColor: 'black',
-    marginTop: 30
+    marginBottom: 50,
+    marginRight: 20,
+    marginLeft: 20
   }
 });

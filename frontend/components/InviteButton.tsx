@@ -31,7 +31,8 @@ const InviteButton = ({ userId, groupId }: InviteButtonProps) => {
   return <CustomButton 
             text={invited? "Invited" : "Invite"} 
             onPress={handleInvite} 
-            style={[invited ? styles.buttonInvited : styles.buttonActive, styles.button]}/>;
+            style={[invited ? styles.buttonInvited : styles.buttonActive, styles.button]}
+            textStyle = {invited ? styles.textInvited : null}/>;
 };
 
 const styles = StyleSheet.create({
@@ -43,13 +44,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   buttonActive: {
-    backgroundColor: '#000000', 
+    backgroundColor: '#4A3DE3', 
   },
   buttonInvited: {
-    backgroundColor: '#A0AEC0', 
+    backgroundColor: '#E2E8F0', 
   },
-  buttonText: {
-    color: 'white',
+  textInvited: {
+    color: '#9EA2AE',
     fontSize: 16,
     fontWeight: '600',
   },
