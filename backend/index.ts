@@ -4,6 +4,7 @@ import webhookRouter from './src/webhooks/clerk/route'; // Adjust path if rename
 import customerRoutes from './routes/stripe_customer';
 import paymentRoutes from './routes/stripe_payment';
 import userRoute from './routes/user'
+import groupMember from './routes/groupMember'
 
 dotenv.config();
 
@@ -15,9 +16,10 @@ app.use(express.json());
 // Mount webhook router
 app.use('/', webhookRouter);
 
-app.use('/api/stripe', customerRoutes);
-app.use('/api/stripe', paymentRoutes);
-app.use('/api/user', userRoute)
+//app.use('/api/stripe', customerRoutes);
+//app.use('/api/stripe', paymentRoutes);
+app.use('/api/user', userRoute);
+app.use('/api/groupMember', groupMember)
 
 
 app.listen(PORT, () => {
