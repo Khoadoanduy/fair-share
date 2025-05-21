@@ -16,8 +16,8 @@ app.use(express.json());
 // Mount webhook router
 app.use('/', webhookRouter);
 
-//app.use('/api/stripe', customerRoutes);
-//app.use('/api/stripe', paymentRoutes);
+app.use('/api/stripe', customerRoutes);
+app.use('/api/stripe', paymentRoutes);
 app.use('/api/user', userRoute);
 app.use('/api/groupMember', groupMember)
 
