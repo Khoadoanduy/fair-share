@@ -13,7 +13,6 @@ const API_URL = process.env.EXPO_PUBLIC_API_URL
 export default function ProfileScreen() {
     const { isSignedIn, signOut, getToken } = useAuth();
     const { user } = useUser();
-    const [jwt, setJwt] = useState<string | null>(null);
 
     // User data state
     const [userProfile, setUserProfile] = useState<any>(null);
@@ -44,7 +43,6 @@ export default function ProfileScreen() {
 
     const handleSignOutPress = async () => {
         try {
-            setJwt(null);
             await signOut();
             router.replace('/(welcome)');
         } catch (error) {
@@ -57,19 +55,10 @@ export default function ProfileScreen() {
 
         try {
             const token = await getToken();
-            setJwt(token);
             return token;
         } catch (error) {
             console.error("Error fetching JWT:", error);
-            setJwt('Error fetching token');
             return null;
-        }
-    };
-
-    const copyTokenToClipboard = async () => {
-        if (jwt) {
-            await Clipboard.setStringAsync(jwt);
-            Alert.alert('Success', 'Token copied to clipboard!');
         }
     };
 
@@ -251,7 +240,6 @@ export default function ProfileScreen() {
                                     <Text style={styles.infoLabel}>Email:</Text>
                                     <View style={styles.emailContainer}>
                                         <Text style={styles.userEmail}>{user.primaryEmailAddress?.emailAddress}</Text>
-                                        <Text style={styles.readOnlyText}>(managed by Clerk)</Text>
                                     </View>
                                 </View>
                             )}
@@ -358,23 +346,7 @@ export default function ProfileScreen() {
                                 style={styles.saveButton}
                             />
                         )}
-
-                        {/* Authentication Section */}
-                        <View style={styles.section}>
-                            <Text style={styles.sectionTitle}>Authentication</Text>
-
-                            <View style={styles.tokenContainer}>
-                                <Text style={styles.tokenTitle}>Your JWT Token:</Text>
-                                <ScrollView style={styles.tokenScroll}>
-                                    <Text style={styles.tokenText}>{jwt || 'Loading token...'}</Text>
-                                </ScrollView>
-                                <CustomButton
-                                    text="Copy Token"
-                                    onPress={copyTokenToClipboard}
-                                    style={{ marginTop: 10 }}
-                                />
-                            </View>
-                        </View>
+                
 
                         <CustomButton
                             text="Sign Out"
