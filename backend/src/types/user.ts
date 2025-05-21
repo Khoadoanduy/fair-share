@@ -14,4 +14,3 @@ export type CreateUserInput = {
       zipCode: string;
     };
   };
-  
