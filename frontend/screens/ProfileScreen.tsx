@@ -8,7 +8,7 @@ import * as Clipboard from 'expo-clipboard';
 import { Ionicons } from '@expo/vector-icons';
 
 // API base URL - update with your actual backend URL
-const API_URL = 'http://192.168.1.53:3000';
+const API_URL = process.env.EXPO_PUBLIC_API_URL
 
 export default function ProfileScreen() {
     const { isSignedIn, signOut, getToken } = useAuth();
