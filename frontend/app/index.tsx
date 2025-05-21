@@ -1,40 +1,28 @@
 // app/index.tsx
-import React from 'react';
+import React, {use, useEffect} from 'react';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { Redirect } from 'expo-router';
 import { useAuthContext } from '../contexts/AuthContext';
-import { useAuth } from '@clerk/clerk-expo';
-
+import { SignedIn, useAuth, useUser } from '@clerk/clerk-expo';
+import { useUserState } from '@/hooks/useUserState';
 export default function Index() {
-  const { loading: contextLoading, onboardingComplete } = useAuthContext();
-  const { isSignedIn, isLoaded: authLoaded } = useAuth();
-  console.log("onboarding status" + onboardingComplete)
-  // Show spinner while auth or onboarding state is initializing
-  if (contextLoading || !authLoaded) {
-    return (
-      <View style={styles.container}>
-        <ActivityIndicator size="large" color="#4353FD" />
-      </View>
-    );
+  const { isSignedIn,onboardingComplete } = useUserState();
+  if (isSignedIn){
+    return <Redirect href="/(tabs)" />;
   }
-
-  // First-time visitor: initial onboarding flow
-  if (onboardingComplete==false) {
+  if (onboardingComplete==false && !isSignedIn) {
     return <Redirect href="/(onboarding)" />;
   }
-  if(onboardingComplete && !isSignedIn){
+  if(onboardingComplete && isSignedIn){
     return <Redirect href="/(onboarding)/user" />;
   }
-
-  // Completed onboarding but not signed in: welcome/sign-up
-  if (!isSignedIn) {
-    console.log('not signed in');
+  if (onboardingComplete && !isSignedIn) {
+    console.log("from main index.tsx to welcome")
     return <Redirect href="/(welcome)" />;
   }
-
-  // Signed in and onboarded: main app tabs
+  
   else{
-    console.log('signed in');
+    console.log("from main index.tsx to tabs")
     return <Redirect href="/(tabs)" />;
   }
   

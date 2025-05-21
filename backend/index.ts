@@ -8,14 +8,17 @@ import userRoute from './routes/user'
 dotenv.config();
 
 const app = express();
+var cors = require('cors')
 const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
+app.use(cors());
+
 
 // Mount webhook router
 app.use('/', webhookRouter);
 
-app.use('/api/stripe', customerRoutes);
+app.use('/api/stripe-customer', customerRoutes);
 app.use('/api/stripe', paymentRoutes);
 app.use('/api/user', userRoute)
 

@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect } from "react";
+import { use, useRef, useState, useEffect } from "react";
 import {
   NativeSyntheticEvent,
   NativeScrollEvent,
@@ -17,9 +17,12 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { Redirect, router } from "expo-router";
 import CustomButton from "@/components/CustomButton";
-import { useAuthContext } from "../contexts/AuthContext";
+import { useAppDispatch } from "@/redux/hooks";
+import { setOnboardingComplete } from "@/redux/slices/userSlice";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useAuth } from "@clerk/clerk-expo";
-
+import { useUserState } from "@/hooks/useUserState";
+import { on } from "events";
 const { width } = Dimensions.get("window");
 
 type Feature = {
@@ -30,42 +33,76 @@ type Feature = {
 };
 
 export default function OnboardingScreen() {
+  const { onboardingComplete,isSignedIn } = useUserState();
+  console.log("from onbs" + onboardingComplete,isSignedIn)
   const flatListRef = useRef<FlatList<Feature>>(null);
   const [currentFeature, setCurrentFeature] = useState(0);
-  const [redirectReady, setRedirectReady] = useState(false);
-  const { markOnboardingComplete, onboardingComplete } = useAuthContext();
-  const { isSignedIn } = useAuth();
+  const dispatch = useAppDispatch();
+  const scrollX = useRef(new Animated.Value(0)).current;
 
   // Animated value for background color transition
-  const scrollX = useRef(new Animated.Value(0)).current;
   const animatedBackgroundColor = scrollX.interpolate({
     inputRange: [0, width, width * 2],
     outputRange: ["#4A3DE3", "#FFFFFF", "#FFFFFF"],
     extrapolate: "clamp",
   });
 
-  useEffect(() => {
-    if (isSignedIn) {
-      markOnboardingComplete();
-      setRedirectReady(true);
+  const footerOpacity = scrollX.interpolate({
+    inputRange: [width * 2, width * 3],
+    outputRange: [0, 1],
+    extrapolate: "clamp",
+  });
+
+  // Early return if signed in
+  if (isSignedIn) {
+    return <Redirect href="/(tabs)" />;
+  }
+  if (onboardingComplete && !isSignedIn){
+
+  }
+  const handleComplete = async () => {
+    try {
+      dispatch(setOnboardingComplete(true));
+    } catch (err) {
+      console.error("Failed to complete onboarding:", err);
     }
-  }, [isSignedIn]);
+  };
+
+  const handleSignUp = async () => {
+    if (isSignedIn) {
+      router.replace("/(tabs)");
+      return;
+    }
+    await handleComplete();
+    router.push("/(auth)/sign-up");
+  };
+
+  const handleLogIn = async () => {
+    if (isSignedIn) {
+      router.replace("/(tabs)");
+      return;
+    }
+    await handleComplete();
+    router.push("/(auth)/sign-in");
+  };
 
   const features: Feature[] = [
-    { 
+    {
       id: "1",
       component: (
         <View style={welcomeStyles.content}>
           <View style={welcomeStyles.logoContainer}>
             <Image
-              source={require('../assets/FairShare_logo.png')}
+              source={require("../assets/FairShare_logo.png")}
               style={welcomeStyles.logoBox}
             />
             <Text style={welcomeStyles.title}>Fair Share</Text>
-            <Text style={welcomeStyles.subtitle}>Shared subscriptions, simplified.</Text>
+            <Text style={welcomeStyles.subtitle}>
+              Shared subscriptions, simplified.
+            </Text>
           </View>
         </View>
-      )
+      ),
     },
     {
       id: "2",
@@ -88,35 +125,11 @@ export default function OnboardingScreen() {
     const idx = Math.round(e.nativeEvent.contentOffset.x / width);
     setCurrentFeature(idx);
   };
-  
-  const footerOpacity = scrollX.interpolate({
-    inputRange: [width * 2, width * 3],
-    outputRange: [0, 1],
-    extrapolate: "clamp",
-  });
 
   const handleScrollEvent = Animated.event(
     [{ nativeEvent: { contentOffset: { x: scrollX } } }],
     { useNativeDriver: false }
   );
-
-  const handleSignUp = () => {
-    if (isSignedIn) {
-      router.replace("/(tabs)");
-      return;
-    }
-    markOnboardingComplete();
-    router.push("/(auth)/sign-up");
-  };
-
-  const handleLogIn = () => {
-    if (isSignedIn) {
-      router.replace("/(tabs)");
-      return;
-    }
-    markOnboardingComplete();
-    router.push("/(auth)/sign-in");
-  };
 
   const goBack = () => {
     if (currentFeature > 0) {
@@ -128,10 +141,6 @@ export default function OnboardingScreen() {
       setCurrentFeature(prev);
     }
   };
-
-  if (redirectReady || onboardingComplete) {
-    return <Redirect href={isSignedIn ? "/(tabs)" : "/(welcome)"} />;
-  }
 
   const renderItem = ({ item, index }: { item: Feature; index: number }) => {
     const inputRange = [
@@ -150,7 +159,9 @@ export default function OnboardingScreen() {
         return (
           <View style={styles.titleContainer}>
             <Text style={styles.featureTitle}>Your subscriptions,</Text>
-            <Text style={styles.featureTitle}>all in <Text style={styles.highlightedText}>one place.</Text></Text>
+            <Text style={styles.featureTitle}>
+              all in <Text style={styles.highlightedText}>one place.</Text>
+            </Text>
           </View>
         );
       } else if (index === 2) {
@@ -163,8 +174,12 @@ export default function OnboardingScreen() {
       } else if (index === 3) {
         return (
           <View style={styles.titleContainer}>
-            <Text style={styles.featureTitle}>Get <Text style={styles.highlightedText}>notified</Text></Text>
-            <Text style={styles.featureTitle}>and stay <Text style={styles.highlightedText}>in control.</Text></Text>
+            <Text style={styles.featureTitle}>
+              Get <Text style={styles.highlightedText}>notified</Text>
+            </Text>
+            <Text style={styles.featureTitle}>
+              and stay <Text style={styles.highlightedText}>in control.</Text>
+            </Text>
           </View>
         );
       }
@@ -176,7 +191,7 @@ export default function OnboardingScreen() {
         style={[
           styles.pageContainer,
           { width },
-          index === 0 ? { backgroundColor: '#4A3DE3' } : null,
+          index === 0 ? { backgroundColor: "#4A3DE3" } : null,
           (index === 0 || index === 1) && { opacity },
         ]}
       >
@@ -188,9 +203,9 @@ export default function OnboardingScreen() {
               source={require("../assets/placeholderFrame.png")}
               style={styles.imageBox}
             />
-            
+
             {renderTitle()}
-            
+
             <Text style={styles.featureDescription}>{item.description}</Text>
           </View>
         )}
@@ -206,11 +221,7 @@ export default function OnboardingScreen() {
         {/* Back button */}
         {currentFeature > 0 && (
           <TouchableOpacity style={styles.backButton} onPress={goBack}>
-            <Ionicons
-              name="chevron-back"
-              size={24}
-              color="#4A3DE3"
-            />
+            <Ionicons name="chevron-back" size={24} color="#4A3DE3" />
           </TouchableOpacity>
         )}
 
@@ -222,20 +233,20 @@ export default function OnboardingScreen() {
                 styles.dot,
                 {
                   width: i === currentFeature ? 24 : 8,
-                  backgroundColor: 
-                    currentFeature > 0 ? (
-                      // After first screen - use these colors
-                      i === currentFeature ? "#4A3DE3" : "#D3D3D3"  // Active dot is purple, inactive is light gray
-                    ) : (
-                      // First screen (currentFeature = 0) - use original colors
-                      i === currentFeature 
-                        ? scrollX.interpolate({
-                            inputRange: [0, width / 2],
-                            outputRange: ["#FFFFFF", "#000000"],
-                            extrapolate: "clamp",
-                          })
-                        : "rgba(255,255,255,0.5)"
-                    ),
+                  backgroundColor:
+                    currentFeature > 0
+                      ? // After first screen - use these colors
+                        i === currentFeature
+                        ? "#4A3DE3"
+                        : "#D3D3D3" // Active dot is purple, inactive is light gray
+                      : // First screen (currentFeature = 0) - use original colors
+                      i === currentFeature
+                      ? scrollX.interpolate({
+                          inputRange: [0, width / 2],
+                          outputRange: ["#FFFFFF", "#000000"],
+                          extrapolate: "clamp",
+                        })
+                      : "rgba(255,255,255,0.5)",
                 },
               ]}
             />
@@ -255,26 +266,26 @@ export default function OnboardingScreen() {
           scrollEventThrottle={30}
         />
 
-        {currentFeature == 3 && (
-          <Animated.View
-            style={[styles.footer, { opacity: footerOpacity }]}
-            // set pointerEvents to auto as conditional check with Animated value is unsupported
-            pointerEvents="auto"
-          >
-            <CustomButton
-              text="Sign Up"
-              onPress={handleSignUp}
-              style={styles.signUpButton}
-              textStyle={styles.signUpText}
-            />
-            <CustomButton
-              text="Log In"
-              onPress={handleLogIn}
-              style={styles.logInButton}
-              textStyle={styles.logInText}
-            />
-          </Animated.View>
-        )}
+        
+        <Animated.View
+          style={[styles.footer, { opacity: footerOpacity }]}
+          // set pointerEvents to auto as conditional check with Animated value is unsupported
+          pointerEvents="auto"
+        >
+          <CustomButton
+            text="Sign Up"
+            onPress={handleSignUp}
+            style={styles.signUpButton}
+            textStyle={styles.signUpText}
+          />
+          <CustomButton
+            text="Log In"
+            onPress={handleLogIn}
+            style={styles.logInButton}
+            textStyle={styles.logInText}
+          />
+        </Animated.View>
+        
       </SafeAreaView>
     </Animated.View>
   );
@@ -284,31 +295,31 @@ export default function OnboardingScreen() {
 const welcomeStyles = StyleSheet.create({
   content: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     paddingHorizontal: 40,
   },
   logoContainer: {
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: 80,
   },
   logoBox: {
     width: 149,
     height: 149,
-    backgroundColor: '#4A3DE3',
+    backgroundColor: "#4A3DE3",
     marginBottom: 20,
     borderRadius: 24,
   },
   title: {
     fontSize: 30,
-    fontWeight: '600',
-    color: '#FCFBFF',
+    fontWeight: "600",
+    color: "#FCFBFF",
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
-    color: '#FCFBFF',
-    textAlign: 'center',
+    color: "#FCFBFF",
+    textAlign: "center",
     marginHorizontal: 20,
   },
 });
@@ -335,7 +346,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   titleContainer: {
-    alignSelf: 'flex-start',
+    alignSelf: "flex-start",
     marginBottom: 16,
   },
   featureTitle: {
@@ -346,8 +357,8 @@ const styles = StyleSheet.create({
   },
   highlightedText: {
     fontSize: 28,
-    color: '#4A3DE3',
-    fontWeight: 'bold',
+    color: "#4A3DE3",
+    fontWeight: "bold",
   },
   featureDescription: {
     fontSize: 16,
@@ -381,7 +392,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-evenly",
     paddingHorizontal: 20,
   },
-  
+
   signUpButton: {
     backgroundColor: "#4A3DE3",
     borderRadius: 10,
@@ -405,5 +416,5 @@ const styles = StyleSheet.create({
     height: 354,
     borderRadius: 20,
     marginBottom: 20,
-  }
+  },
 });

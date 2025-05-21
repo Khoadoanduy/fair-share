@@ -22,8 +22,10 @@
     "@react-native-async-storage/async-storage": "2.1.2",
     "@react-navigation/bottom-tabs": "^7.2.0",
     "@react-navigation/native": "^7.0.14",
+    "@reduxjs/toolkit": "^2.8.2",
     "@stripe/stripe-react-native": "^0.45.0",
     "axios": "^1.9.0",
+    "date-fns": "^4.1.0",
     "expo": "^53.0.9",
     "expo-auth-session": "^6.1.5",
     "expo-blur": "~14.1.4",
@@ -49,6 +51,7 @@
     "react-native-screens": "~4.10.0",
     "react-native-web": "^0.20.0",
     "react-native-webview": "13.13.5",
+    "react-redux": "^9.2.0",
     "stripe": "^18.1.0",
     "zod": "^3.24.2"
   },

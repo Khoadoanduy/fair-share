@@ -2,27 +2,24 @@ import { useState } from "react";
 import { StyleSheet, Text, View, SafeAreaView, Image } from "react-native";
 import { Redirect } from "expo-router";
 import CustomButton from "@/components/CustomButton";
-import { useAuthContext } from "../contexts/AuthContext";
-
+import { useAppDispatch, useAppSelector } from "@/redux/hooks";
+import { setUserOnboardingComplete } from "@/redux/slices/userSlice";
+import { router } from "expo-router";
 export default function EmailVerified() {
   const [redirectReady, setRedirectReady] = useState(false);
-  const { markUserOnboardingComplete, needsUserOnboarding } = useAuthContext();
+  const dispatch = useAppDispatch();
+  const needsUserOnboarding = useAppSelector(
+    (state) => state.user.needsUserOnboarding
+  );
 
   const handleNext = () => {
     console.log("EmailVerified: Marking user onboarding as complete");
-    markUserOnboardingComplete();
+    dispatch(setUserOnboardingComplete(false));
+    console
     setRedirectReady(true);
+    router.push("/(collectpayment)/CollectPayment")
   };
 
-  if (redirectReady || !needsUserOnboarding) {
-    console.log(
-      "EmailVerified: Redirecting to tabs, redirectReady:",
-      redirectReady,
-      "needsUserOnboarding:",
-      needsUserOnboarding
-    );
-    return <Redirect href="/(tabs)" />;
-  }
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
@@ -40,7 +37,7 @@ export default function EmailVerified() {
           <Image
             source={require("../assets/placeholderFrame.png")}
             style={styles.logoBox}
-          ></Image>
+          />
           <CustomButton
             text="Next - Create personal card"
             style={styles.nextButton}
