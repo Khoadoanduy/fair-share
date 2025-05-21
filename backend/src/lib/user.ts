@@ -1,5 +1,5 @@
-import prisma from '../../prisma/client'; 
-import { CreateUserInput } from '../types/user'; 
+import prisma from '../../prisma/client';
+import { CreateUserInput } from '../types/user';
 import { User } from '@prisma/client';
 
 interface GetUserParams {
@@ -35,24 +35,18 @@ async function updateUser(id: string, data: Partial<CreateUserInput>) {
 // Delete a user
 async function deleteUser(id: string) {
   try {
-    // First check if user exists
-    const existingUser = await prisma.user.findUnique({
-      where: { id }
+    // Use transactions to ensure all operations succeed or fail together
+    const result = await prisma.$transaction(async (tx) => {
+      const deletedUser = await tx.user.delete({
+        where: { id }
+      });
+      return { success: true, userId: id };
     });
-    
-    if (!existingUser) {
-      return { error: 'User not found' };
-    }
-    
-    // Delete the user
-    await prisma.user.delete({
-      where: { id }
-    });
-    
-    return { success: true, message: 'User deleted successfully' };
+
+    return result;
   } catch (error) {
     console.error('Error deleting user:', error);
-    return { error };
+    return { error: error instanceof Error ? error.message : 'Unknown error' };
   }
 }
 
