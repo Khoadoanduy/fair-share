@@ -31,7 +31,7 @@ export default function CreateGroupName() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
-        <Text style={styles.title}>Create New Group</Text>
+        <Text style={styles.title}>Create new group</Text>
         <Text style={styles.subtitle}>First, create a name for your group</Text>
         <Text style={styles.groupname}>Group name</Text>
         <CustomInput
@@ -58,7 +58,7 @@ const styles = StyleSheet.create({
     flex: 1
   },
   title: {
-    marginTop: -50,
+    marginTop: -40,
     fontSize: 24,
     fontWeight: 'bold',
     marginBottom: 10,
@@ -68,11 +68,11 @@ const styles = StyleSheet.create({
   subtitle: {
     alignSelf:'center',
     color: '#64748B',
-    fontSize: 14,
+    fontSize: 15,
     marginBottom: 50
   },
   groupname: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '500',
     marginBottom: 15
   },

@@ -207,8 +207,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   button: {
-    marginBottom: 50,
+    marginBottom: 65,
     marginRight: 20,
-    marginLeft: 20
+    marginLeft: 20,
+    height: 50,
   }
 });

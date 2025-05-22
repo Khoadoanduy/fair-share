@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TextInput, Alert, SafeAreaView, Pressable, Image, Platform, TouchableOpacity, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Alert, SafeAreaView, Pressable, Image, Platform, TouchableOpacity, Keyboard } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import CustomButton from '@/components/CustomButton';
 import axios from 'axios';
@@ -8,6 +8,7 @@ import CustomInput from '@/components/CustomInput';
 import ProgressDots from '@/components/ProgressDots';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
+import CustomDropdown, { DropdownOption } from '@/components/CustomDropdown';
 
 type FormatData = {
   subscriptionName: string;
@@ -93,13 +94,13 @@ export default function CustomSubscriptionScreen() {
     }
   };
 
-  const cycleOptions = [
+  const cycleOptions: DropdownOption[] = [
     { label: 'Weekly', value: 'weekly' },
     { label: 'Monthly', value: 'monthly' },
     { label: 'Yearly', value: 'yearly' },
   ];
 
-  const currencyOptions = [
+  const currencyOptions: DropdownOption[] = [
     { label: 'USD ($)', value: 'USD' },
     { label: 'EUR (€)', value: 'EUR' },
     { label: 'JPY (¥)', value: 'JPY' },
@@ -113,6 +114,7 @@ export default function CustomSubscriptionScreen() {
     if (showCurrencyDropdown) {
       setShowCurrencyDropdown(false);
     }
+    Keyboard.dismiss();
   };
 
   return (
@@ -125,60 +127,12 @@ export default function CustomSubscriptionScreen() {
             left: 0,
             right: 0,
             bottom: 0,
-            backgroundColor: 'rgba(0,0,0,0.4)',
+            backgroundColor: 'rgba(0,0,0,0)',
             zIndex: 90,
           }}
           activeOpacity={1}
           onPress={handleOutsideClick}
         />
-      )}
-
-      {showCycleDropdown && (
-        <View style={[
-          styles.dropdownMenuSmall,
-          {
-            top: 380,
-            left: 20 + (0.52 * (Dimensions.get('window').width - 40)),
-            width: 0.48 * (Dimensions.get('window').width - 40),
-          }
-        ]}>
-          {cycleOptions.map(option => (
-            <Pressable
-              key={option.value}
-              style={styles.dropdownItem}
-              onPress={() => {
-                setValue('cycle', option.value);
-                setShowCycleDropdown(false);
-              }}
-            >
-              <Text style={styles.dropdownText}>{option.label}</Text>
-            </Pressable>
-          ))}
-        </View>
-      )}
-
-      {showCurrencyDropdown && (
-        <View style={[
-          styles.dropdownMenuSmall,
-          {
-            top: 470,
-            left: 20,
-            width: 0.3 * (Dimensions.get('window').width - 40),
-          }
-        ]}>
-          {currencyOptions.map(option => (
-            <Pressable
-              key={option.value}
-              style={styles.dropdownItem}
-              onPress={() => {
-                setValue('currency', option.value);
-                setShowCurrencyDropdown(false);
-              }}
-            >
-              <Text style={styles.dropdownText}>{option.label}</Text>
-            </Pressable>
-          ))}
-        </View>
       )}
 
       <View style={styles.contentContainer}>
@@ -223,8 +177,11 @@ export default function CustomSubscriptionScreen() {
               control={control}
               name="day"
               placeholder="1"
-              keyboardType="numeric"
+              keyboardType="decimal-pad"
               style={styles.dayInput}
+              blurOnSubmit={true}
+              returnKeyType="done"
+              onSubmitEditing={() => Keyboard.dismiss()}
             />
 
             <Controller
@@ -232,15 +189,22 @@ export default function CustomSubscriptionScreen() {
               name="cycle"
               rules={{ required: true }}
               render={({ field: { value } }) => (
-                <Pressable
+                <CustomDropdown
+                  options={cycleOptions}
+                  value={value}
+                  placeholder="Select cycle"
+                  onChange={(val) => setValue('cycle', val)}
+                  isOpen={showCycleDropdown}
+                  setIsOpen={() => setShowCycleDropdown(!showCycleDropdown)}
                   style={styles.simpleDropdown}
-                  onPress={() => setShowCycleDropdown(!showCycleDropdown)}
-                >
-                  <Text style={styles.dropdownValue}>
-                    {value ? cycleOptions.find(opt => opt.value === value)?.label : 'Select cycle'}
-                  </Text>
-                  <Ionicons name="chevron-down" size={20} color="#888" />
-                </Pressable>
+                  menuStyle={{
+                    position: 'absolute',
+                    top: 52,
+                    right: 0,
+                    width: '48%',
+                    zIndex: 100,
+                  }}
+                />
               )}
             />
           </View>
@@ -251,15 +215,23 @@ export default function CustomSubscriptionScreen() {
               control={control}
               name="currency"
               render={({ field: { value } }) => (
-                <Pressable
+                <CustomDropdown
+                  options={currencyOptions}
+                  value={value}
+                  placeholder="Currency"
+                  onChange={(val) => setValue('currency', val)}
+                  isOpen={showCurrencyDropdown}
+                  setIsOpen={() => setShowCurrencyDropdown(!showCurrencyDropdown)}
                   style={styles.currencyInput}
-                  onPress={() => setShowCurrencyDropdown(!showCurrencyDropdown)}
-                >
-                  <Text style={styles.dropdownValue}>
-                    {value ? currencyOptions.find(opt => opt.value === value)?.label : 'Currency'}
-                  </Text>
-                  <Ionicons name="chevron-down" size={18} color="#888" />
-                </Pressable>
+                  menuStyle={{
+                    position: 'absolute',
+                    top: 52,
+                    left: 0,
+                    width: '30%',
+                    zIndex: 100,
+                  }}
+                  iconSize={18}
+                />
               )}
             />
 
@@ -267,8 +239,11 @@ export default function CustomSubscriptionScreen() {
               control={control}
               name="amount"
               placeholder="Amount"
-              keyboardType="numeric"
+              keyboardType="decimal-pad"
               style={styles.amountInput}
+              blurOnSubmit={true}
+              returnKeyType="done"
+              onSubmitEditing={() => Keyboard.dismiss()}
             />
           </View>
 
@@ -276,7 +251,7 @@ export default function CustomSubscriptionScreen() {
           <CustomInput
             control={control}
             name="planName"
-            placeholder="Enter subscription plan"
+            placeholder="Enter plan name"
             style={styles.planInput}
           />
         </View>
@@ -288,8 +263,9 @@ export default function CustomSubscriptionScreen() {
         <CustomButton
           text="Next"
           onPress={handleSubmit(handleCreateGroup)}
+          size="large"
+          fullWidth
           style={styles.nextButton}
-          textStyle={styles.nextButtonText}
         />
       </View>
     </SafeAreaView>
@@ -301,6 +277,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: 'white',
+    justifyContent: 'space-between',
   },
   header: {
     paddingHorizontal: 20,
@@ -323,14 +300,15 @@ const styles = StyleSheet.create({
   // Content container
   contentContainer: {
     flex: 1,
+    paddingTop: 40,
     paddingHorizontal: 20,
-    paddingBottom: 120, // Add space for fixed button container
+    paddingBottom: 120,
   },
 
   // Form container and labels
   formContainer: {
-    width: '100%',
-    marginTop: 16,
+    flex: 1,
+    paddingBottom: 20,
   },
   label: {
     fontSize: 16,
@@ -342,6 +320,7 @@ const styles = StyleSheet.create({
 
   // Subscription section with image
   subscriptionSection: {
+    paddingVertical: 16,
     flexDirection: 'row',
     alignItems: 'flex-start',
     marginBottom: 10,
@@ -365,11 +344,6 @@ const styles = StyleSheet.create({
     borderColor: '#E2E8F0',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  addImageText: {
-    fontSize: 14,
-    color: '#64748B',
-    marginBottom: 4,
   },
   addIcon: {
     position: 'absolute',
@@ -502,20 +476,22 @@ const styles = StyleSheet.create({
 
   // Button container
   buttonContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
     paddingHorizontal: 20,
-    paddingBottom: 40, // Reduced from 30
+    paddingBottom: 50,
+    paddingTop: 10,
     backgroundColor: 'white',
     alignItems: 'center',
+    width: '100%',
   },
   nextButton: {
     backgroundColor: '#5E5AEF',
     borderRadius: 12,
     paddingVertical: 14,
     width: '100%',
-  },
-  nextButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
+    marginBottom: 50,
   },
 });
