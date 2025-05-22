@@ -97,7 +97,7 @@ export default function SubscriptionScreen() {
 
   const handleCreateCustomSubscription = () => {
     router.push({
-      pathname: '/(group)/customSubscription',
+      pathname: '/(group)/CustomSubscription',
       params: { groupName }
     });
   };
@@ -122,7 +122,7 @@ export default function SubscriptionScreen() {
 
       // If successfully create group, move and give groupId to next page to invite members
       router.push({
-        pathname: '/(group)/inviteMember',
+        pathname: '/(group)/InviteMember',
         params: { groupId: response.data.groupId },
       });
     } catch (error) {
