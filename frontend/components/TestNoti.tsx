@@ -53,6 +53,7 @@ const WebSocketDemo: React.FC = () => {
     if (ws.current && ws.current.readyState === WebSocket.OPEN && inputMessage) {
       ws.current.send(inputMessage);
       addMessage(`Sent: ${inputMessage}`);
+
       setInputMessage('');
     } else if (!inputMessage) {
       addMessage('Cannot send empty message');

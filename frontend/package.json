@@ -19,13 +19,14 @@
     "@expo/vector-icons": "^14.0.2",
     "@hookform/resolvers": "^5.0.1",
     "@react-native-async-storage/async-storage": "1.23.1",
+    "@react-native-community/push-notification-ios": "^1.11.0",
     "@react-navigation/bottom-tabs": "^7.2.0",
     "@react-navigation/native": "^7.0.14",
     "@stripe/stripe-react-native": "^0.45.0",
     "axios": "^1.9.0",
     "expo": "^53.0.7",
     "expo-blur": "~14.0.3",
-    "expo-constants": "~17.0.8",
+    "expo-constants": "~17.1.6",
     "expo-font": "~13.0.4",
     "expo-haptics": "~14.0.1",
     "expo-linking": "~7.0.5",
@@ -48,7 +49,9 @@
     "react-native-web": "~0.19.13",
     "react-native-webview": "13.12.5",
     "stripe": "^18.1.0",
-    "zod": "^3.24.2"
+    "zod": "^3.24.2",
+    "expo-notifications": "~0.31.2",
+    "expo-device": "~7.1.4"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
