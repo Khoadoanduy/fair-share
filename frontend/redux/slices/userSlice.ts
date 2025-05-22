@@ -154,7 +154,16 @@ const userSlice = createSlice({
       state.needsUserOnboarding = action.payload;
     },
     resetUser: (state) => {
-      return initialState;
+      // Reset everything except onboardingComplete
+      const currentOnboardingComplete = state.onboardingComplete;
+      
+      // Reset to initial state
+      const newState = { ...initialState };
+      
+      // Preserve onboarding complete
+      newState.onboardingComplete = currentOnboardingComplete;
+      
+      return newState;
     },
     setUserOnboardingComplete: (state, action: PayloadAction<boolean>) => {
       state.needsUserOnboarding = action.payload;

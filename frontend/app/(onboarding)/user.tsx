@@ -1,4 +1,4 @@
-import EmailVerified from "@/screens/EmailVerified";
+import EmailVerified from "@/app/(auth)/verified";
 export default function UserOnboarding() {
   return <EmailVerified />;
 }

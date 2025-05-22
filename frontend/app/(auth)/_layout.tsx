@@ -31,27 +31,10 @@ export default function AuthLayout() {
         headerLeft: () => <BackButton />,
       }}
     >
-      <Stack.Screen
-        name="sign-in"
-        options={{
-          title: "Log In",
-          headerBackVisible: false,
-        }}
-      />
-      <Stack.Screen
-        name="sign-up"
-        options={{
-          title: "Sign Up",
-          headerBackVisible: false,
-        }}
-      />
-      <Stack.Screen
-        name="verify"
-        options={{
-          title: "Verify Email",
-          headerBackVisible: false,
-        }}
-      />
+      <Stack.Screen name="sign-in" options={{ title: "Sign In" }} />
+      <Stack.Screen name="sign-up" options={{ title: "Sign Up" }} />
+      <Stack.Screen name="verify" options={{ title: "Verify Email" }} />
+      <Stack.Screen name="verified" options={{ title: "Email Verified" }} />
     </Stack>
   );
 }

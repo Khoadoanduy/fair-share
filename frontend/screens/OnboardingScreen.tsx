@@ -73,8 +73,9 @@ export default function OnboardingScreen() {
       router.replace("/(tabs)");
       return;
     }
-    await handleComplete();
+    
     router.push("/(auth)/sign-up");
+    await handleComplete();
   };
 
   const handleLogIn = async () => {

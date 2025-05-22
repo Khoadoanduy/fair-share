@@ -3,18 +3,18 @@ import { StyleSheet, Text, View, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import CustomButton from '../components/CustomButton';
-import { useAuthContext as useAuthContextFromProvider } from '../contexts/AuthContext';
+// import { useAuthContext as useAuthContext} from '../contexts/AuthContext';
 
 export default function WelcomeScreen() {
-  const { markOnboardingComplete } = useAuthContextFromProvider();
+  // const { markOnboardingComplete } = useAuthContext();
 
   const handleSignUp = () => {
-    markOnboardingComplete();
+    // markOnboardingComplete();
     router.push('/(auth)/sign-up');
   };
 
   const handleLogIn = () => {
-    markOnboardingComplete();
+    // markOnboardingComplete();
     router.push('/(auth)/sign-in');
   };
 

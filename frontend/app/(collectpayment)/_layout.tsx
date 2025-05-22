@@ -9,19 +9,6 @@ export default function CollectPaymentLayout() {
         headerShown: true,
       }}
     >
-      <Stack.Screen
-        name="CollectPayment"
-        options={{
-          headerShown: true,
-        }}
-      />
-      <Stack.Screen
-        name="StripePayment"
-        options={{
-          title: "Payment Setup",
-          headerBackTitle: "Back",
-        }}
-      />
     </Stack>
   );
 }
