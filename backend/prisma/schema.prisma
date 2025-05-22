@@ -40,7 +40,9 @@ model User {
 model Group {
   id               String            @id @default(auto()) @map("_id") @db.ObjectId
   groupName        String
-  subscriptionName String
+  subscription     Subscription?     @relation(fields: [subscriptionId], references: [id])
+  subscriptionId   String?           @db.ObjectId
+  subscriptionName String 
   planName         String?
   amount           Float
   virtualCardId    String?           @unique
@@ -68,4 +70,13 @@ model GroupInvitation {
   groupId   String   @db.ObjectId
   status    String   @default("pending") //pending, accepted, rejected
   createdAt DateTime @default(now())
+}
+
+model Subscription {
+  id       String  @id @default(auto()) @map("_id") @db.ObjectId
+  name     String
+  logo     String
+  category String
+  domain   String
+  groups   Group[]
 }
