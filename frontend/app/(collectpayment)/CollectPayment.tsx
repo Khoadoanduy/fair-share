@@ -480,8 +480,6 @@ export default function CollectPaymentScreen() {
                   clearButtonMode="while-editing"
                 />
               </View>
-
-              {/* Country list */}
               <FlatList
                 data={filteredCountries}
                 keyExtractor={(item, index) => `${item.country}-${index}`}
@@ -624,15 +622,15 @@ const styles = StyleSheet.create({
   // Modal styles
   modalContainer: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "flex-end",
+    backgroundColor: "transparent",
+    justifyContent: "flex-end", // Center the modal instead of pushing it to bottom
   },
   modalContent: {
     backgroundColor: "white",
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     paddingTop: 16,
-    maxHeight: "80%",
+    maxHeight: "50%",
   },
   modalHeader: {
     flexDirection: "row",
