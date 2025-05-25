@@ -7,6 +7,7 @@ import { authMiddleware, authErrorHandler } from './src/middleware';
 import customerRoutes from './routes/stripe_customer';
 import paymentRoutes from './routes/stripe_payment';
 import userRoute from './routes/user'
+import inviteRoute from './routes/invite'
 
 dotenv.config();
 
@@ -23,6 +24,7 @@ app.use('/', webhookRouter);
 app.use('/api/stripe', customerRoutes);
 app.use('/api/stripe', paymentRoutes);
 app.use('/api/user', userRoute)
+app.use('/api/invite', inviteRoute)
 
 
 // API routes with authentication middleware
