@@ -11,19 +11,30 @@ Notifications.setNotificationHandler({
         }),
 });
 
-export const sendTestNotification = async (): Promise<void> => {
-  try {
-    await Notifications.scheduleNotificationAsync({
-      content: {
-        title: 'Test Notification 📱',
-        body: 'This is a simple test notification!',
-        data: { test: 'data' },
-      },
-      trigger: null, // null = immediate notification
-    });
-    console.log('Test notification sent!');
-  } catch (error) {
-    console.error('Error sending notification:', error);
-    throw error;
-  }
-};
+// export const sendTestNotification = async (): Promise<void> => {
+//   try {
+//     await Notifications.scheduleNotificationAsync({
+//       content: {
+//         title: 'Test Notification 📱',
+//         body: 'This is a simple test notification!',
+//         data: { test: 'data' },
+//       },
+//       trigger: null, // null = immediate notification
+//     });
+//     console.log('Test notification sent!');
+//   } catch (error) {
+//     console.error('Error sending notification:', error);
+//     throw error;
+//   }
+// };
+
+export async function sendLocalNotification() {
+        await Notifications.scheduleNotificationAsync({
+          content: {
+                title: 'Test Notification 📱',
+                body: 'This is a simple test notification!',
+                data: { test: 'data' }
+          },
+          trigger: null, // Show immediately
+        });
+      }
