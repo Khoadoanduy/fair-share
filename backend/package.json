@@ -22,13 +22,14 @@
   "dependencies": {
     "@clerk/clerk-sdk-node": "^4.13.23",
     "@prisma/client": "^6.7.0",
+    "@types/stripe": "^8.0.416",
     "backend": "file:",
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",
     "express": "^5.1.0",
     "express-validator": "^7.2.1",
     "jsonwebtoken": "^9.0.2",
-    "stripe": "^18.1.0",
+    "stripe": "^18.1.1",
     "svix": "^1.64.1"
   }
 }

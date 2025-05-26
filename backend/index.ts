@@ -1,12 +1,13 @@
 import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
-import userRouter from './routes/user';
 import webhookRouter from './src/webhooks/clerk/route';
 import { authMiddleware, authErrorHandler } from './src/middleware';
 import customerRoutes from './routes/stripe_customer';
 import paymentRoutes from './routes/stripe_payment';
 import userRoute from './routes/user'
+import friendRoute from './routes/friend';
+import feedRouter from './routes/feed';
 
 dotenv.config();
 
@@ -23,10 +24,8 @@ app.use('/', webhookRouter);
 app.use('/api/stripe', customerRoutes);
 app.use('/api/stripe', paymentRoutes);
 app.use('/api/user', userRoute)
-
-
-// API routes with authentication middleware
-app.use('/api/user', userRouter);
+app.use('/api/friend', friendRoute)
+app.use('/api/feed', feedRouter);
 
 // Error handling (must be after all routes)
 app.use(authErrorHandler);
