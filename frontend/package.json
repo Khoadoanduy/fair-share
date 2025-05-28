@@ -26,6 +26,7 @@
     "axios": "^1.9.0",
     "expo": "^53.0.9",
     "expo-auth-session": "^6.1.5",
+    "expo-image-picker": "~16.1.4",
     "expo-blur": "~14.1.4",
     "expo-clipboard": "~7.1.4",
     "expo-constants": "~17.1.5",
