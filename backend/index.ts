@@ -11,7 +11,6 @@ import feedRouter from './routes/feed';
 import groupRoutes from './routes/group';
 import subscriptionRouter from './routes/subscription';
 
-
 dotenv.config();
 
 const app = express();
@@ -31,6 +30,7 @@ app.use('/api/stripe-payment', paymentRoutes);
 app.use('/api/user', userRoute)
 app.use('/api/friend', friendRoute)
 app.use('/api/feed', feedRouter);
+app.use('/api/groupMember', groupMember)
 
 // Error handling (must be after all routes)
 app.use(authErrorHandler);
