@@ -8,11 +8,16 @@ import paymentRoutes from './routes/stripe_payment';
 import userRoute from './routes/user'
 import friendRoute from './routes/friend';
 import feedRouter from './routes/feed';
+import groupRoutes from './routes/group';
+import subscriptionRouter from './routes/subscription';
+
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+
 
 // Basic middleware
 app.use(express.json());
@@ -21,8 +26,8 @@ app.use(cors());
 // Mount webhook router
 app.use('/', webhookRouter);
 
-app.use('/api/stripe', customerRoutes);
-app.use('/api/stripe', paymentRoutes);
+app.use('/api/stripe-customer', customerRoutes);
+app.use('/api/stripe-payment', paymentRoutes);
 app.use('/api/user', userRoute)
 app.use('/api/friend', friendRoute)
 app.use('/api/feed', feedRouter);
@@ -36,4 +41,5 @@ app.use(express.static('public'));
 // Start the server
 app.listen(PORT, () => {
   console.log(`✅ Server is running on ${PORT}`);
+  console.log(`✅ Server is running locally at: http://localhost:${PORT}`);
 });
