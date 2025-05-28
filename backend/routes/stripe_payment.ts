@@ -41,5 +41,20 @@ router.post('/payment-sheet', async function (request, response) {
           response.status(500).json({err});
         }
     });
+
+  router.get('/retrieve-paymentMethodId', async function (request, response) {
+    try {
+      const customerStripeID = request.body.customerStripeID ;
+      const paymentMethods = await stripe.customers.listPaymentMethods(customerStripeID);
+
+      response.json(paymentMethods);
+    } catch (err) {
+      // Log for debugging
+      console.error('Error retrieving user payment methods:', err);
+        
+      // Send back the Stripe (or other) error message
+      response.status(500).json({err});
+    }
+  });
     
 export default router;
