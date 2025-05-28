@@ -1,27 +1,45 @@
 import express from 'express';
 import dotenv from 'dotenv';
-import webhookRouter from './src/webhooks/clerk/route'; // Adjust path if renamed to webhookRouter.ts
+import cors from 'cors';
+import webhookRouter from './src/webhooks/clerk/route';
+import { authMiddleware, authErrorHandler } from './src/middleware';
 import customerRoutes from './routes/stripe_customer';
 import paymentRoutes from './routes/stripe_payment';
 import userRoute from './routes/user'
-import groupMember from './routes/groupMember'
+import friendRoute from './routes/friend';
+import feedRouter from './routes/feed';
+import groupRoutes from './routes/group';
+import subscriptionRouter from './routes/subscription';
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+
+
+// Basic middleware
 app.use(express.json());
+app.use(cors());
 
 // Mount webhook router
 app.use('/', webhookRouter);
 
-app.use('/api/stripe', customerRoutes);
-app.use('/api/stripe', paymentRoutes);
-app.use('/api/user', userRoute);
+app.use('/api/stripe-customer', customerRoutes);
+app.use('/api/stripe-payment', paymentRoutes);
+app.use('/api/user', userRoute)
+app.use('/api/friend', friendRoute)
+app.use('/api/feed', feedRouter);
 app.use('/api/groupMember', groupMember)
 
+// Error handling (must be after all routes)
+app.use(authErrorHandler);
 
+// Static files if needed
+app.use(express.static('public'));
+
+// Start the server
 app.listen(PORT, () => {
   console.log(`✅ Server is running on ${PORT}`);
+  console.log(`✅ Server is running locally at: http://localhost:${PORT}`);
 });

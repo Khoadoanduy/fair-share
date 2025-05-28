@@ -5,6 +5,7 @@ export type CreateUserInput = {
     lastName: string;
     phoneNumber?: string;
     dateOfBirth?: Date;
+    username?: string;
     address?: {
       country: string;
       street: string;
@@ -14,4 +15,3 @@ export type CreateUserInput = {
       zipCode: string;
     };
   };
-  
