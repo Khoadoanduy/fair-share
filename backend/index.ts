@@ -6,6 +6,7 @@ import { authMiddleware, authErrorHandler } from './src/middleware';
 import customerRoutes from './routes/stripe_customer';
 import paymentRoutes from './routes/stripe_payment';
 import userRoute from './routes/user'
+import inviteRoute from './routes/invite'
 import friendRoute from './routes/friend';
 import feedRouter from './routes/feed';
 import groupRoutes from './routes/group';
@@ -28,9 +29,10 @@ app.use('/', webhookRouter);
 app.use('/api/stripe-customer', customerRoutes);
 app.use('/api/stripe-payment', paymentRoutes);
 app.use('/api/user', userRoute)
+app.use('/api/invite', inviteRoute)
 app.use('/api/friend', friendRoute)
 app.use('/api/feed', feedRouter);
-app.use('/api/groupMember', groupMember)
+app.use('/api/groupMember', groupRoutes)
 
 // Error handling (must be after all routes)
 app.use(authErrorHandler);
