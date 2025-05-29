@@ -75,6 +75,82 @@ router.post('/invitation', async (req: Request, res: Response) => {
     }
 });
 
+// Check if an invitation exists
+router.get('/invitation/check', async (req: Request, res: Response) => {
+    const { senderId, recipientId } = req.query;
+
+    try {
+        const invitation = await prisma.friendInvitation.findFirst({
+            where: {
+                senderId: senderId as string,
+                recipientId: recipientId as string
+            }
+        });
+
+        if (invitation) {
+            return res.status(200).json({
+                exists: true,
+                status: invitation.status,
+                id: invitation.id
+            });
+        }
+
+        return res.status(200).json({ exists: false });
+    } catch (error) {
+        return res.status(500).json({ error: 'Failed to check invitation' });
+    }
+});
+
+// Remove invitation with specific sender/recipient
+router.post('/invitation/remove', async (req: Request, res: Response) => {
+    const { senderId, recipientId } = req.body;
+
+    if (!senderId || !recipientId) {
+        return res.status(400).json({ error: 'Missing required parameters' });
+    }
+
+    try {
+        // Find and delete the invitation
+        const result = await prisma.friendInvitation.deleteMany({
+            where: {
+                senderId,
+                recipientId
+            }
+        });
+
+        res.json({ success: true, deleted: result.count });
+    } catch (error) {
+        console.error('Error removing invitation:', error);
+        res.status(500).json({ error: 'Failed to remove invitation' });
+    }
+});
+
+// Remove all invitations between two users
+router.post('/invitation/removeAll', async (req: Request, res: Response) => {
+    const { userA, userB } = req.body;
+
+    if (!userA || !userB) {
+        return res.status(400).json({ error: 'Both userA and userB are required' });
+    }
+
+    try {
+        // Delete invitations in both directions
+        const result = await prisma.friendInvitation.deleteMany({
+            where: {
+                OR: [
+                    { senderId: userA, recipientId: userB },
+                    { senderId: userB, recipientId: userA }
+                ]
+            }
+        });
+
+        res.json({ success: true, deleted: result.count });
+    } catch (error) {
+        console.error('Error removing invitations:', error);
+        res.status(500).json({ error: 'Failed to remove invitations' });
+    }
+});
+
 // Accept or decline an invitation
 router.put('/invitation/:id', async (req: Request, res: Response) => {
     try {
@@ -198,5 +274,42 @@ router.delete('/:userId/:friendId', async (req: Request, res: Response) => {
         res.status(500).json({ error: 'Failed to remove friend' });
     }
 });
+
+// Search for users with a simpler implementation
+router.get('/search/:query', async (req: Request, res: Response) => {
+    try {
+        const { query } = req.params;
+        const userId = req.query.userId as string;
+
+        if (!query || query.trim().length < 1) {
+            return res.status(400).json({ error: 'Search query too short' });
+        }
+
+        // Simple search by username prefix
+        const users = await prisma.user.findMany({
+            where: {
+                username: {
+                    startsWith: query,
+                    mode: 'insensitive'
+                },
+                ...(userId ? { id: { not: userId } } : {})
+            },
+            select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                username: true,
+                email: true
+            },
+            take: 10
+        });
+
+        res.json(users);
+    } catch (error) {
+        console.error('Error searching users:', error);
+        res.status(500).json({ error: 'Failed to search users' });
+    }
+});
+
 
 export default router;
