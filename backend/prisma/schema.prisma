@@ -14,12 +14,12 @@ datasource db {
 }
 
 type Address {
-  country     String
-  street      String
-  apartment   String?
-  city        String
-  state       String
-  zipCode     String
+  country   String
+  street    String
+  apartment String?
+  city      String
+  state     String
+  zipCode   String
 }
 
 // Schemas
@@ -37,6 +37,10 @@ model User {
   address         Address?
   groups          GroupMember[]
   GroupInvitation GroupInvitation[]
+  sentInvitations     FriendInvitation[] @relation("SentInvitations")
+  receivedInvitations FriendInvitation[] @relation("ReceivedInvitations")
+  friends             Friend[]           @relation("UserFriends")
+  friendOf            Friend[]           @relation("FriendsOf")
 }
 
 model Group {
@@ -72,3 +76,28 @@ model GroupInvitation {
   createdAt DateTime @default(now())
 }
 
+model FriendInvitation {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  sender       User     @relation("SentInvitations", fields: [senderId], references: [id])
+  senderId     String   @db.ObjectId
+  recipient    User     @relation("ReceivedInvitations", fields: [recipientId], references: [id])
+  recipientId  String   @db.ObjectId
+  status       String   @default("pending")  // pending, accepted, declined
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Prevents duplicate friend invitation requests.
+  @@unique([senderId, recipientId])
+}
+
+model Friend {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  user      User     @relation("UserFriends", fields: [userId], references: [id])
+  userId    String   @db.ObjectId
+  friend    User     @relation("FriendsOf", fields: [friendId], references: [id])
+  friendId  String   @db.ObjectId
+  createdAt DateTime @default(now())
+
+  // Prevents duplicate friendship records.
+  @@unique([userId, friendId])
+}
