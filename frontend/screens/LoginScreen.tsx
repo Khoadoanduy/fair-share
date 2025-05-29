@@ -7,7 +7,6 @@ import {
   ScrollView,
   TouchableOpacity,
 } from "react-native";
-import LogInWith from '../components/LogInWith';
 import CustomInput from "../components/CustomInput";
 import CustomButton from "../components/CustomButton";
 import { Link } from "expo-router";
@@ -15,7 +14,6 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { isClerkAPIResponseError, useSignIn } from "@clerk/clerk-expo";
-import SignInWith from "../components/SignInWith";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 
@@ -97,19 +95,6 @@ export default function LoginScreen() {
             <Text style={styles.subtitle}>
               Welcome back to Fair Share
             </Text>
-            <View style={{ height: 30 }} />
-            <View style={styles.socialButtonContainer}>
-              <LogInWith
-                strategy="oauth_google"
-                style={styles.googleLogInButton}
-              />
-            </View>
-          </View>
-
-          <View style={styles.dividerContainer}>
-            <View style={styles.divider} />
-            <Text style={styles.dividerText}>OR</Text>
-            <View style={styles.divider} />
           </View>
 
           <View style={styles.form}>
@@ -238,33 +223,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#4353FD",
     borderRadius: 12,
     paddingVertical: 16,
-  },
-  dividerContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginVertical: 2,
-  },
-  divider: {
-    flex: 1,
-    height: 1,
-    backgroundColor: "#E2E8F0",
-  },
-  dividerText: {
-    paddingHorizontal: 16,
-    color: "#64748B",
-    fontWeight: "500",
-  },
-  socialButtonContainer: {
-    flexDirection: "row",
-    justifyContent: "center",
-    marginVertical: 2,
-    width: "100%",
-  },
-  googleLogInButton: {
-    backgroundColor: "#4353FD",
-    borderRadius: 8,
-    paddingVertical: 16,
-    width: "100%",
   },
   signupLinkContainer: {
     flexDirection: "row",
