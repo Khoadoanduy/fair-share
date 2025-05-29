@@ -147,4 +147,20 @@ router.get('/search-customers', async (req: Request, res: Response) => {
   }
 });
 
+
+router.get('/retrieve-paymentMethodId', async function (request, response) {
+  try {
+  const customerStripeID = request.query.customerStripeID as string;
+  
+  if (!customerStripeID) {
+    return response.status(400).json({ error: 'Customer Stripe ID is required' });
+  }
+    const paymentMethods = await stripe.customers.listPaymentMethods(customerStripeID);
+    response.json(paymentMethods);
+  } catch (error) {
+    console.error(error);
+    response.status(500).send('Error fetching payment methods');
+  }
+});
+
 export default router;
