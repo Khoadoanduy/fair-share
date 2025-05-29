@@ -22,6 +22,7 @@
     "@react-native-async-storage/async-storage": "2.1.2",
     "@react-navigation/bottom-tabs": "^7.2.0",
     "@react-navigation/native": "^7.0.14",
+    "@stripe/stripe-react-native": "^0.45.0",
     "axios": "^1.9.0",
     "expo": "^53.0.9",
     "expo-auth-session": "^6.1.5",
@@ -33,7 +34,6 @@
     "expo-haptics": "~14.1.4",
     "expo-linking": "~7.1.4",
     "expo-router": "~5.0.5",
-    "@stripe/stripe-react-native": "^0.45.0",
     "expo-secure-store": "^14.0.1",
     "expo-splash-screen": "~0.30.8",
     "expo-status-bar": "~2.2.3",
@@ -57,6 +57,7 @@
   "devDependencies": {
     "@babel/core": "^7.25.2",
     "@types/jest": "^29.5.12",
+    "@types/lodash": "^4.17.17",
     "@types/node": "^22.14.0",
     "@types/react": "~19.0.10",
     "@types/react-test-renderer": "^18.3.0",
