@@ -14,12 +14,12 @@ datasource db {
 }
 
 type Address {
-  country     String
-  street      String
-  apartment   String?
-  city        String
-  state       String
-  zipCode     String
+  country   String
+  street    String
+  apartment String?
+  city      String
+  state     String
+  zipCode   String
 }
 
 // Schemas

@@ -1,5 +1,5 @@
 {
-  "name": "fair-share",
+  "name": "fair-share-app",
   "main": "expo-router/entry",
   "version": "1.0.0",
   "scripts": {
@@ -26,6 +26,7 @@
     "axios": "^1.9.0",
     "expo": "^53.0.9",
     "expo-auth-session": "^6.1.5",
+    "expo-image-picker": "~16.1.4",
     "expo-blur": "~14.1.4",
     "expo-clipboard": "~7.1.4",
     "expo-constants": "~17.1.5",
@@ -33,7 +34,7 @@
     "expo-font": "~13.3.1",
     "expo-haptics": "~14.1.4",
     "expo-linking": "~7.1.4",
-    "expo-router": "~5.0.5",
+    "expo-router": "~5.0.7",
     "expo-secure-store": "^14.0.1",
     "expo-splash-screen": "~0.30.8",
     "expo-status-bar": "~2.2.3",

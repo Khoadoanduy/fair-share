@@ -1,5 +1,5 @@
-import prisma from '../../prisma/client'; 
-import { CreateUserInput } from '../types/user'; 
+import prisma from '../../prisma/client';
+import { CreateUserInput } from '../types/user';
 import { User } from '@prisma/client';
 
 interface GetUserParams {
@@ -7,7 +7,7 @@ interface GetUserParams {
   clerkUserId?: string;
 }
 
-//  Use CreateUserInput type
+// Create a user
 async function createUser(data: CreateUserInput) {
   try {
     const user = await prisma.user.create({ data });
@@ -18,4 +18,36 @@ async function createUser(data: CreateUserInput) {
   }
 }
 
-export { createUser };
+// Update a user
+async function updateUser(id: string, data: Partial<CreateUserInput>) {
+  try {
+    const user = await prisma.user.update({
+      where: { id },
+      data
+    });
+    return { user };
+  } catch (error) {
+    console.error('Error updating user:', error);
+    return { error };
+  }
+}
+
+// Delete a user
+async function deleteUser(id: string) {
+  try {
+    // Use transactions to ensure all operations succeed or fail together
+    const result = await prisma.$transaction(async (tx) => {
+      const deletedUser = await tx.user.delete({
+        where: { id }
+      });
+      return { success: true, userId: id };
+    });
+
+    return result;
+  } catch (error) {
+    console.error('Error deleting user:', error);
+    return { error: error instanceof Error ? error.message : 'Unknown error' };
+  }
+}
+
+export { createUser, updateUser, deleteUser };

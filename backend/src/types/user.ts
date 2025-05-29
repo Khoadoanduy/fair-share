@@ -6,6 +6,7 @@ export type CreateUserInput = {
     username: string;
     phoneNumber?: string;
     dateOfBirth?: Date;
+    username?: string;
     address?: {
       country: string;
       street: string;
