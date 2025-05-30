@@ -11,6 +11,7 @@ const prisma = new PrismaClient();
 router.post('/:groupId/:userId', async function (request, response) {
     try {
         const { groupId, userId } = request.params;
+        const { userRole } = request.body;
         //Check if member is already in that group
         const existedMember = await prisma.groupMember.findFirst({
             where: { userId, groupId }
@@ -19,7 +20,7 @@ router.post('/:groupId/:userId', async function (request, response) {
             return response.status(400).json({ message: 'Users already in group' })
         }
         const newMember = await prisma.groupMember.create({
-            data: { userId, groupId }
+            data: { userId, groupId, userRole }
             });
         response.status(201).json({ message: 'Member added', newMember});
     } catch (error) {

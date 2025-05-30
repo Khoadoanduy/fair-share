@@ -9,7 +9,8 @@ import userRoute from './routes/user'
 import inviteRoute from './routes/invite'
 import friendRoute from './routes/friend';
 import feedRouter from './routes/feed';
-import groupRoutes from './routes/group';
+import groupRoute from './routes/group';
+import groupMemberRoute from './routes/groupMember'
 import subscriptionRouter from './routes/subscription';
 
 dotenv.config();
@@ -26,13 +27,14 @@ app.use(cors());
 // Mount webhook router
 app.use('/', webhookRouter);
 
-app.use('/api/stripe-customer', customerRoutes);
-app.use('/api/stripe-payment', paymentRoutes);
+//app.use('/api/stripe-customer', customerRoutes);
+//app.use('/api/stripe-payment', paymentRoutes);
 app.use('/api/user', userRoute)
 app.use('/api/invite', inviteRoute)
 app.use('/api/friend', friendRoute)
 app.use('/api/feed', feedRouter);
-app.use('/api/groupMember', groupRoutes)
+app.use('/api/groupMember', groupMemberRoute)
+app.use('/api/group', groupRoute)
 
 // Error handling (must be after all routes)
 app.use(authErrorHandler);
