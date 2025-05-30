@@ -57,7 +57,7 @@ app.use(cors());
 // Mount webhook router
 app.use('/', webhookRouter);
 
-app.use('/api/stripe-customer', customerRoutes);
+// app.use('/api/stripe-customer', customerRoutes);
 app.use('/api/stripe-payment', paymentRoutes);
 app.use('/api/user', userRoute)
 app.use('/api/invite', inviteRoute)
