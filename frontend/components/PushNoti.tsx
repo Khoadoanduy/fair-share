@@ -63,19 +63,8 @@ export function usePushNotifications() {
 
   const registerTokenWithBackend = async (token: string) => {
     try {
-//       const response = await fetch(`${API_URL}/api/register-push-token`, {
-//         method: 'POST',
-//         headers: {
-//           'Content-Type': 'application/json',
-//           'Authorization': `Bearer ${await user?.getToken()}`,
-//         },
-//         body: JSON.stringify({
-//           userId: user?.id,
-//           token: token,
-//         }),
-//       });
-console.log('Registering token for user:', user?.id);
-console.log('Token:', token);
+    console.log('Registering token for user:', user?.id);
+    console.log('Token:', token);
         const response = await axios.post(`${API_URL}/api/push-tokens/register`, {
                 clerkId: user?.id,
                 token: token
