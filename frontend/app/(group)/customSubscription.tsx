@@ -9,6 +9,7 @@ import ProgressDots from '@/components/ProgressDots';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import CustomDropdown, { DropdownOption } from '@/components/CustomDropdown';
+import { useUser } from '@clerk/clerk-expo';
 
 type FormatData = {
   subscriptionName: string;
@@ -23,6 +24,8 @@ type FormatData = {
 export default function CustomSubscriptionScreen() {
   const API_URL = process.env.EXPO_PUBLIC_API_URL;
   const router = useRouter();
+  const { user } = useUser();
+  const clerkId = user?.id;
   const { groupName } = useLocalSearchParams();
   const { control, handleSubmit, setValue } = useForm<FormatData>({
     defaultValues: {
@@ -31,6 +34,20 @@ export default function CustomSubscriptionScreen() {
       day: '1'
     }
   });
+
+  const userFromMongo = async () => {
+        try{
+            const response = await axios.get(`${API_URL}/api/user/`,{
+                params:{
+                    clerkID : clerkId
+                }
+            })
+            return response.data.id
+        }
+        catch(error){
+            console.error("Error fetching user data:", error);
+        }
+    }
 
   const [subscriptionImage, setSubscriptionImage] = useState<string | null>(null);
   const [showCycleDropdown, setShowCycleDropdown] = useState(false);
@@ -74,6 +91,7 @@ export default function CustomSubscriptionScreen() {
     }
 
     try {
+      const leaderId = await userFromMongo();
       const response = await axios.post(`${API_URL}/api/groups/create`, {
         groupName,
         subscriptionName: info.subscriptionName,
@@ -82,10 +100,12 @@ export default function CustomSubscriptionScreen() {
         cycle: info.cycle,
         category: info.category
       });
+      const groupId = response.data.groupId;
       console.log(response.data.groupId);
-
+      await axios.post(`${API_URL}/api/groupMember/${groupId}/${leaderId}`, {userRole: "leader"});
+      console.log("Add group creator as leader");
       router.push({
-        pathname: '/(group)/InviteMember',
+        pathname: '/(group)/inviteMember',
         params: { groupId: response.data.groupId },
       });
     } catch (error) {
