@@ -27,53 +27,71 @@ router.post('/create', async function (request, response) {
             return response.status(400).json({ error: 'Customer not found' });
         }
 
-        if (!customer.dateOfBirth || !customer.firstName || !customer.lastName || !customer.email || !customer.phoneNumber) {
-            return response.status(400).json({ error: 'Customer information is incomplete' });
+        if (!customer.cardholderId) {
+
+            if (!customer.dateOfBirth || !customer.firstName || !customer.lastName || !customer.email || !customer.phoneNumber) {
+                return response.status(400).json({ error: 'Customer information is incomplete' });
+            }
+
+            const ip = request.headers['x-forwarded-for'] || 
+                request.socket.remoteAddress ||
+                request.ip;
+
+            const paymentMethods = await stripe.customers.listPaymentMethods(customerId);
+            const paymentMethod = paymentMethods.data[0];
+
+            const address = paymentMethod.billing_details.address
+
+            const cardholder = await stripe.issuing.cardholders.create({
+                type: 'individual',
+                name: customer.firstName + ' ' + customer.lastName,
+                email: customer.email,
+                billing: {
+                    address: {
+                        line1: address.line1 || '',
+                        city: address.city || '',
+                        state: address.state || '',
+                        postal_code: address.postal_code || '',
+                        country: address?.country || 'US' // Default to US if not provided
+                    }
+                },
+                phone_number: customer.phoneNumber,
+                individual: {
+                    card_issuing: {
+                        user_terms_acceptance: {
+                            date: Math.floor(Date.now() / 1000), // Current timestamp in seconds
+                            ip: ip, // Client IP address where terms were accepted
+                        },
+                    },
+                    dob: {
+                        day: customer.dateOfBirth.getDate(),
+                        month: customer.dateOfBirth.getMonth() + 1, // Months are 0-indexed in JavaScript
+                        year: customer.dateOfBirth.getFullYear()
+                    },
+                    first_name: customer.firstName,
+                    last_name: customer.lastName
+                }
+            });
+
+            await prisma.user.update({
+                where: {
+                    customerId: customerId,
+                },
+                data: {
+                    cardholderId: cardholder.id,
+                }
+            });
         }
 
-        const ip = request.headers['x-forwarded-for'] || 
-             request.socket.remoteAddress ||
-             request.ip;
+        const cardholder = customer.cardholderId;
 
-        const paymentMethods = await stripe.customers.listPaymentMethods(customerId);
-        const paymentMethod = paymentMethods.data[0];
-
-        const address = paymentMethod.billing_details.address
-
-        const cardholder = await stripe.issuing.cardholders.create({
-            type: 'individual',
-            name: customer.firstName + ' ' + customer.lastName,
-            email: customer.email,
-            billing: {
-                address: {
-                    line1: address.line1 || '',
-                    city: address.city || '',
-                    state: address.state || '',
-                    postal_code: address.postal_code || '',
-                    country: address?.country || 'US' // Default to US if not provided
-                }
-            },
-            phone_number: customer.phoneNumber,
-            individual: {
-                card_issuing: {
-                    user_terms_acceptance: {
-                        date: Math.floor(Date.now() / 1000), // Current timestamp in seconds
-                        ip: ip, // Client IP address where terms were accepted
-                    },
-                },
-                dob: {
-                    day: customer.dateOfBirth.getDate(),
-                    month: customer.dateOfBirth.getMonth() + 1, // Months are 0-indexed in JavaScript
-                    year: customer.dateOfBirth.getFullYear()
-                },
-                first_name: customer.firstName,
-                last_name: customer.lastName
-            }
-        });
+        if (!cardholder) {
+            return response.status(400).json({ error: 'Error creating cardholder' });
+        }
 
         const card = await stripe.issuing.cards.create({
-            cardholder: cardholder.id,
-            currency: 'usd',
+            cardholder: cardholder,
+            currency: 'usd',    
             type: 'virtual',
             status: 'active',
             spending_controls: {
@@ -85,7 +103,7 @@ router.post('/create', async function (request, response) {
         });
 
         response.json({
-            card: card.id
+            card: card.id,
           });
         } catch (err) {
           // Log for debugging
@@ -95,6 +113,42 @@ router.post('/create', async function (request, response) {
           response.status(500).json({err});
         }
     });
+
+    router.get('/get', async function (request, response) {
+        try {
+            const customerId = request.query.stripeId as string;
+    
+            const customer = await prisma.user.findUnique({
+                where: {
+                    customerId: customerId,
+                }
+            });
+    
+            if (!customer) {
+                return response.status(400).json({ error: 'Customer not found' });
+            }
+
+            const cardholder = customer.cardholderId;
+
+            if (!cardholder) {
+                return response.status(400).json({ error: 'Hasnt created virtual card for this user' });
+            }
+
+            const cards = await stripe.issuing.cards.list({
+                cardholder: cardholder,
+            });
+    
+            response.json({
+                cards: cards.data
+              });
+            } catch (err) {
+              // Log for debugging
+              console.error('Error listing virtual cards list:', err);
+          
+              // Send back the Stripe (or other) error message
+              response.status(500).json({err});
+            }
+        });
 
     
 export default router;
