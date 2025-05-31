@@ -14,9 +14,14 @@ import feedRouter from './routes/feed';
 import groupRoutes from './routes/group';
 import subscriptionRouter from './routes/subscription';
 
+import pushNotiRouter from './routes/push-tokens';  
+import notificationsRouter from './routes/notifications';
+
 dotenv.config();
 
+
 const app = express();
+app.use(cors());
 const PORT = process.env.PORT || 3000;
 
 
@@ -52,8 +57,6 @@ server.listen(8080, () => {
 });
 
 
-app.use(cors());
-
 // Mount webhook router
 app.use('/', webhookRouter);
 
@@ -64,6 +67,8 @@ app.use('/api/invite', inviteRoute)
 app.use('/api/friend', friendRoute)
 app.use('/api/feed', feedRouter);
 app.use('/api/groupMember', groupRoutes)
+app.use('/api/push-tokens', pushNotiRouter);
+app.use('/api/notifications', notificationsRouter);
 
 // Error handling (must be after all routes)
 app.use(authErrorHandler);

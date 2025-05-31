@@ -8,10 +8,10 @@ const router: Router = express.Router();
 
 // Register/Update push token
 router.post('/register', async (req, res) => {
-    const { userId, token } = req.body;
+    const { clerkId, token } = req.body;
   
-    if (!userId || !token) {
-      return res.status(400).json({ error: 'userId and token are required' });
+    if (!clerkId || !token) {
+      return res.status(400).json({ error: 'clerkId and token are required' });
     }
   
     if (!Expo.isExpoPushToken(token)) {
@@ -20,11 +20,14 @@ router.post('/register', async (req, res) => {
   
     try {
         const user = await prisma.user.update({
-        where: { id: userId },
+        where: { clerkId: clerkId },
         data: { 
           pushToken: token,
-          tokenUpdatedAt: new Date(),
-        } as any, // Add 'as any' to bypass type checking
+        } 
+        });
+        res.json({ 
+          success: true, 
+          message: 'Push token registered successfully' 
         });
     }
     catch (error) {
@@ -32,3 +35,5 @@ router.post('/register', async (req, res) => {
         return res.status(500).json({ error: 'Failed to register push token' });
     }
 });
+
+export default router;

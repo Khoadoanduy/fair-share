@@ -29,7 +29,7 @@
       [
         "expo-notifications",
         {
-          "icon": "./assets/notification-icon.png",
+          "icon": "./assets/FairShare_logo.png",
           "color": "#ffffff",
           "sounds": ["./assets/notification-sound.wav"]
         }

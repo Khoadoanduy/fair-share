@@ -7,27 +7,27 @@ import { Expo } from 'expo-server-sdk';
 const router: Router = express.Router();
 const expo = new Expo();
 
-router.post('/api/notifications/send', async (req, res) => {
-    const { userId, title, body, data} = req.body;
+router.post('/send', async (req, res) => {
+    const { clerkId, title, body, data} = req.body;
   
-    if (!userId || !title || !body) {
+    if (!clerkId || !title || !body) {
       return res.status(400).json({ error: 'userId, title, and body are required' });
     }
   
     try {
         const user = await prisma.user.findUnique({
-            where: { id: userId },
+            where: { clerkId: clerkId },
             select: { pushToken: true } 
         });
         if (!user) {
             return res.status(404).json({ 
-              error: `User ${userId} not found` 
+              error: `User ${clerkId} not found` 
             });
         }
       
         if (!user.pushToken) {
             return res.status(404).json({ 
-              error: `No push token found for user ${userId}` 
+              error: `No push token found for user ${clerkId}` 
             });
         }
 
@@ -54,3 +54,5 @@ router.post('/api/notifications/send', async (req, res) => {
       res.status(500).json({ error: 'Failed to send notification' });
     }
   });
+
+  export default router;
