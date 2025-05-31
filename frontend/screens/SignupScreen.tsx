@@ -14,7 +14,6 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Link, router } from "expo-router";
 import { isClerkAPIResponseError, useSignUp } from "@clerk/clerk-expo";
-import SignInWith from "../components/SignInWith";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 
@@ -34,10 +33,10 @@ const signUpSchema = z.object({
     .min(8, "Password should be at least 8 characters long"),
   confirmPassword: z.string({ message: "Please confirm your password" }),
 })
-.refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords do not match",
-  path: ["confirmPassword"],
-});
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
+  });
 
 type SignUpFields = z.infer<typeof signUpSchema>;
 
@@ -117,28 +116,15 @@ export default function SignupScreen() {
             <Text style={styles.subtitle}>
               Join Fair Share to start splitting expenses with friends and family
             </Text>
-            <View style={{ height: 30 }} />
-            <View style={styles.socialButtonContainer}>
-              <SignInWith
-                strategy="oauth_google"
-                style={styles.googleSignInButton}
-              />
-            </View>
-          </View>
-
-          <View style={styles.dividerContainer}>
-            <View style={styles.divider} />
-            <Text style={styles.dividerText}>OR</Text>
-            <View style={styles.divider} />
           </View>
 
           <View style={styles.form}>
             <View style={styles.inputContainer}>
-              <Ionicons 
-                name="person-outline" 
-                size={20} 
-                color="#888" 
-                style={styles.inputIcon} 
+              <Ionicons
+                name="person-outline"
+                size={20}
+                color="#888"
+                style={styles.inputIcon}
               />
               <CustomInput
                 control={control}
@@ -151,11 +137,11 @@ export default function SignupScreen() {
             </View>
 
             <View style={styles.inputContainer}>
-              <Ionicons 
-                name="person-outline" 
-                size={20} 
-                color="#888" 
-                style={styles.inputIcon} 
+              <Ionicons
+                name="person-outline"
+                size={20}
+                color="#888"
+                style={styles.inputIcon}
               />
               <CustomInput
                 control={control}
@@ -168,11 +154,11 @@ export default function SignupScreen() {
             </View>
 
             <View style={styles.inputContainer}>
-              <Ionicons 
-                name="at" 
-                size={20} 
-                color="#888" 
-                style={styles.inputIcon} 
+              <Ionicons
+                name="at"
+                size={20}
+                color="#888"
+                style={styles.inputIcon}
               />
               <CustomInput
                 control={control}
@@ -184,11 +170,11 @@ export default function SignupScreen() {
             </View>
 
             <View style={styles.inputContainer}>
-              <Ionicons 
-                name="mail-outline" 
-                size={20} 
-                color="#888" 
-                style={styles.inputIcon} 
+              <Ionicons
+                name="mail-outline"
+                size={20}
+                color="#888"
+                style={styles.inputIcon}
               />
               <CustomInput
                 control={control}
@@ -202,11 +188,11 @@ export default function SignupScreen() {
             </View>
 
             <View style={styles.inputContainer}>
-              <Ionicons 
-                name="lock-closed-outline" 
-                size={20} 
-                color="#888" 
-                style={styles.inputIcon} 
+              <Ionicons
+                name="lock-closed-outline"
+                size={20}
+                color="#888"
+                style={styles.inputIcon}
               />
               <CustomInput
                 control={control}
@@ -218,11 +204,11 @@ export default function SignupScreen() {
             </View>
 
             <View style={styles.inputContainer}>
-              <Ionicons 
-                name="shield-checkmark-outline" 
-                size={20} 
-                color="#888" 
-                style={styles.inputIcon} 
+              <Ionicons
+                name="shield-checkmark-outline"
+                size={20}
+                color="#888"
+                style={styles.inputIcon}
               />
               <CustomInput
                 control={control}
@@ -324,33 +310,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#4353FD",
     borderRadius: 12,
     paddingVertical: 16,
-  },
-  dividerContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginVertical: 2,
-  },
-  divider: {
-    flex: 1,
-    height: 1,
-    backgroundColor: "#E2E8F0",
-  },
-  dividerText: {
-    paddingHorizontal: 16,
-    color: "#64748B",
-    fontWeight: "500",
-  },
-  socialButtonContainer: {
-    flexDirection: "row",
-    justifyContent: "center",
-    marginVertical: 2,
-    width: "100%",
-  },
-  googleSignInButton: {
-    backgroundColor: '#4353FD',
-    borderRadius: 8,
-    paddingVertical: 16,
-    width: '100%',
   },
   loginLinkContainer: {
     flexDirection: "row",
