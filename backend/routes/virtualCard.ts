@@ -103,7 +103,7 @@ router.post('/create', async function (request, response) {
         });
 
         response.json({
-            cardholderId: cardholder,
+            card: card.id,
           });
         } catch (err) {
           // Log for debugging
