@@ -33,7 +33,7 @@ export default function CollectPaymentScreen() {
             await axios.put(
                 `${API_URL}/api/user/${clerkId}`, 
                 { 
-                    customerId: customer 
+                    name: customer 
                 }
               );
             return {
