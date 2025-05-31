@@ -1,63 +1,37 @@
-import { Redirect } from "expo-router";
-import { useEffect, useState } from "react";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { View, ActivityIndicator } from "react-native";
-import { useAuth } from "@clerk/clerk-expo";
-
+// app/index.tsx
+import React, {use, useEffect} from 'react';
+import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import { Redirect } from 'expo-router';
+import { useAuthContext } from '../contexts/AuthContext';
+import { SignedIn, useAuth, useUser } from '@clerk/clerk-expo';
+import { useUserState } from '@/hooks/useUserState';
 export default function Index() {
-  const [loading, setLoading] = useState(true);
-  const [onboardingComplete, setOnboardingComplete] = useState(false);
-  const [needsUserOnboarding, setNeedsUserOnboarding] = useState(false);
-  const { isSignedIn, isLoaded } = useAuth();
-
-  useEffect(() => {
-    // TEMPORARY: Reset onboarding status for testing
-    // Remove this block after testing
-    AsyncStorage.removeItem("onboardingComplete")
-      .then(() => console.log("Onboarding reset for testing"))
-      .catch(err => console.error("Failed to reset:", err));
-
-    async function checkStatus() {
-      try {
-        const [onboardingStatus, userOnboardingStatus] = await Promise.all([
-          AsyncStorage.getItem("onboardingComplete"),
-          AsyncStorage.getItem("needsUserOnboarding")
-        ]);
-
-        setOnboardingComplete(onboardingStatus === "true");
-        setNeedsUserOnboarding(userOnboardingStatus === "true");
-      } catch (error) {
-        console.error("Error checking status:", error);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    checkStatus();
-  }, []);
-
-  if (loading || !isLoaded) {
-    return (
-      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-        <ActivityIndicator size="large" color="#4353FD" />
-      </View>
-    );
+  const { isSignedIn,onboardingComplete } = useUserState();
+  if (isSignedIn){
+    return <Redirect href="/(tabs)" />;
   }
-  // Signed-up & logged-in user who needs post-signup onboarding
-  if (needsUserOnboarding && isSignedIn) {
-    return <Redirect href="/(onboarding)/user" />;
-  }
-
-  // First-time visitor sees initial onboarding
-  if (!onboardingComplete) {
+  if (onboardingComplete==false && !isSignedIn) {
     return <Redirect href="/(onboarding)" />;
   }
-
-  // Not signed in user sees welcome screen
-  if (!isSignedIn) {
+  if(onboardingComplete && isSignedIn){
+    return <Redirect href="/(onboarding)/user" />;
+  }
+  if (onboardingComplete && !isSignedIn) {
+    console.log("from main index.tsx to welcome")
     return <Redirect href="/(welcome)" />;
   }
-
-  // Otherwise go to main app
-  return <Redirect href="/(tabs)" />;
+  
+  else{
+    console.log("from main index.tsx to tabs")
+    return <Redirect href="/(tabs)" />;
+  }
+  
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+});

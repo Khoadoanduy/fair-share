@@ -1,63 +1,26 @@
+import express from 'express';
+import { ClerkExpressWithAuth } from '@clerk/clerk-sdk-node'; 
 import { Request, Response, NextFunction } from 'express';
-import { ClerkExpressWithAuth, ClerkExpressRequireAuth } from '@clerk/clerk-sdk-node';
 
-// Authentication middleware for public/private route handling
-export const authMiddleware = (req: Request, res: Response, next: NextFunction) => {
-  const publicPaths = [
-    /^\/webhooks(\/.*)?$/, // Webhook routes
-    /^\/api\/health$/, // Health check endpoint
-    /\.(html?|css|js|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)$/ // Static files
-  ];
-  
-  // Check if path should be public
-  const isPublicPath = publicPaths.some(pattern => pattern.test(req.path));
-  
-  if (isPublicPath) {
-    // Skip authentication for public routes
-    return next();
+const app = express();
+
+// Initialize Clerk middleware
+const clerkMiddleware = ClerkExpressWithAuth();
+
+// Middleware to check authentication for all routes except static files or public routes
+app.use((req, res, next) => {
+  const protectedRoutePattern = /^(?!.*\.(?:html?|css|js|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*/;
+  // Apply Clerk authentication middleware only to routes that match the pattern
+  if (protectedRoutePattern.test(req.path)) {
+    clerkMiddleware(req, res, next);  // Protect route with Clerk
   } else {
-    // Apply Clerk authentication for protected routes
-    return ClerkExpressRequireAuth()(req, res, next);
+    next();  // Allow public routes to pass through
   }
-};
+});
 
-// Middleware that attaches user data but doesn't require authentication
-export const attachUserMiddleware = ClerkExpressWithAuth();
+app.use(express.static('public'));
 
-// Middleware to catch and format authentication errors
-export const authErrorHandler = (err: any, req: Request, res: Response, next: NextFunction) => {
-  if (err.statusCode === 401) {
-    return res.status(401).json({
-      success: false,
-      message: 'Authentication required'
-    });
-  }
-  
-  if (err.statusCode === 403) {
-    return res.status(403).json({
-      success: false,
-      message: 'Permission denied'
-    });
-  }
-  
-  next(err);
-};
-
-// Helper to create a middleware that requires specific roles
-// export const requireRoles = (allowedRoles: string[]) => {
-//   return (req: Request, res: Response, next: NextFunction) => {
-//     // This assumes you store user roles in the auth object or your database
-//     const userRoles = req.auth?.claims?.roles || [];
-    
-//     const hasPermission = allowedRoles.some(role => userRoles.includes(role));
-    
-//     if (!hasPermission) {
-//       return res.status(403).json({
-//         success: false,
-//         message: 'Insufficient permissions'
-//       });
-//     }
-    
-//     next();
-//   };
-// };
+// Start the server
+app.listen(3000, () => {
+  console.log('Server is running on http://localhost:3000');
+});

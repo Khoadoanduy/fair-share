@@ -1,6 +1,5 @@
 import express from 'express';
 import dotenv from 'dotenv';
-import cors from 'cors';
 import webhookRouter from './src/webhooks/clerk/route';
 import { authMiddleware, authErrorHandler } from './src/middleware';
 import customerRoutes from './routes/stripe_customer';
@@ -16,13 +15,7 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-
-
-
-// Basic middleware
 app.use(express.json());
-app.use(cors());
-
 // Mount webhook router
 app.use('/', webhookRouter);
 

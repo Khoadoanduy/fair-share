@@ -61,8 +61,7 @@ export default function VerifyScreen() {
           // Then activate the session
           await setActive({ session: signUpAttempt.createdSessionId });
 
-          // Force navigation to refresh
-          router.replace("/");
+          router.replace("/(onboarding)/user");
         } catch (err) {
           console.error("Error:", err);
         }
