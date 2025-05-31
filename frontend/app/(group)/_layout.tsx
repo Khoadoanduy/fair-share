@@ -25,7 +25,7 @@ export default function AuthLayout() {
     }}
     >
     <Stack.Screen
-        name="CreateGroupName"
+        name="createGroupName"
         options={{
             title: "",
             headerTitle: () => null,
@@ -39,14 +39,14 @@ export default function AuthLayout() {
         }}
     />
     <Stack.Screen
-        name="CustomSubscription"
+        name="customSubscription"
         options={{
             title: "",
             headerTitle: () => null,
         }}
     />
     <Stack.Screen
-        name="InviteMember"
+        name="inviteMember"
         options={{
             title: "",
             headerTitle: () => null,

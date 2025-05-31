@@ -65,36 +65,4 @@ router.get('/search-user/:username', async (request, response) => {
     }
 })
 
-// Invite users to a group
-router.post('/:groupId/invite/:userId', async (request: Request, response: Response) => {
-    try {
-        const { groupId, userId } = request.params;
-        if (!groupId || !userId) {
-            return response.status(400).json({ message: 'groupId and userId are required' });
-        }
-        //Check if the user has already been invited to this group
-        const existingInvitation = await prisma.groupInvitation.findFirst({
-          where: { 
-            groupId, 
-            userId, 
-            status: { in: ['pending', 'accepted']} }
-        })
-        if (existingInvitation) {
-          return response.status(409).json({ message: 'User already invited' });
-        }
-        const invitation = await prisma.groupInvitation.create({
-          data: {
-            groupId,
-            userId,
-            status: 'pending'
-          }
-        })
-        response.status(200).json({ message: 'Successful invitation' });
-
-    } catch (error) {
-        console.error(error);
-        response.status(500).json({ message: 'Error sending invitation' });
-    }
-});
-
 export default router
