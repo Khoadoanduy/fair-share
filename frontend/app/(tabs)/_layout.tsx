@@ -7,7 +7,7 @@ export default function TabLayout() {
   const publishableKey = process.env.STRIPE_PUBLISHABLE_KEY;
   return (
     <StripeProvider
-      publishableKey = {publishableKey || "pk_test_51RCKvhP6zmoUwvZwkocdBO2hyFBXuiUrU5upYLJZ8IQNZnSXD3TSxrMVkxgOviRuCArTK6lS1gKy8eZ6NNDND9bz00x86Xhrbv"}>
+      publishableKey = {publishableKey || "pk_test_51RHyoO05UULTmGntA6FTExtkuBE6cXD0X9SX9GsxUEcjzjQXOW0IWQkroU5emAbnOLvgJM47XHBznPQZo4cc7wUE00NX5dJR6D"}>
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: "#4353FD",

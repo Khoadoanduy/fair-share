@@ -10,6 +10,8 @@ import friendRoute from './routes/friend';
 import feedRouter from './routes/feed';
 import groupRoutes from './routes/group';
 import subscriptionRouter from './routes/subscription';
+import virtualCardRoute from './routes/virtualCard';
+import cors from 'cors';  // Add this
 
 dotenv.config();
 
@@ -17,6 +19,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 app.use(express.json());
 // Mount webhook router
+app.use(cors());
 app.use('/', webhookRouter);
 
 app.use('/api/stripe-customer', customerRoutes);
@@ -25,7 +28,8 @@ app.use('/api/user', userRoute)
 app.use('/api/invite', inviteRoute)
 app.use('/api/friend', friendRoute)
 app.use('/api/feed', feedRouter);
-app.use('/api/groupMember', groupRoutes)
+app.use('/api/groupMember', groupRoutes);
+app.use('/api/virtual-card', virtualCardRoute);
 
 // Error handling (must be after all routes)
 app.use(authErrorHandler);
