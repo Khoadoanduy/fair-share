@@ -4,8 +4,11 @@ import * as Device from 'expo-device';
 import { Platform } from 'react-native';
 import { useUser } from '@clerk/clerk-expo';
 import axios from "axios";
+import dotenv from 'dotenv';
 
-const API_URL = 'http://192.168.89.64:3000';
+dotenv.config();
+
+const API_URL = process.env.EXPO_PUBLIC_API_URL
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
