@@ -111,7 +111,7 @@ router.get('/:groupId/:userId', async (request: Request, response: Response) => 
 
     } catch (error) {
         console.error(error);
-        response.status(500).json({ message: 'Error sending invitation' });
+        response.status(500).json({ message: 'Error getting invitation' });
     }
 });
 
