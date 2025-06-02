@@ -14,6 +14,7 @@ export default function TabLayout() {
         tabBarInactiveTintColor: "#888",
         // Remove back button from all tab screens
         headerLeft: () => null,
+        headerShown: false, // Add this line to remove all headers
       }}
     >
       <Tabs.Screen
