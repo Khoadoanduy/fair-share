@@ -6,7 +6,7 @@ import FriendSubscriptionFeed from '@/components/FriendSubscriptionFeed';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from "expo-router";
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
+const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
 export default function FriendsScreen() {
   const { userId: clerkId } = useAuth();
