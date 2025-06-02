@@ -63,37 +63,28 @@ router.get('/search-user/:username', async (request, response) => {
         console.log(error);
         response.status(500).json({ message: 'Error searching user' });
     }
-})
+});
 
-// Invite users to a group
-router.post('/:groupId/invite/:userId', async (request: Request, response: Response) => {
+//Show all pending invitations for a group
+router.get('/invitation/:groupId', async (request: Request, response: Response) => {
     try {
-        const { groupId, userId } = request.params;
-        if (!groupId || !userId) {
-            return response.status(400).json({ message: 'groupId and userId are required' });
+        const { groupId } = request.params;
+        if (!groupId) {
+            return response.status(400).json({ message: 'groupId are required' });
         }
         //Check if the user has already been invited to this group
-        const existingInvitation = await prisma.groupInvitation.findFirst({
-          where: { 
-            groupId, 
-            userId, 
-            status: { in: ['pending', 'accepted']} }
+        const invitation = await prisma.groupInvitation.findMany({
+          where: { groupId },
+          include: { user: true }
         })
-        if (existingInvitation) {
-          return response.status(409).json({ message: 'User already invited' });
+        if (invitation.length == 0) {
+          return response.status(409).json({ message: 'No invitation sent' });
         }
-        const invitation = await prisma.groupInvitation.create({
-          data: {
-            groupId,
-            userId,
-            status: 'pending'
-          }
-        })
-        response.status(200).json({ message: 'Successful invitation' });
+        response.status(200).json(invitation);
 
     } catch (error) {
         console.error(error);
-        response.status(500).json({ message: 'Error sending invitation' });
+        response.status(500).json({ message: 'Error getting invitation' });
     }
 });
 

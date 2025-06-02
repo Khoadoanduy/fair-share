@@ -8,9 +8,9 @@ import userRoute from './routes/user'
 import inviteRoute from './routes/invite'
 import friendRoute from './routes/friend';
 import feedRouter from './routes/feed';
-import groupRoutes from './routes/group';
-import groupMemberRoutes from './routes/groupMember';
+import groupRoute from './routes/group';
 import subscriptionRouter from './routes/subscription';
+import groupMemberRoute from './routes/groupMember'
 import virtualCardRoute from './routes/virtualCard';
 import cors from 'cors';  // Add this
 
@@ -29,8 +29,8 @@ app.use('/api/user', userRoute)
 app.use('/api/invite', inviteRoute)
 app.use('/api/friend', friendRoute)
 app.use('/api/feed', feedRouter);
-app.use('/api/groupMember', groupMemberRoutes);
-app.use('/api/groups', groupRoutes);
+app.use('/api/group', groupRoute);
+app.use('/api/groupMember', groupMemberRoute);
 app.use('/api/virtual-card', virtualCardRoute);
 app.use('/api/subscriptions', subscriptionRouter);
 
