@@ -20,7 +20,7 @@ import { setHasPayment, setStripeCustomerId } from "@/redux/slices/userSlice";
 import { formatISO } from "date-fns";
 import { router } from "expo-router";
 
-const API_URL = "http://localhost:3000";
+const API_URL = process.env.EXPO_PUBLIC_API_URL
 
 interface CountryCode {
   code: string;
