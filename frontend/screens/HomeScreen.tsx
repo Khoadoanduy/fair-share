@@ -1,37 +1,65 @@
-import { View, Text, Image, StyleSheet, SafeAreaView } from "react-native";
+import {
+  View,
+  Text,
+  Image,
+  StyleSheet,
+  SafeAreaView,
+  ScrollView,
+} from "react-native";
+import { router } from 'expo-router';
 import { useUser } from "@clerk/clerk-expo";
 import PaymentMethod from "@/components/PaymentMethod";
+import {
+  useUserState,
+} from "@/hooks/useUserState";
+import { useEffect } from "react";
+import CustomButton from "@/components/CustomButton";
+import { Redirect } from "expo-router";
+
+// Set to true to show the Redux debugger, false to hide it
+const SHOW_REDUX_DEBUGGER = true;
 
 export default function HomeScreen() {
   const { user } = useUser();
+  const {name, hasPayment, userId, stripeCustomerId, isSignedIn } = useUserState();
 
+  const handleNext = () => {
+    router.push("/(collectpayment)/CollectPayment");
+  }
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
-        <PaymentMethod/>
-        {user ? (
-          <>
-            <Image
-              source={{ uri: user?.imageUrl }}
-              style={styles.profileImage}
-            />
-            <Text style={styles.welcomeText}>
-              Welcome,{" "}
-              {user?.fullName || `${user?.firstName} ${user?.lastName}`}
-            </Text>
-            <Text style={styles.subtitle}>
-              What would you like to do today?
-            </Text>
-          </>
-        ) : (
-          <>
-            <Text style={styles.welcomeText}>Welcome to Fair Share</Text>
-            <Text style={styles.subtitle}>
-              The easiest way to split expenses with friends and family
-            </Text>
-          </>
-        )}
-      </View>
+      <ScrollView>
+        <View style={styles.content}>
+          {isSignedIn ? (
+            <>
+              <Image
+                source={{ uri: user?.imageUrl }}
+                style={styles.profileImage}
+              />
+              <Text style={styles.welcomeText}>
+                Welcome,${name}
+              </Text>
+              <Text style={styles.subtitle}>
+                What would you like to do today?
+              </Text>
+            </>
+          ) : (
+            <>
+              <Text style={styles.welcomeText}>
+                Hi, {name}
+              </Text>
+              <Text style={styles.welcomeText}>Welcome to Fair Share</Text>
+              <Text style={styles.subtitle}>
+                The easiest way to split expenses with friends and family
+              </Text>
+            </>
+          )}
+        </View>
+        <CustomButton
+                    text="Next - Create personal card"
+                    onPress={handleNext}
+          />
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -62,5 +90,5 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#666",
     textAlign: "center",
-  }
+  },
 });

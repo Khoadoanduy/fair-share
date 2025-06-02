@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { StyleSheet, Text, View, SafeAreaView, Image } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Redirect } from 'expo-router';
+import { Redirect,router } from 'expo-router';
 import CustomButton from '@/components/CustomButton';
 
 export default function EmailVerified() {
@@ -14,6 +14,12 @@ export default function EmailVerified() {
         } catch (error) {
             console.error('Error saving onboarding status:', error);
         }
+    };
+    const handleNext = () => {
+      console.log("EmailVerified: Marking user onboarding as complete");
+      
+      
+      router.push("/(collectpayment)/CollectPayment");
     };
     if (onboardingCompleted) {
         return <Redirect href="/(tabs)"/>;
@@ -28,7 +34,7 @@ export default function EmailVerified() {
             <CustomButton
                 text="Next - Create personal card"
                 style={styles.nextButton}
-                //onPress={handleCreate}
+                onPress={handleNext}
             />
             </View>
           </View>

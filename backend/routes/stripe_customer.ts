@@ -5,6 +5,7 @@
 import dotenv from 'dotenv';
 import express, { Request, Response, Router } from 'express';
 import Stripe from 'stripe';
+import prisma from '../prisma/client';
 // import axios from "axios";
 // const API_URL = 'http://localhost:3000';
 
@@ -48,7 +49,6 @@ router.get('/customers/:customerId', async (req: Request<{ customerId: string }>
     if (customer.deleted) {
       return res.status(404).json({ error: 'Customer has been deleted' });
     }
-    
     res.json({ customer });
   } catch (error) {
     console.error('Error retrieving customer:', error);
@@ -63,15 +63,8 @@ router.get('/customers', async (req: Request, res: Response) => {
   try {
     const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
     const email = req.query.email as string | undefined;
-    
-    const params: Stripe.CustomerListParams = {
-      limit,
-    };
-    
-    if (email) {
-      params.email = email;
-    }
-    
+    const params: Stripe.CustomerListParams = {limit}
+    if (email) params.email = email;
     const customers = await stripe.customers.list(params);
     
     res.json(customers);
@@ -86,21 +79,21 @@ router.get('/customers', async (req: Request, res: Response) => {
 // 5. Update customer
 router.put('/customers/:customerId', async (req: Request<{ customerId: string }, {}, Partial<CreateCustomerRequest>>, res: Response) => {
   try {
-const { customerId } = req.params;
-const { email, name, phone, description, metadata } = req.body;
+    const { customerId } = req.params;
+    const { email, name, phone, description, metadata } = req.body;
 
-// Only include fields that are provided
-const updateParams: Stripe.CustomerUpdateParams = {};
+    // Only include fields that are provided
+    const updateParams: Stripe.CustomerUpdateParams = {};
 
-if (email !== undefined) updateParams.email = email;
-if (name !== undefined) updateParams.name = name;
-if (phone !== undefined) updateParams.phone = phone;
-if (description !== undefined) updateParams.description = description;
-if (metadata !== undefined) updateParams.metadata = metadata as Stripe.MetadataParam; // cast type to Stripe.MetadataParam
+    if (email !== undefined) updateParams.email = email;
+    if (name !== undefined) updateParams.name = name;
+    if (phone !== undefined) updateParams.phone = phone;
+    if (description !== undefined) updateParams.description = description;
+    if (metadata !== undefined) updateParams.metadata = metadata as Stripe.MetadataParam; // cast type to Stripe.MetadataParam
 
-const customer = await stripe.customers.update(customerId, updateParams);
+    const customer = await stripe.customers.update(customerId, updateParams);
 
-res.json({ success: true, customer });
+    res.json({ success: true, customer });
   } catch (error) {
     console.error('Error updating customer:', error);
     res.status(500).json({ 
@@ -141,6 +134,65 @@ router.get('/search-customers', async (req: Request, res: Response) => {
     res.json(customers);
   } catch (error) {
     console.error('Error searching customers:', error);
+    res.status(500).json({ 
+      error: error instanceof Error ? error.message : 'An unknown error occurred'
+    });
+  }
+});
+
+
+router.get('/retrieve-paymentMethodId', async function (request, response) {
+  try {
+  const customerStripeID = request.query.customerStripeID as string;
+  
+  if (!customerStripeID) {
+    return response.status(400).json({ error: 'Customer Stripe ID is required' });
+  }
+    const paymentMethods = await stripe.customers.listPaymentMethods(customerStripeID);
+    response.json(paymentMethods);
+  } catch (error) {
+    console.error(error);
+    response.status(500).send('Error fetching payment methods');
+  }
+});
+
+// 8. Check if a user has a payment method
+router.get('/check', async (req: Request, res: Response) => {
+  try {
+    const clerkID = req.query.clerkID as string;
+    
+    if (!clerkID) {
+      return res.status(400).json({ error: 'clerkID is required' });
+    }
+    
+    // First, find the user in our database to get their Stripe customer ID
+    const user = await prisma.user.findUnique({
+      where: {
+        clerkId: clerkID
+      }
+    });
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    // If the user doesn't have a Stripe customer ID, they don't have a payment method
+    if (!user.customerId) {
+      return res.json({ hasPaymentMethod: false });
+    }
+    
+    // Retrieve the customer's payment methods from Stripe
+    const paymentMethods = await stripe.paymentMethods.list({
+      customer: user.customerId,
+      type: 'card'
+    });
+    
+    // Check if the customer has at least one payment method
+    const hasPaymentMethod = paymentMethods.data.length > 0;
+    
+    res.json({ hasPaymentMethod });
+  } catch (error) {
+    console.error('Error checking payment method:', error);
     res.status(500).json({ 
       error: error instanceof Error ? error.message : 'An unknown error occurred'
     });

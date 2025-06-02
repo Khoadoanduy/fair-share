@@ -1,10 +1,13 @@
-import { Slot, Stack } from 'expo-router';
-import { ClerkProvider } from '@clerk/clerk-expo';
-import { tokenCache } from '@clerk/clerk-expo/token-cache';
-import { useEffect } from 'react';
-import { useFonts } from 'expo-font';
-import { StatusBar } from 'expo-status-bar';
-import * as SplashScreen from 'expo-splash-screen';
+import { Slot, Stack } from "expo-router";
+import { ClerkProvider } from "@clerk/clerk-expo";
+import { tokenCache } from "@clerk/clerk-expo/token-cache";
+import { useEffect } from "react";
+import { useFonts } from "expo-font";
+import { StatusBar } from "expo-status-bar";
+import * as SplashScreen from "expo-splash-screen";
+import { AuthProvider } from "../contexts/AuthContext";
+import { Provider } from "react-redux";
+import { store } from "../redux/store";
 
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
@@ -26,12 +29,16 @@ export default function RootLayout() {
   }
 
   return (
-    <ClerkProvider tokenCache={tokenCache}>
-      <StatusBar style="auto" />
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-      </Stack>
-    </ClerkProvider>
+    <Provider store={store}>
+      <ClerkProvider tokenCache={tokenCache}>
+        <AuthProvider>
+          <StatusBar style="auto" />
+          <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+          </Stack>
+        </AuthProvider>
+      </ClerkProvider>
+    </Provider>
   );
 }
