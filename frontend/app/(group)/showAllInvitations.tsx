@@ -47,6 +47,7 @@ export default function AllInvitations() {
   const handleAccept = async (groupId) => {
     try {
       await axios.put(`${API_URL}/api/invite/${groupId}/${userId}`);
+      await axios.post(`${API_URL}/api/groupMember/${groupId}/${userId}`, {userRole: "member"});
       setResponseStatus((prev) => ({ ...prev, [groupId]: 'accepted' }));
       console.log('Accept invitation successfully');
     } catch (error) {
