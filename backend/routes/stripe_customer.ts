@@ -9,6 +9,15 @@ import prisma from '../prisma/client';
 // import axios from "axios";
 // const API_URL = 'http://localhost:3000';
 
+// Define customer request interface
+interface CreateCustomerRequest {
+  email?: string;
+  name?: string;
+  phone?: string;
+  description?: string;
+  metadata?: Record<string, string>;
+}
+
 // Initialize environment variables
 dotenv.config();
 
@@ -193,6 +202,92 @@ router.get('/check', async (req: Request, res: Response) => {
     res.json({ hasPaymentMethod });
   } catch (error) {
     console.error('Error checking payment method:', error);
+    res.status(500).json({ 
+      error: error instanceof Error ? error.message : 'An unknown error occurred'
+    });
+  }
+});
+
+// 9. Create setup intent for adding payment methods
+router.post('/create-setup-intent', async (req: Request, res: Response) => {
+  try {
+    const { email } = req.body;
+    
+    if (!email) {
+      return res.status(400).json({ error: 'Email is required' });
+    }
+
+    // Check if customer already exists
+    let customer;
+    const existingCustomers = await stripe.customers.list({ email, limit: 1 });
+    
+    if (existingCustomers.data.length > 0) {
+      customer = existingCustomers.data[0];
+    } else {
+      // Create new customer
+      customer = await stripe.customers.create({ email });
+    }
+
+    // Create ephemeral key
+    const ephemeralKey = await stripe.ephemeralKeys.create(
+      { customer: customer.id },
+      { apiVersion: '2025-03-31.basil' }
+    );
+
+    // Create setup intent
+    const setupIntent = await stripe.setupIntents.create({
+      customer: customer.id,
+      payment_method_types: ['card'],
+    });
+
+    res.json({
+      setupIntent: setupIntent.client_secret,
+      ephemeralKey: ephemeralKey.secret,
+      customer: customer.id
+    });
+  } catch (error) {
+    console.error('Error creating setup intent:', error);
+    res.status(500).json({ 
+      error: error instanceof Error ? error.message : 'An unknown error occurred'
+    });
+  }
+});
+
+// 10. Delete payment method
+router.delete('/payment-methods/:paymentMethodId', async (req: Request, res: Response) => {
+  try {
+    const { paymentMethodId } = req.params;
+    
+    await stripe.paymentMethods.detach(paymentMethodId);
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting payment method:', error);
+    res.status(500).json({ 
+      error: error instanceof Error ? error.message : 'An unknown error occurred'
+    });
+  }
+});
+
+// 11. Set default payment method
+router.post('/set-default-payment-method', async (req: Request, res: Response) => {
+  try {
+    const { customerId, paymentMethodId } = req.body;
+    
+    if (!customerId || !paymentMethodId) {
+      return res.status(400).json({ error: 'Customer ID and Payment Method ID are required' });
+    }
+
+    // Update customer's default payment method
+    await stripe.customers.update(customerId, {
+      invoice_settings: {
+        default_payment_method: paymentMethodId,
+      },
+    });
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error setting default payment method:', error);
     res.status(500).json({ 
       error: error instanceof Error ? error.message : 'An unknown error occurred'
     });
