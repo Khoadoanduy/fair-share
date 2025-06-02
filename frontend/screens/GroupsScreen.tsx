@@ -8,6 +8,9 @@ export default function GroupsScreen() {
   const handleCreateGroup = () => {
     router.push('/(group)/createGroupName')
   }
+  const showAllInvitations = () => {
+    router.push('/(group)/showAllInvitations')
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -15,6 +18,7 @@ export default function GroupsScreen() {
         <Text style={styles.title}>Groups</Text>
         <Text>Your groups will appear here</Text>
         <CustomButton text='Create Group' onPress={handleCreateGroup} />
+        <CustomButton text='Show invitations' onPress={showAllInvitations}/>
       </View>
     </SafeAreaView>
   );

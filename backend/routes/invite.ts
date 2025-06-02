@@ -7,7 +7,7 @@ dotenv.config();
 const router: Router = express.Router();
 const prisma = new PrismaClient();
 
-//Create invitation to group (delete from group.ts)
+//Create invitation to group
 router.post('/:groupId/:userId', async (request: Request, response: Response) => {
     try {
         const { groupId, userId } = request.params;
@@ -65,10 +65,10 @@ router.delete('/:groupId/:userId', async (request: Request, response: Response) 
 });
 
 //Update invitation status from pending to accepted (if rejected => delete invitation)
-router.put('/:groupId/:userId/:status', async (request: Request, response: Response) => {
+router.put('/:groupId/:userId', async (request: Request, response: Response) => {
     try {
-        const { groupId, userId, status } = request.params;
-        if (!groupId || !userId || !status) {
+        const { groupId, userId } = request.params;
+        if (!groupId || !userId) {
             return response.status(400).json({ message: 'groupId, userId, and status are required' });
         }
         //Check if the user has already been invited to this group
@@ -83,7 +83,7 @@ router.put('/:groupId/:userId/:status', async (request: Request, response: Respo
         }
         await prisma.groupInvitation.update({
           where: { id: updateInvitation.id },
-          data: { status: status}
+          data: { status: "accepted" }
         })
         response.status(200).json({ message: 'Invitation updated' });
 
