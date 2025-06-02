@@ -72,7 +72,7 @@ export default function SubscriptionScreen() {
       setSubscriptions([]);
       return;
     }
-    
+
     const timer = setTimeout(async () => {
       try {
         const response = await axios.get(`${API_URL}/api/subscriptions`, {
@@ -277,6 +277,9 @@ export default function SubscriptionScreen() {
               placeholder="1"
               keyboardType="decimal-pad"
               style={styles.dayInput}
+              blurOnSubmit={true}
+              returnKeyType="done"
+              onSubmitEditing={() => Keyboard.dismiss()}
             />
 
             <Controller
@@ -337,6 +340,9 @@ export default function SubscriptionScreen() {
               placeholder="Amount"
               keyboardType="decimal-pad"
               style={styles.amountInput}
+              blurOnSubmit={true}
+              returnKeyType="done"
+              onSubmitEditing={() => Keyboard.dismiss()}
             />
           </View>
 
@@ -393,7 +399,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0)',
     zIndex: 90,
   },
-  
+
   // Headers
   title: {
     fontSize: 24,
@@ -415,7 +421,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
     color: '#000',
   },
-  
+
   // Rows and containers
   rowContainer: {
     flexDirection: 'row',
@@ -435,7 +441,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     width: '100%',
   },
-  
+
   // Inputs base styles
   dropdownBase: {
     flexDirection: 'row',
@@ -448,7 +454,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC',
     height: 50,
   },
-  
+
   // Input specific styles
   dropdownInput: {
     paddingVertical: 12,
@@ -502,7 +508,7 @@ const styles = StyleSheet.create({
     marginBottom: 5,
     height: 50,
   },
-  
+
   // Dropdown menus
   dropdownMenuBase: {
     backgroundColor: 'white',
@@ -532,7 +538,7 @@ const styles = StyleSheet.create({
     padding: 16,
     elevation: 10,
   },
-  
+
   // Dropdown content
   dropdownItem: {
     flexDirection: 'row',
@@ -560,7 +566,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#eee',
     marginVertical: 8,
   },
-  
+
   // Subscription search
   searchContainer: {
     flexDirection: 'row',
@@ -606,7 +612,7 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     marginRight: 12,
   },
-  
+
   // Custom option
   customOption: {
     padding: 12,
