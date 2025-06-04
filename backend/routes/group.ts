@@ -88,4 +88,36 @@ router.get('/invitation/:groupId', async (request: Request, response: Response) 
     }
 });
 
+router.get('/search-group/:userId/:groupName', async (request, response) => {
+    try {
+        const { userId, groupName } = request.params;
+
+        const groups = await prisma.groupMember.findMany({
+            where: { 
+              userId: userId,
+              group: {
+                is: {
+                  groupName: {
+                    contains: groupName,
+                    mode: 'insensitive'
+                }
+              }
+             }
+            },
+            select: {
+                group: true
+            }
+        })
+
+        //If user doesn't exist, give an empty list
+        if (groups.length === 0) {
+            return response.status(404).json({ groups: [] });
+        }
+        response.status(200).json({ groups });
+    } catch (error) {
+        console.log(error);
+        response.status(500).json({ message: 'Error searching group' });
+    }
+});
+
 export default router
