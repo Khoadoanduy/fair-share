@@ -32,17 +32,13 @@ const router: Router = express.Router();
 router.post('/create-customer', async function (request, response) {
   try {
     const { email, name, phone } = request.body;
-
-
     const customerData = { email, name, phone };
-
     const stripeCustomer = await stripe.customers.create(customerData);
 
     return response.status(200).json({ customer: stripeCustomer });
   } catch (err) {
     // Log for your own debugging
     console.error('Error creating Stripe customer:', err);
-
     // Send back the Stripe (or other) error message
     response.status(500).json({err});
   }
@@ -224,7 +220,6 @@ router.post('/create-setup-intent', async (req: Request, res: Response) => {
     if (existingCustomers.data.length > 0) {
       customer = existingCustomers.data[0];
     } else {
-      // Create new customer
       customer = await stripe.customers.create({ email });
     }
 
@@ -233,7 +228,6 @@ router.post('/create-setup-intent', async (req: Request, res: Response) => {
       { customer: customer.id },
       { apiVersion: '2025-03-31.basil' }
     );
-
     // Create setup intent
     const setupIntent = await stripe.setupIntents.create({
       customer: customer.id,
@@ -257,9 +251,7 @@ router.post('/create-setup-intent', async (req: Request, res: Response) => {
 router.delete('/payment-methods/:paymentMethodId', async (req: Request, res: Response) => {
   try {
     const { paymentMethodId } = req.params;
-    
     await stripe.paymentMethods.detach(paymentMethodId);
-    
     res.json({ success: true });
   } catch (error) {
     console.error('Error deleting payment method:', error);
@@ -277,7 +269,6 @@ router.post('/set-default-payment-method', async (req: Request, res: Response) =
     if (!customerId || !paymentMethodId) {
       return res.status(400).json({ error: 'Customer ID and Payment Method ID are required' });
     }
-
     // Update customer's default payment method
     await stripe.customers.update(customerId, {
       invoice_settings: {

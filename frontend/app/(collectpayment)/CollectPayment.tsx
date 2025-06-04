@@ -264,8 +264,8 @@ export default function CollectPaymentScreen() {
     try {
       console.log(" I'm at fetchPaymentSheetParams");
       const customerInfo = userState.email;
-      const response = await axios.post(`${API_URL}/api/stripe-payment/payment-sheet`, {
-        customerInfo,
+      const response = await axios.post(`${API_URL}/api/stripe-customer/create-setup-intent`, {
+        email: customerInfo,
       });
       const { setupIntent, ephemeralKey, customer } = response.data;
       console.log(customer);
