@@ -20,6 +20,8 @@
     "@expo/vector-icons": "^14.0.2",
     "@hookform/resolvers": "^5.0.1",
     "@react-native-async-storage/async-storage": "2.1.2",
+    "@react-native-community/push-notification-ios": "^1.11.0",
+    "@react-native-async-storage/async-storage": "2.1.2",
     "@react-navigation/bottom-tabs": "^7.2.0",
     "@react-navigation/native": "^7.0.14",
     "@reduxjs/toolkit": "^2.8.2",
@@ -57,7 +59,9 @@
     "react-native-webview": "13.13.5",
     "react-redux": "^9.2.0",
     "stripe": "^18.1.0",
-    "zod": "^3.24.2"
+    "zod": "^3.24.2",
+    "expo-notifications": "~0.31.2",
+    "expo-device": "~7.1.4"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",

@@ -23,6 +23,7 @@
     "@clerk/clerk-sdk-node": "^4.13.23",
     "@prisma/client": "^6.8.2",
     "@types/stripe": "^8.0.416",
+    "@types/ws": "^8.18.1",
     "backend": "file:",
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",
@@ -30,6 +31,8 @@
     "express-validator": "^7.2.1",
     "jsonwebtoken": "^9.0.2",
     "stripe": "^18.1.1",
-    "svix": "^1.64.1"
+    "svix": "^1.64.1",
+    "ts-node": "^10.9.2",
+    "ws": "^8.18.2"
   }
 }
