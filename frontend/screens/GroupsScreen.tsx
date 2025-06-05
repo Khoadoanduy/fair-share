@@ -1,17 +1,17 @@
 import CustomButton from '@/components/CustomButton';
-import { View, Text, StyleSheet, SafeAreaView, TextInput, Image, FlatList } from 'react-native';
-import { Link, useRouter } from 'expo-router';
+import { View, Text, StyleSheet, SafeAreaView, TextInput, Image, FlatList, Pressable } from 'react-native';
+import { Link, useRouter } from 'expo-router'; 
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useUser } from '@clerk/clerk-expo';
 
+
 export default function GroupsScreen() {
   const router = useRouter();
   const API_URL = process.env.EXPO_PUBLIC_API_URL;
-  const [groups, setGroups] = useState([]);
-  const [search, setSearch] = useState('');
   const { user } = useUser();
   const [userId, setUserId] = useState(null);
+  const [groups, setGroups] = useState([]);
   const clerkId = user?.id;
 
   const handleCreateGroup = () => {
@@ -37,63 +37,49 @@ export default function GroupsScreen() {
       fetchUserId();
     }
   }, [clerkId]);
-  
-  const handleSearch = async (text: string) => {
-    console.log('Searching for: ', text);
-    setSearch(text);
-    if (!text) {
-      setGroups([]); 
-      return;
-    }
+
+  const fetchGroups = async () => {
+    if (!userId) return;
     try {
-      const response = await axios.get(`${API_URL}/api/group/search-group/${userId}/${text}`,{
-      });
-      //Return an array of users that contains that username entered
-      if (response.data) {
-        setGroups(response.data); 
-      } else {
-        setGroups([]);
-      }
+      const response = await axios.get(`${API_URL}/api/user/groups/${userId}`);
+      setGroups(response.data);
     } catch (error) {
-      console.log(error)
-      setGroups([]);
+      console.error('Error fetching groups:', error);
     }
   };
 
+  useEffect(() => {
+    if (userId) {
+      fetchGroups();
+    }
+  }, [userId]);
+
   return (
     <SafeAreaView style={styles.container}>
+      <View style={styles.toggleContainer}>
+        <Pressable style={styles.toggleBtnActive}>
+          <Text style={styles.toggleTextActive}>My Subscriptions</Text>
+        </Pressable>
+        <Pressable style={styles.toggleBtnInactive} onPress={showAllInvitations}>
+          <Text style={styles.toggleTextInactive}>Pending</Text>
+        </Pressable>
+      </View>
       <View style={styles.content}>
-        <CustomButton text='Create Group' onPress={handleCreateGroup}/>
-        <View style={styles.searchbar}>
-          {/* <Image source={require('../../assets/search.png')} style={styles.icon} /> */}
-          <TextInput
-            style={styles.searchText}
-            placeholder="Search subscription"
-            value={search}
-            onChangeText={setSearch}
-            onSubmitEditing={() => handleSearch(search)}
-            returnKeyType="search"
-          />
-          {/* <Image source={require('../../assets/filter.png')} style={styles.icon} /> */}
-        </View>
-
         {groups.length > 0 ? (
-        <View style={styles.userContainer}>
           <FlatList
             data={groups}
             keyExtractor={(item) => item.id}
             renderItem={({ item }) => (
-              <View style={styles.eachSubscription}>
-                <View>
-                  <Text style={styles.username}>{item.groupName} {item.lastName}</Text>
-                  <Text style={styles.inviteFriends}>{item.groupName}</Text>
-                </View>
+              <View style={styles.userContainer}>
+                <Text style={styles.name}>{item.subscriptionName}</Text>
               </View>
             )}
           />
-        </View>
-        ) :<Text style={styles.emptyText}>No subscription found.</Text> }
+        ) : (
+          <Text style={styles.emptyText}>No subscriptions found.</Text>
+        )}
       </View>
+      <CustomButton text='Create Group' onPress={handleCreateGroup}/>
     </SafeAreaView>
   );
 }

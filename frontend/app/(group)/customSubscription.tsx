@@ -83,7 +83,7 @@ export default function CustomSubscriptionScreen() {
   };
 
   const handleCreateGroup: SubmitHandler<FormatData> = async (info) => {
-    if (!info.subscriptionName || !info.planName || !info.amount || !info.cycle) {
+    if (!info.subscriptionName || !info.planName || !info.amount || !info.cycle || !info.category) {
       Alert.alert('Missing Info', 'Please fill in all fields');
       return;
     }

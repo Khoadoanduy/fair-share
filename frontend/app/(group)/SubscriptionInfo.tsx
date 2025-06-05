@@ -120,7 +120,7 @@ export default function SubscriptionScreen() {
   };
 
   const handleCreateGroup = async (info: FormatData) => {
-    if (!info.subscriptionName || !info.planName || !info.amount || !info.cycle) {
+    if (!info.subscriptionName || !info.planName || !info.amount || !info.cycle || !info.category) {
       Alert.alert('Missing Info', 'Please fill in all fields');
       return;
     }
@@ -134,6 +134,7 @@ export default function SubscriptionScreen() {
         planName: info.planName,
         amount: parseFloat(info.amount),
         cycle: info.cycle,
+        category: info.category
       });
       const groupId = response.data.groupId;
       await axios.post(`${API_URL}/api/groupMember/${groupId}/${leaderId}`, {userRole: "leader"});
