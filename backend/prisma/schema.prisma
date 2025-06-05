@@ -57,6 +57,8 @@ model Group {
   startDate        DateTime?
   endDate          DateTime?
   GroupInvitation  GroupInvitation[]
+  amountEach       Float?
+  totalMem         Int
 }
 
 //junction table between User and Group
@@ -104,7 +106,6 @@ model Friend {
   // Prevents duplicate friendship records.
   @@unique([userId, friendId])
 }
-
 
 model Subscription {
   id       String  @id @default(auto()) @map("_id") @db.ObjectId
