@@ -16,7 +16,6 @@ router.get('/', async function (request, response) {
                 clerkId: clerkID,
             },
         });
-        console.log(user)
         if (!user) {
             return response.status(430).send("User not found");
         }

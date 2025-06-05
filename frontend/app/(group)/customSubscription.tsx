@@ -137,7 +137,6 @@ export default function CustomSubscriptionScreen() {
       });
       const groupId = response.data.groupId;
       await axios.post(`${API_URL}/api/groupMember/${groupId}/${leaderId}`, {userRole: "leader"});
-      console.log("Add group creator as leader");
       router.push({
         pathname: '/(group)/inviteMember',
         params: { groupId: response.data.groupId },

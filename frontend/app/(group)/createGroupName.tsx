@@ -16,7 +16,6 @@ export default function CreateGroupName() {
   const { control, handleSubmit } = useForm<FormatData>();
   const router = useRouter();
   const { hasPayment } = useUserState();
-  console.log(hasPayment)
   const onNext: SubmitHandler<FormatData> = (data) => {
     if (!data.groupName || data.groupName.trim() === "") {
       Alert.alert("Missing Group Name", "Please enter a group name.");
