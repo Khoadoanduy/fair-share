@@ -24,41 +24,45 @@ export default function AuthLayout() {
         headerLeft: () => <BackButton />, // your custom back button
       }}
     >
-      <Stack.Screen
-        name="CreateGroupName"
+    <Stack.Screen
+        name="createGroupName"
         options={{
           title: "",
           headerTitle: () => null,
         }}
-      />
-      <Stack.Screen
-        name="SubscriptionInfo"
+    />
+    <Stack.Screen
+        name="customSubscription"
         options={{
           title: "",
           headerTitle: () => null,
         }}
-      />
-      <Stack.Screen
-        name="CustomSubscription"
+    />
+    <Stack.Screen
+        name="customSubscription"
         options={{
           title: "",
           headerTitle: () => null,
         }}
-      />
-      <Stack.Screen
-        name="InviteMember"
+    />
+    <Stack.Screen
+        name="inviteMember"
         options={{
           title: "",
           headerTitle: () => null,
         }}
-      />
-      <Stack.Screen
-        name="SubscriptionDetails"
-        options={{
-          title: "",
-          headerTitle: () => null,
-        }}
-      />
+    />
+    <Stack.Screen
+        name = "showAllInvitations"
+        options={{ title: ""}}
+    />
+    <Stack.Screen
+      name="SubscriptionDetails"
+      options={{
+        title: "",
+        headerTitle: () => null,
+      }}
+    />
     </Stack>
 
   );

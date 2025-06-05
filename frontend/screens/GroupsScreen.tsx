@@ -6,7 +6,10 @@ import { Link, useRouter } from 'expo-router';
 export default function GroupsScreen() {
   const router = useRouter();
   const handleCreateGroup = () => {
-    router.push('/(group)/CreateGroupName')
+    router.push('/(group)/createGroupName')
+  }
+  const showAllInvitations = () => {
+    router.push('/(group)/showAllInvitations')
   }
 
   return (
@@ -15,6 +18,7 @@ export default function GroupsScreen() {
         <Text style={styles.title}>Groups</Text>
         <Text>Your groups will appear here</Text>
         <CustomButton text='Create Group' onPress={handleCreateGroup} />
+        <CustomButton text='Show invitations' onPress={showAllInvitations}/>
         <Pressable
           style={{ backgroundColor: '#4A3DE3', padding: 15, borderRadius: 8, margin: 20 }}
           onPress={() => router.push({

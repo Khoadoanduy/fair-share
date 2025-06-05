@@ -35,7 +35,7 @@ export default function InviteMemberScreen() {
     }
     setLoading(true);
     try {
-      const response = await axios.get(`${API_URL}/api/groups/search-user/${text}`,{
+      const response = await axios.get(`${API_URL}/api/group/search-user/${text}`,{
         timeout: 10000
       });
       //Return an array of users that contains that username entered

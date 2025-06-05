@@ -65,5 +65,28 @@ router.put('/:clerkID/:customerId', async function(request, response) {
     }
 });
 
+//Show all invitation of one user
+router.get('/invitation/:userId', async (request: Request, response: Response) => {
+    try {
+        const { userId } = request.params;
+        if (!userId) {
+            return response.status(400).json({ message: 'userId are required' });
+        }
+        //Check if the user has already been invited to this group
+        const invitation = await prisma.groupInvitation.findMany({
+          where: { userId, status: "pending" },
+          include: { group: true }
+        })
+        if (invitation.length == 0) {
+          return response.json({ message: 'No invitation sent' });
+        }
+        response.status(200).json(invitation);
+
+    } catch (error) {
+        console.error(error);
+        response.status(500).json({ message: 'Error getting invitation' });
+    }
+});
+
 
 export default router;

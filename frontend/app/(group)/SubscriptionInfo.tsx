@@ -8,6 +8,7 @@ import CustomInput from '@/components/CustomInput';
 import ProgressDots from '@/components/ProgressDots';
 import { Ionicons } from '@expo/vector-icons';
 import CustomDropdown, { DropdownOption } from '@/components/CustomDropdown';
+import { useUser } from '@clerk/clerk-expo';
 
 type FormatData = {
   subscriptionId?: string;
@@ -30,6 +31,8 @@ type Subscription = {
 export default function SubscriptionScreen() {
   const API_URL = process.env.EXPO_PUBLIC_API_URL;
   const router = useRouter();
+  const { user } = useUser();
+  const clerkId = user?.id;
   const { groupName } = useLocalSearchParams();
   const { control, handleSubmit, setValue } = useForm<FormatData>({
     defaultValues: {
@@ -38,6 +41,20 @@ export default function SubscriptionScreen() {
       day: '1'
     }
   });
+
+  const userFromMongo = async () => {
+        try{
+            const response = await axios.get(`${API_URL}/api/user/`,{
+                params:{
+                    clerkID : clerkId
+                }
+            })
+            return response.data.id
+        }
+        catch(error){
+            console.error("Error fetching user data:", error);
+        }
+    }
 
   // Dropdown states
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
@@ -97,7 +114,7 @@ export default function SubscriptionScreen() {
 
   const handleCreateCustomSubscription = () => {
     router.push({
-      pathname: '/(group)/CustomSubscription',
+      pathname: '/(group)/customSubscription',
       params: { groupName }
     });
   };
@@ -109,7 +126,8 @@ export default function SubscriptionScreen() {
     }
 
     try {
-      const response = await axios.post(`${API_URL}/api/groups/create`, {
+      const leaderId = await userFromMongo();
+      const response = await axios.post(`${API_URL}/api/group/create`, {
         groupName,
         subscriptionId: info.subscriptionId,
         subscriptionName: info.subscriptionName,
@@ -117,9 +135,11 @@ export default function SubscriptionScreen() {
         amount: parseFloat(info.amount),
         cycle: info.cycle,
       });
-
+      const groupId = response.data.groupId;
+      await axios.post(`${API_URL}/api/groupMember/${groupId}/${leaderId}`, {userRole: "leader"});
+      console.log("Add group creator as leader");
       router.push({
-        pathname: '/(group)/InviteMember',
+        pathname: '/(group)/inviteMember',
         params: { groupId: response.data.groupId },
       });
     } catch (error) {
@@ -406,7 +426,8 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     marginBottom: 8,
     color: '#4A3DE3',
-    alignSelf: 'center'
+    alignSelf: 'center',
+    marginTop: -30
   },
   subtitle: {
     fontSize: 16,
@@ -645,7 +666,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingVertical: 14,
     width: '100%',
-    marginBottom: 50,
   },
   noResults: {
     fontSize: 16,
