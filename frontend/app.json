@@ -10,9 +10,15 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.fairshare",
+      "bundleIdentifier": "com.fairshare.app",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "UIBackgroundModes": ["remote-notification"]
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
       }
     },
     "plugins": [

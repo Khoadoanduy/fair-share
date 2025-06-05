@@ -18,10 +18,22 @@ import { Redirect } from "expo-router";
 
 // Set to true to show the Redux debugger, false to hide it
 const SHOW_REDUX_DEBUGGER = true;
+import Noti from "@/components/TestNoti";
+import { sendTestNotification } from "@/utils/notificationUtils";
 
 export default function HomeScreen() {
   const { user } = useUser();
   const {name, hasPayment, userId, stripeCustomerId, isSignedIn } = useUserState();
+
+  const handleSendNotification = async (): Promise<void> => {
+    try {
+      await sendTestNotification();
+      Alert.alert('Success!', 'Notification sent!');
+    } catch (error) {
+      Alert.alert('Error', 'Failed to send notification');
+      console.error(error);
+    }
+  };
 
   const handleNext = () => {
     router.push("/(collectpayment)/CollectPayment");

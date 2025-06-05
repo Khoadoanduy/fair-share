@@ -96,5 +96,41 @@ router.post('/create', async function (request, response) {
         }
     });
 
+    router.get('/get', async function (request, response) {
+        try {
+            const customerId = request.query.stripeId as string;
+
+            const customer = await prisma.user.findUnique({
+                where: {
+                    customerId: customerId,
+                }
+            });
+
+            if (!customer) {
+                return response.status(400).json({ error: 'Customer not found' });
+            }
+
+            const cardholder = customer.cardholderId;
+
+            if (!cardholder) {
+                return response.status(400).json({ error: 'Hasnt created virtual card for this user' });
+            }
+
+            const cards = await stripe.issuing.cards.list({
+                cardholder: cardholder,
+            });
+
+            response.json({
+                cards: cards.data
+              });
+            } catch (err) {
+              // Log for debugging
+              console.error('Error listing virtual cards list:', err);
+
+              // Send back the Stripe (or other) error message
+              response.status(500).json({err});
+            }
+        });
+
     
 export default router;
