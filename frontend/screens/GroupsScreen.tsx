@@ -80,7 +80,7 @@ export default function GroupsScreen() {
         amountEach: item.group.amountEach,
         cycle: item.group.cycle,
         category: item.group.category,
-        logo: item.group.logo,,
+        logo: item.group.logo,
         startDate: item.group.startDate,
         endDate: item.group.endDate,
         totalMem: item.group.totalMem,
@@ -100,7 +100,6 @@ export default function GroupsScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <BackButton></BackButton>
         <Text style={styles.headerTitle}>Manage Subscriptions</Text>
         <Ionicons name="search" size={20} color="#4A3DE3" />
       </View>

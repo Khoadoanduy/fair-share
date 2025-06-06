@@ -90,19 +90,19 @@ export default function PersonalInfoScreen() {
         }
 
         // Fetch payment methods if user has Stripe customer ID
-        if (userData.customerId) {
-          try {
-            const paymentResponse = await axios.get(
-              `${API_URL}/api/stripe-customer/retrieve-paymentMethodId`,
-              { params: { customerStripeID: userData.customerId } }
-            );
-            if (paymentResponse.data?.data) {
-              setPaymentMethods(paymentResponse.data.data);
-            }
-          } catch (error) {
-            console.error("Error fetching payment methods:", error);
-          }
-        }
+        // if (userData.customerId) {
+        //   try {
+        //     const paymentResponse = await axios.get(
+        //       `${API_URL}/api/stripe-customer/retrieve-paymentMethodId`,
+        //       { params: { customerStripeID: userData.customerId } }
+        //     );
+        //     if (paymentResponse.data?.data) {
+        //       setPaymentMethods(paymentResponse.data.data);
+        //     }
+        //   } catch (error) {
+        //     console.error("Error fetching payment methods:", error);
+        //   }
+        // }
 
         return userData;
       }
