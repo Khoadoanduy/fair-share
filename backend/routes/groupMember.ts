@@ -11,6 +11,7 @@ const prisma = new PrismaClient();
 router.post('/:groupId/:userId', async function (request, response) {
     try {
         const { groupId, userId } = request.params;
+        const { userRole } = request.body;
         //Check if member is already in that group
         const existedMember = await prisma.groupMember.findFirst({
             where: { userId, groupId }
@@ -19,8 +20,19 @@ router.post('/:groupId/:userId', async function (request, response) {
             return response.status(400).json({ message: 'Users already in group' })
         }
         const newMember = await prisma.groupMember.create({
-            data: { userId, groupId }
+            data: { userId, groupId, userRole }
             });
+        const updateTotalMem = await prisma.group.update({
+            where: { id: groupId },
+            data: {
+                totalMem: { increment: 1 }
+            }
+        });
+        const newAmountEach = updateTotalMem.amount/updateTotalMem.totalMem;
+        await prisma.group.update({
+            where: { id: groupId},
+            data: {amountEach: newAmountEach}
+        })
         response.status(201).json({ message: 'Member added', newMember});
     } catch (error) {
         console.error("Error adding member to group:", error);
@@ -41,6 +53,17 @@ router.delete('/:groupId/:userId', async function (request, response) {
         await prisma.groupMember.delete({
             where: { id: deleteMember.id}
         });
+        const updateTotalMem = await prisma.group.update({
+            where: { id: groupId },
+            data: {
+                totalMem: { decrement: 1 }
+            }
+        });
+        const newAmountEach = updateTotalMem.amount/updateTotalMem.totalMem;
+        await prisma.group.update({
+            where: { id: groupId},
+            data: {amountEach: newAmountEach}
+        })
         response.status(201).json({ message: 'Member deleted', deleteMember});
     } catch (error) {
         console.error("Error deleting member from group:", error);

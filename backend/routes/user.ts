@@ -3,9 +3,7 @@ import express, { Request, Response, Router, response } from 'express';
 import { User } from '@prisma/client';
 import prisma from '../prisma/client';
 
-
 const router: Router = express.Router();
-
 
 router.get('/', async function (request, response) {
     try {
@@ -15,7 +13,6 @@ router.get('/', async function (request, response) {
                 clerkId: clerkID,
             },
         });
-        console.log(user)
         if (!user) {
             return response.status(430).send("User not found");
         }
@@ -61,6 +58,29 @@ router.put('/:clerkID/:customerId', async function(request, response) {
     } catch (error) {
         console.error('Error updating user:', error);
         response.status(500).json({ error: 'Failed to update user' });
+    }
+});
+
+//Show all invitation of one user
+router.get('/invitation/:userId', async (request: Request, response: Response) => {
+    try {
+        const { userId } = request.params;
+        if (!userId) {
+            return response.status(400).json({ message: 'userId are required' });
+        }
+        //Check if the user has already been invited to this group
+        const invitation = await prisma.groupInvitation.findMany({
+          where: { userId, status: "pending" },
+          include: { group: true }
+        })
+        if (invitation.length == 0) {
+          return response.json({ message: 'No invitation sent' });
+        }
+        response.status(200).json(invitation);
+
+    } catch (error) {
+        console.error(error);
+        response.status(500).json({ message: 'Error getting invitation' });
     }
 });
 

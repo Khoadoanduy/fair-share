@@ -16,7 +16,7 @@ const InviteButton = ({ userId, groupId }: InviteButtonProps) => {
   const handleInvite = async () => {
     if (invited) return;
     try {
-      const response = await axios.post(`${API_URL}/api/groups/${groupId}/invite/${userId}`);
+      const response = await axios.post(`${API_URL}/api/invite/${groupId}/${userId}`);
       console.log('Invitation sent:', response.data);
       setInvited(true);
     } catch (error) {

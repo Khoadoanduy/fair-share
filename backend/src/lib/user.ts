@@ -1,6 +1,5 @@
 import prisma from '../../prisma/client';
 import { CreateUserInput } from '../types/user';
-import { User } from '@prisma/client';
 
 interface GetUserParams {
   id?: string;
@@ -37,7 +36,7 @@ async function updateUser(id: string, data: Partial<CreateUserInput>) {
 async function deleteUser(id: string) {
   try {
     // Use transactions to ensure all operations succeed or fail together
-    const result = await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx: { user: { delete: (arg0: { where: { id: string; }; }) => any; }; }) => {
       const deletedUser = await tx.user.delete({
         where: { id }
       });
