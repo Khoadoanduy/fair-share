@@ -17,11 +17,7 @@ if (!WEBHOOK_SECRET) {
 }
 
 // Define the webhook endpoint to handle POST requests from Clerk
-webhookRouter.post('/webhook', async (req: Request, res: Response) => {
-
-  // Log the event type for debugging
-  console.log("Received webhook event type:", req.body?.type);
-  
+webhookRouter.post('/webhook', async (req: Request, res: Response) => { 
   // Extract Svix headers needed to verify the webhook
   const svix_id = req.headers['svix-id'] as string;
   const svix_timestamp = req.headers['svix-timestamp'] as string;
