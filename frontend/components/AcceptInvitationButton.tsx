@@ -17,7 +17,7 @@ const AcceptInvitationButton = ({ userId, groupId }: AcceptButtonProps) => {
     try {
       await axios.put(`${API_URL}/api/invite/${groupId}/${userId}`);
       await axios.post(`${API_URL}/api/groupMember/${groupId}/${userId}`, {userRole: "member"});
-      setAccepted((prev) => ({ ...prev, [groupId]: 'accepted' }));
+      setAccepted(true);
       console.log('Accept invitation successfully');
     } catch (error) {
       console.error('Error accepting invitation:', error);
@@ -46,7 +46,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'green', 
   },
   textAccepted: {
-    color: 'white',
+    color: '#94A3B8',
     fontSize: 16,
     fontWeight: '600',
   },
