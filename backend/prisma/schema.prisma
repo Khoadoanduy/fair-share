@@ -55,6 +55,8 @@ model Group {
   cycle            String?
   cycleDays        Int?
   members          GroupMember[]
+  cycle            String
+  category         String
   startDate        DateTime?
   endDate          DateTime?
   GroupInvitation  GroupInvitation[]

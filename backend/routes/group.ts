@@ -10,7 +10,7 @@ const prisma = new PrismaClient();
 //Create group
 router.post('/create', async function (request, response) {
   try {
-    const { groupName, subscriptionName, subscriptionId, planName, amount, cycle,cycleDays } = request.body;    
+    const { groupName, subscriptionName, subscriptionId, planName, amount, cycle, category,cycleDays } = request.body;    
 
     const group = await prisma.group.create({
       data: {
@@ -20,6 +20,7 @@ router.post('/create', async function (request, response) {
         planName,
         amount,
         cycle,
+        category
         cycleDays,
         amountEach: amount,
         totalMem: 1
@@ -87,6 +88,38 @@ router.get('/invitation/:groupId', async (request: Request, response: Response) 
     } catch (error) {
         console.error(error);
         response.status(500).json({ message: 'Error getting invitation' });
+    }
+});
+
+router.get('/search-group/:userId/:groupName', async (request, response) => {
+    try {
+        const { userId, groupName } = request.params;
+
+        const groups = await prisma.groupMember.findMany({
+            where: { 
+              userId: userId,
+              group: {
+                is: {
+                  groupName: {
+                    contains: groupName,
+                    mode: 'insensitive'
+                }
+              }
+             }
+            },
+            select: {
+                group: true
+            }
+        })
+
+        //If user doesn't exist, give an empty list
+        if (groups.length === 0) {
+            return response.status(404).json({ groups: [] });
+        }
+        response.status(200).json({ groups });
+    } catch (error) {
+        console.log(error);
+        response.status(500).json({ message: 'Error searching group' });
     }
 });
 

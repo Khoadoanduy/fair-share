@@ -146,7 +146,7 @@ export default function SubscriptionScreen() {
   };
 
   const handleCreateGroup = async (info: FormatData) => {
-    if (!info.subscriptionName || !info.planName || !info.amount || !info.cycle) {
+    if (!info.subscriptionName || !info.planName || !info.amount || !info.cycle || !info.category) {
       Alert.alert('Missing Info', 'Please fill in all fields');
       return;
     }

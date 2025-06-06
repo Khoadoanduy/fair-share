@@ -27,6 +27,8 @@ export default function CustomSubscriptionScreen() {
   const { user } = useUser();
   const clerkId = user?.id;
   const { groupName } = useLocalSearchParams();
+  const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
+
   const { control, handleSubmit, setValue, watch } = useForm<FormatData>({
     defaultValues: {
       currency: 'USD',
@@ -117,7 +119,7 @@ export default function CustomSubscriptionScreen() {
     return calculateTotalDays(dayValue || '1', cycleValue || 'monthly');
   };
   const handleCreateGroup: SubmitHandler<FormatData> = async (info) => {
-    if (!info.subscriptionName || !info.planName || !info.amount || !info.cycle) {
+    if (!info.subscriptionName || !info.planName || !info.amount || !info.cycle || !info.category) {
       Alert.alert('Missing Info', 'Please fill in all fields');
       return;
     }
@@ -146,7 +148,10 @@ export default function CustomSubscriptionScreen() {
       Alert.alert('Error', 'Failed to create group');
     }
   };
-
+  const toggleDropdown = (dropdown: string) => {
+    setActiveDropdown(activeDropdown === dropdown ? null : dropdown);
+  };
+  const isDropdownOpen = (dropdown: string) => activeDropdown === dropdown;
   const cycleOptions: DropdownOption[] = [
     { label: 'Weekly', value: 'weekly' },
     { label: 'Monthly', value: 'monthly' },
@@ -157,6 +162,14 @@ export default function CustomSubscriptionScreen() {
     { label: 'USD ($)', value: 'USD' },
     { label: 'EUR (€)', value: 'EUR' },
     { label: 'JPY (¥)', value: 'JPY' },
+  ];
+  const categoryOptions: DropdownOption[] = [
+    { label: 'Streaming', value: 'streaming' },
+    { label: 'Music', value: 'music' },
+    { label: 'Gaming', value: 'gaming' },
+    { label: 'Productivity', value: 'productivity' },
+    { label: 'Cloud Storage', value: 'cloud_storage' },
+    { label: 'Fitness', value: 'fitness' },
   ];
 
   // Close dropdown when clicking outside
@@ -216,12 +229,29 @@ export default function CustomSubscriptionScreen() {
             </View>
           </View>
 
+         {/* Category field using the imported CustomDropdown */}
           <Text style={styles.label}>Category</Text>
-          <CustomInput
+          <Controller
             control={control}
             name="category"
-            placeholder="Enter subscription category"
-            style={styles.input}
+            render={({ field: { value } }) => (
+              <CustomDropdown
+                options={categoryOptions}
+                value={value}
+                placeholder="Select subscription category"
+                onChange={(val) => setValue('category', val)}
+                isOpen={isDropdownOpen('category')}
+                setIsOpen={() => toggleDropdown('category')}
+                style={styles.dropdownInput}
+                menuStyle={{
+                  position: 'absolute',
+                  top: 195,
+                  left: 0,
+                  right: 0,
+                  zIndex: 100,
+                }}
+              />
+            )}
           />
 
           <Text style={styles.label}>Payment every</Text>
@@ -546,5 +576,8 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingVertical: 14,
     width: '100%',
+  },
+  dropdownInput: {
+    paddingVertical: 12,
   },
 });

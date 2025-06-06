@@ -87,5 +87,26 @@ router.get('/invitation/:userId', async (request: Request, response: Response) =
     }
 });
 
+//Show all user's groups
+router.get('/groups/:userId', async (request: Request, response: Response) => {
+    try {
+        const { userId } = request.params;
+        if (!userId) {
+            return response.status(400).json({ message: 'userId are required' });
+        }
+        const allGroups = await prisma.groupMember.findMany({
+          where: { userId },
+          select: { group: true }
+        })
+        if (allGroups.length == 0) {
+          return response.json({ message: 'No group found' });
+        }
+        response.status(200).json(allGroups);
+
+    } catch (error) {
+        console.error(error);
+        response.status(500).json({ message: 'Error getting groups' });
+    }
+});
 
 export default router;
