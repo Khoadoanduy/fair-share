@@ -27,12 +27,12 @@ model User {
   id                  String             @id @default(auto()) @map("_id") @db.ObjectId
   clerkId             String             @unique
   email               String             @unique
-  customerId          String?            @unique
-  cardholderId        String?            @unique
+  customerId          String?
+  cardholderId        String?
   firstName           String
   lastName            String
   username            String?            @unique
-  phoneNumber         String?            @unique
+  phoneNumber         String?
   dateOfBirth         DateTime?
   address             Address?
   groups              GroupMember[]
@@ -46,20 +46,24 @@ model User {
 model Group {
   id               String            @id @default(auto()) @map("_id") @db.ObjectId
   groupName        String
+  logo             String?
   subscriptionName String
   subscription     Subscription?     @relation(fields: [subscriptionId], references: [id])
   subscriptionId   String?           @db.ObjectId
   planName         String?
   amount           Float
-  virtualCardId    String?           @unique
+  virtualCardId    String?           
+  cycleDays        Int?
   members          GroupMember[]
-  cycle            String?
+  category         String
   startDate        DateTime?
   endDate          DateTime?
   GroupInvitation  GroupInvitation[]
   credentialUsername String?
   credentialPassword String?
   createdAt        DateTime          @default(now())
+  amountEach       Float?
+  totalMem         Int
 }
 
 //junction table between User and Group
@@ -107,7 +111,6 @@ model Friend {
   // Prevents duplicate friendship records.
   @@unique([userId, friendId])
 }
-
 
 model Subscription {
   id       String  @id @default(auto()) @map("_id") @db.ObjectId

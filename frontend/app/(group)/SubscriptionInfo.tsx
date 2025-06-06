@@ -19,6 +19,7 @@ type FormatData = {
   day: string;
   cycle: string;
   currency: string;
+  logo: string;
 };
 
 type Subscription = {
@@ -34,7 +35,7 @@ export default function SubscriptionScreen() {
   const { user } = useUser();
   const clerkId = user?.id;
   const { groupName } = useLocalSearchParams();
-  const { control, handleSubmit, setValue } = useForm<FormatData>({
+  const { control, handleSubmit, setValue, watch } = useForm<FormatData>({
     defaultValues: {
       currency: 'USD',
       cycle: 'monthly',
@@ -42,19 +43,22 @@ export default function SubscriptionScreen() {
     }
   });
 
+  // Watch the day and cycle values to calculate total days
+  const dayValue = watch('day');
+  const cycleValue = watch('cycle');
   const userFromMongo = async () => {
-        try{
-            const response = await axios.get(`${API_URL}/api/user/`,{
-                params:{
-                    clerkID : clerkId
-                }
-            })
-            return response.data.id
+    try {
+      const response = await axios.get(`${API_URL}/api/user/`, {
+        params: {
+          clerkID: clerkId
         }
-        catch(error){
-            console.error("Error fetching user data:", error);
-        }
+      })
+      return response.data.id
     }
+    catch (error) {
+      console.error("Error fetching user data:", error);
+    }
+  }
 
   // Dropdown states
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
@@ -109,6 +113,7 @@ export default function SubscriptionScreen() {
     setValue('subscriptionId', subscription.id);
     setValue('subscriptionName', subscription.name);
     setValue('category', subscription.category.toLowerCase());
+    setValue('logo', subscription.logo);
     setActiveDropdown(null);
   };
 
@@ -118,15 +123,46 @@ export default function SubscriptionScreen() {
       params: { groupName }
     });
   };
+  const calculateTotalDays = (dayValue: string, cycle: string): number => {
+    // Parse the day value - handle decimal numbers
+    const parsedDay = parseFloat(dayValue) || 1;
+    
+    // Base days for each cycle
+    const cycleDaysMap: { [key: string]: number } = {
+      'weekly': 7,
+      'monthly': 30,
+      'yearly': 365,
+    };
+
+    const baseDays = cycleDaysMap[cycle.toLowerCase()] || 30;
+    
+    // Calculate total days by multiplying base cycle days with the day value
+    const totalDays = Math.round(parsedDay * baseDays);
+    
+    return totalDays;
+  };
+
+  // Get the current calculated days for display
+  const getCurrentCalculatedDays = (): number => {
+    return calculateTotalDays(dayValue || '1', cycleValue || 'monthly');
+  };
 
   const handleCreateGroup = async (info: FormatData) => {
-    if (!info.subscriptionName || !info.planName || !info.amount || !info.cycle) {
+    if (!info.subscriptionName || !info.planName || !info.amount || !info.cycle || !info.category) {
       Alert.alert('Missing Info', 'Please fill in all fields');
+      return;
+    }
+
+    // Validate day input
+    const parsedDay = parseFloat(info.day);
+    if (isNaN(parsedDay) || parsedDay <= 0) {
+      Alert.alert('Invalid Input', 'Please enter a valid number for the payment frequency');
       return;
     }
 
     try {
       const leaderId = await userFromMongo();
+      const cycleDays = calculateTotalDays(info.day, info.cycle);
       const response = await axios.post(`${API_URL}/api/group/create`, {
         groupName,
         subscriptionId: info.subscriptionId,
@@ -134,10 +170,15 @@ export default function SubscriptionScreen() {
         planName: info.planName,
         amount: parseFloat(info.amount),
         cycle: info.cycle,
+        cycleDays: cycleDays,
+        paymentFrequency: parseFloat(info.day), // Store the original frequency value
+        category: info.category,
+        logo: info.logo,
       });
+      
       const groupId = response.data.groupId;
-      await axios.post(`${API_URL}/api/groupMember/${groupId}/${leaderId}`, {userRole: "leader"});
-      console.log("Add group creator as leader");
+      await axios.post(`${API_URL}/api/groupMember/${groupId}/${leaderId}`, { userRole: "leader" });
+      
       router.push({
         pathname: '/(group)/inviteMember',
         params: { groupId: response.data.groupId },
@@ -205,7 +246,7 @@ export default function SubscriptionScreen() {
             <Ionicons name="chevron-down" size={20} color="#888" />
           </Pressable>
 
-          {/* Subscription dropdown (needs custom implementation for search) */}
+          {/* Subscription dropdown */}
           {isDropdownOpen('subscription') && (
             <View style={styles.dropdownMenu}>
               <View style={styles.searchContainer}>
@@ -263,7 +304,7 @@ export default function SubscriptionScreen() {
             </View>
           )}
 
-          {/* Category field using the imported CustomDropdown */}
+          {/* Category field */}
           <Text style={styles.label}>Category</Text>
           <Controller
             control={control}
@@ -288,7 +329,7 @@ export default function SubscriptionScreen() {
             )}
           />
 
-          {/* Payment every */}
+          {/* Payment every with enhanced calculation display */}
           <Text style={styles.label}>Payment every</Text>
           <View style={styles.rowContainer}>
             <CustomInput
@@ -441,6 +482,19 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     marginTop: 16,
     color: '#000',
+  },
+
+  // Calculation display
+  calculationDisplay: {
+    marginTop: 8,
+    marginBottom: 8,
+    paddingLeft: 4,
+  },
+  calculationText: {
+    fontSize: 14,
+    color: '#4A3DE3',
+    fontWeight: '500',
+    fontStyle: 'italic',
   },
 
   // Rows and containers

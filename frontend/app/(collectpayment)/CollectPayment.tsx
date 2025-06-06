@@ -255,7 +255,6 @@ export default function CollectPaymentScreen() {
       return response.status === 200;
     } catch (error) {
       console.error("Error updating user info:", error);
-      Alert.alert("Error", "Failed to update user information");
       return false;
     }
   };

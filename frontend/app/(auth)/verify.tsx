@@ -67,7 +67,6 @@ export default function VerifyScreen() {
         }
       } else {
         console.log('Verification failed');
-        console.log(signUpAttempt);
         setError('root', { message: 'Could not complete the sign up' });
       }
     } catch (err) {

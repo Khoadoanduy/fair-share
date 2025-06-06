@@ -10,18 +10,21 @@ const prisma = new PrismaClient();
 //Create group
 router.post('/create', async function (request, response) {
   try {
-    console.log("create group called")
     const { groupName, subscriptionName, subscriptionId, planName, amount, cycle } = request.body;
-
+    const { groupName, subscriptionName, subscriptionId, planName, logo, amount, cycle, category,cycleDays } = request.body;    
     const group = await prisma.group.create({
       data: {
         groupName,
         subscriptionId,
-        subscriptionName,
+        subscriptionName, // Required for all groups
+        logo,
         planName,
         amount,
         cycle,
-        startDate: new Date(),
+        category,
+        cycleDays,
+        amountEach: amount,
+        totalMem: 1
       }
     });
     response.status(201).json({
@@ -194,6 +197,78 @@ router.get('/:groupId/subscription-details', async (request: Request, response: 
     console.error('Error fetching subscription details:', error);
     response.status(500).json({ message: 'Error fetching subscription details' });
   }
+});
+
+router.get('/search-group/:userId/:groupName', async (request, response) => {
+    try {
+        const { userId, groupName } = request.params;
+
+        const groups = await prisma.groupMember.findMany({
+            where: { 
+              userId: userId,
+              group: {
+                is: {
+                  groupName: {
+                    contains: groupName,
+                    mode: 'insensitive'
+                }
+              }
+             }
+            },
+            select: {
+                group: true
+            }
+        })
+
+        //If user doesn't exist, give an empty list
+        if (groups.length === 0) {
+            return response.status(404).json({ groups: [] });
+        }
+        response.status(200).json({ groups });
+    } catch (error) {
+        console.log(error);
+        response.status(500).json({ message: 'Error searching group' });
+    }
+});
+
+//Get amount each member has to pay
+router.get('/amount-each/:groupId', async (request: Request, response: Response) => {
+    try {
+        const { groupId } = request.params;
+        if (!groupId) {
+            return response.status(400).json({ message: 'groupId are required' });
+        }
+        const group = await prisma.group.findFirst({
+          where: { id: groupId },
+        });
+        if (!group)
+          return response.status(404).json({message: "No group found"});
+        response.status(200).json(group.amountEach);
+
+    } catch (error) {
+        console.error(error);
+        response.status(500).json({ message: 'Error getting amount' });
+    }
+});
+
+//Get the number of members in the group
+router.get('/total-mem/:groupId', async (request: Request, response: Response) => {
+    try {
+        const { groupId } = request.params;
+        if (!groupId) {
+            return response.status(400).json({ message: 'groupId are required' });
+        }
+        const group = await prisma.group.findFirst({
+          where: { id: groupId },
+        })
+        if (!group)
+          return response.status(404).json({message: "No group found"});
+        response.status(200).json(group.totalMem);
+
+    } catch (error) {
+        console.error(error);
+        response.status(500).json({ message: 'Error getting total number of members' });
+    }
 });
 
 export default router

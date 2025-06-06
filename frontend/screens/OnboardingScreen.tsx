@@ -34,7 +34,6 @@ type Feature = {
 
 export default function OnboardingScreen() {
   const { onboardingComplete,isSignedIn } = useUserState();
-  console.log("from onbs" + onboardingComplete,isSignedIn)
   const flatListRef = useRef<FlatList<Feature>>(null);
   const [currentFeature, setCurrentFeature] = useState(0);
   const dispatch = useAppDispatch();

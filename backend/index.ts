@@ -3,6 +3,7 @@ import dotenv from 'dotenv';
 import webhookRouter from './src/webhooks/clerk/route';
 import { authMiddleware, authErrorHandler } from './src/middleware';
 import paymentRoutes from './routes/stripe_payment';
+import customerRoutes from './routes/stripe_customer'
 import userRoute from './routes/user'
 import inviteRoute from './routes/invite'
 import friendRoute from './routes/friend';

@@ -16,7 +16,6 @@ router.get('/', async function (request, response) {
                 clerkId: clerkID,
             },
         });
-        console.log(user)
         if (!user) {
             return response.status(430).send("User not found");
         }
@@ -88,6 +87,7 @@ router.get('/invitation/:userId', async (request: Request, response: Response) =
     }
 });
 
+//Show all user's groups
 router.get('/groups/:userId', async (request: Request, response: Response) => {
     try {
         const { userId } = request.params;
@@ -99,6 +99,7 @@ router.get('/groups/:userId', async (request: Request, response: Response) => {
           where: { userId },
           include: { group: true }
         })
+        
         if (allGroups.length == 0) {
           return response.json({ message: 'No group found' });
         }

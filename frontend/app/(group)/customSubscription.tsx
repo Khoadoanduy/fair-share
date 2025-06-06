@@ -27,13 +27,17 @@ export default function CustomSubscriptionScreen() {
   const { user } = useUser();
   const clerkId = user?.id;
   const { groupName } = useLocalSearchParams();
-  const { control, handleSubmit, setValue } = useForm<FormatData>({
+  const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
+
+  const { control, handleSubmit, setValue, watch } = useForm<FormatData>({
     defaultValues: {
       currency: 'USD',
       cycle: 'monthly',
       day: '1'
     }
   });
+  const dayValue = watch('day');
+  const cycleValue = watch('cycle');
   const userFromMongo = async () => {
         try{
             const response = await axios.get(`${API_URL}/api/user/`,{
@@ -81,26 +85,60 @@ export default function CustomSubscriptionScreen() {
       Alert.alert('Error', 'Could not pick the image.');
     }
   };
+  const convertCycleToDays = (cycle: string): number => {
+    switch (cycle.toLowerCase()) {
+      case "weekly":
+        return 7;
+      case "monthly":
+        return 30;
+      case "yearly":
+        return 365;
+      default:
+        return 30;
+    }
+  };
+  const calculateTotalDays = (dayValue: string, cycle: string): number => {
+    // Parse the day value - handle decimal numbers
+    const parsedDay = parseFloat(dayValue) || 1;
+    
+    // Base days for each cycle
+    const cycleDaysMap: { [key: string]: number } = {
+      'weekly': 7,
+      'monthly': 30,
+      'yearly': 365,
+    };
 
+    const baseDays = cycleDaysMap[cycle.toLowerCase()] || 30;
+    
+    // Calculate total days by multiplying base cycle days with the day value
+    const totalDays = Math.round(parsedDay * baseDays);
+    
+    return totalDays;
+  };
+  const getCurrentCalculatedDays = (): number => {
+    return calculateTotalDays(dayValue || '1', cycleValue || 'monthly');
+  };
   const handleCreateGroup: SubmitHandler<FormatData> = async (info) => {
-    if (!info.subscriptionName || !info.planName || !info.amount || !info.cycle) {
+    if (!info.subscriptionName || !info.planName || !info.amount || !info.cycle || !info.category) {
       Alert.alert('Missing Info', 'Please fill in all fields');
       return;
     }
 
     try {
       const leaderId = await userFromMongo();
+      const cycleDays = calculateTotalDays(info.day, info.cycle);
       const response = await axios.post(`${API_URL}/api/group/create`, {
         groupName,
         subscriptionName: info.subscriptionName,
         planName: info.planName,
         amount: parseFloat(info.amount),
         cycle: info.cycle,
+        cycleDays: cycleDays,
+        paymentFrequency: parseFloat(info.day),
         category: info.category
       });
       const groupId = response.data.groupId;
       await axios.post(`${API_URL}/api/groupMember/${groupId}/${leaderId}`, {userRole: "leader"});
-      console.log("Add group creator as leader");
       router.push({
         pathname: '/(group)/inviteMember',
         params: { groupId: response.data.groupId },
@@ -110,7 +148,10 @@ export default function CustomSubscriptionScreen() {
       Alert.alert('Error', 'Failed to create group');
     }
   };
-
+  const toggleDropdown = (dropdown: string) => {
+    setActiveDropdown(activeDropdown === dropdown ? null : dropdown);
+  };
+  const isDropdownOpen = (dropdown: string) => activeDropdown === dropdown;
   const cycleOptions: DropdownOption[] = [
     { label: 'Weekly', value: 'weekly' },
     { label: 'Monthly', value: 'monthly' },
@@ -121,6 +162,14 @@ export default function CustomSubscriptionScreen() {
     { label: 'USD ($)', value: 'USD' },
     { label: 'EUR (€)', value: 'EUR' },
     { label: 'JPY (¥)', value: 'JPY' },
+  ];
+  const categoryOptions: DropdownOption[] = [
+    { label: 'Streaming', value: 'streaming' },
+    { label: 'Music', value: 'music' },
+    { label: 'Gaming', value: 'gaming' },
+    { label: 'Productivity', value: 'productivity' },
+    { label: 'Cloud Storage', value: 'cloud_storage' },
+    { label: 'Fitness', value: 'fitness' },
   ];
 
   // Close dropdown when clicking outside
@@ -180,12 +229,29 @@ export default function CustomSubscriptionScreen() {
             </View>
           </View>
 
+         {/* Category field using the imported CustomDropdown */}
           <Text style={styles.label}>Category</Text>
-          <CustomInput
+          <Controller
             control={control}
             name="category"
-            placeholder="Enter subscription category"
-            style={styles.input}
+            render={({ field: { value } }) => (
+              <CustomDropdown
+                options={categoryOptions}
+                value={value}
+                placeholder="Select subscription category"
+                onChange={(val) => setValue('category', val)}
+                isOpen={isDropdownOpen('category')}
+                setIsOpen={() => toggleDropdown('category')}
+                style={styles.dropdownInput}
+                menuStyle={{
+                  position: 'absolute',
+                  top: 195,
+                  left: 0,
+                  right: 0,
+                  zIndex: 100,
+                }}
+              />
+            )}
           />
 
           <Text style={styles.label}>Payment every</Text>
@@ -510,5 +576,8 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingVertical: 14,
     width: '100%',
+  },
+  dropdownInput: {
+    paddingVertical: 12,
   },
 });
