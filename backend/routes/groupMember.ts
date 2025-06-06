@@ -72,7 +72,7 @@ router.delete('/:groupId/:userId', async function (request, response) {
 });
 
 // Get all members of a group
-router.get('/:groupId/', async function (request, response) {
+router.get('/:groupId', async function (request, response) {
     try {
         const { groupId } = request.params;
         const allMember = await prisma.groupMember.findMany({
@@ -88,20 +88,29 @@ router.get('/:groupId/', async function (request, response) {
     }
 });
 
-// Check if a user is in a group
+// check role of a user in a group
 router.get('/:groupId/:userId', async function (request, response) {
     try {
         const { groupId, userId } = request.params;
         const member = await prisma.groupMember.findFirst({
             where: { groupId, userId }
         });
-        if (member) {
-            return response.status(200).json(true);
+        if (!member) {
+            return response.status(200).json({ 
+                isMember: false,
+                isLeader: false 
+            });
         }
-        return response.status(200).json(false);
+        const isLeader = member.userRole === 'leader';
+        return response.status(200).json({
+            isMember: true,
+            isLeader: isLeader
+        });
+        
     } catch (error) {
         console.error("Error finding member in the group", error);
         response.status(500).send("Internal server error");
     }
 })
+
 export default router

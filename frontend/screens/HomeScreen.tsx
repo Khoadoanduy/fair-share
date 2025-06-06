@@ -5,16 +5,17 @@ import {
   StyleSheet,
   SafeAreaView,
   ScrollView,
+  Alert,
 } from "react-native";
-import { router } from 'expo-router';
+import { router } from "expo-router";
 import { useUser } from "@clerk/clerk-expo";
 import PaymentMethod from "@/components/PaymentMethod";
-import {
-  useUserState,
-} from "@/hooks/useUserState";
+import { useUserState } from "@/hooks/useUserState";
 import { useEffect } from "react";
 import CustomButton from "@/components/CustomButton";
 import { Redirect } from "expo-router";
+import { useAppDispatch } from "@/redux/hooks";
+import { fetchUserData } from "@/redux/slices/userSlice";
 
 // Set to true to show the Redux debugger, false to hide it
 const SHOW_REDUX_DEBUGGER = true;
@@ -23,21 +24,34 @@ import { sendTestNotification } from "@/utils/notificationUtils";
 
 export default function HomeScreen() {
   const { user } = useUser();
-  const {name, hasPayment, userId, stripeCustomerId, isSignedIn } = useUserState();
-
+  const dispatch = useAppDispatch();
+  const { name, hasPayment, userId, stripeCustomerId, isSignedIn } =
+    useUserState();
   const handleSendNotification = async (): Promise<void> => {
     try {
       await sendTestNotification();
-      Alert.alert('Success!', 'Notification sent!');
+      Alert.alert("Success!", "Notification sent!");
     } catch (error) {
-      Alert.alert('Error', 'Failed to send notification');
+      Alert.alert("Error", "Failed to send notification");
       console.error(error);
+    }
+  };
+
+  const handleForceRefresh = async () => {
+    if (user?.id) {
+      try {
+        await dispatch(fetchUserData(user.id)).unwrap();
+        Alert.alert("Success", "Data refreshed successfully!");
+      } catch (error) {
+        Alert.alert("Error", "Failed to refresh data");
+      }
     }
   };
 
   const handleNext = () => {
     router.push("/(collectpayment)/CollectPayment");
-  }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView>
@@ -48,18 +62,14 @@ export default function HomeScreen() {
                 source={{ uri: user?.imageUrl }}
                 style={styles.profileImage}
               />
-              <Text style={styles.welcomeText}>
-                Welcome,${name}
-              </Text>
+              <Text style={styles.welcomeText}>Welcome, {name}</Text>
               <Text style={styles.subtitle}>
                 What would you like to do today?
               </Text>
             </>
           ) : (
             <>
-              <Text style={styles.welcomeText}>
-                Hi, {name}
-              </Text>
+              <Text style={styles.welcomeText}>Hi, {name}</Text>
               <Text style={styles.welcomeText}>Welcome to Fair Share</Text>
               <Text style={styles.subtitle}>
                 The easiest way to split expenses with friends and family
@@ -67,10 +77,8 @@ export default function HomeScreen() {
             </>
           )}
         </View>
-        <CustomButton
-                    text="Next - Create personal card"
-                    onPress={handleNext}
-          />
+        <CustomButton text="Refresh Data" onPress={handleForceRefresh} />
+        <CustomButton text="Next - Create personal card" onPress={handleNext} />
       </ScrollView>
     </SafeAreaView>
   );
