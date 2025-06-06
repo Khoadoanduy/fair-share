@@ -27,12 +27,12 @@ model User {
   id                  String             @id @default(auto()) @map("_id") @db.ObjectId
   clerkId             String             @unique
   email               String             @unique
-  customerId          String?            
-  cardholderId        String?            
+  customerId          String?
+  cardholderId        String?
   firstName           String
   lastName            String
   username            String?            @unique
-  phoneNumber         String?            
+  phoneNumber         String?
   dateOfBirth         DateTime?
   address             Address?
   groups              GroupMember[]
@@ -46,12 +46,13 @@ model User {
 model Group {
   id               String            @id @default(auto()) @map("_id") @db.ObjectId
   groupName        String
+  logo             String?
   subscriptionName String
   subscription     Subscription?     @relation(fields: [subscriptionId], references: [id])
   subscriptionId   String?           @db.ObjectId
   planName         String?
   amount           Float
-  virtualCardId    String?           
+  virtualCardId    String?
   cycleDays        Int?
   members          GroupMember[]
   cycle            String

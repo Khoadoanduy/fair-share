@@ -6,6 +6,7 @@ import axios from 'axios';
 import { useUser } from '@clerk/clerk-expo';
 import { Ionicons } from '@expo/vector-icons';
 import BackButton from '@/components/BackButton';
+import GroupCard from '@/components/GroupCard';
 
 interface Group {
   id: string;
@@ -13,7 +14,7 @@ interface Group {
   subscriptionName: string;
   subscriptionId?: string;
   planName?: string;
-  amount: number;
+  amountEach: number;
   cycle: string;
   category: string;
 }
@@ -63,9 +64,10 @@ export default function GroupsScreen() {
         subscriptionName: item.group.subscriptionName,
         subscriptionId: item.group.subscriptionId,
         planName: item.group.planName,
-        amount: item.group.amount,
+        amountEach: item.group.amountEach,
         cycle: item.group.cycle,
-        category: item.group.category
+        category: item.group.category,
+        logo: item.group.logo,
       }));
       setGroups(transformedGroups);
     } catch (error) {
@@ -120,27 +122,14 @@ export default function GroupsScreen() {
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContainer}
         renderItem={({ item }) => (
-          <View style={styles.subscriptionCard}>
-            <Image source={require('../assets/spotify.png')} style={styles.subscriptionLogo} />
-            <View style={styles.subscriptionDetails}>
-              <Text style={styles.subscriptionName}>{item.subscriptionName}</Text>
-              <View style={styles.tagsContainer}>
-                <View style={[styles.tag, { backgroundColor: '#FEC260' }]}>
-                  <Text style={styles.tagText}>Shared</Text>
-                </View>
-                <View style={[styles.tag, { backgroundColor: '#10B981' }]}>
-                  <Text style={styles.tagText}>{item.category}</Text>
-                </View>
-              </View>
-            </View>
-            <View style={styles.subscriptionRight}>
-              <Text style={styles.price}>${item.amount}</Text>
-              <View style={styles.cycleContainer}>
-                <Image source={require('../assets/refresh-cw.png')} style={styles.refreshIcon} />
-                <Text style={styles.billingCycle}>{item.cycle}</Text>
-              </View>
-            </View>
-          </View>
+          <GroupCard
+            logo={{ uri: item.logo}}
+            subscriptionName={item.subscriptionName}
+            amountEach={item.amountEach}
+            cycle={item.cycle}
+            isShared={true} // or item.isShared if available
+            category={item.category}
+          />
         )}
       />
       <Pressable style={styles.fab} onPress={handleCreateGroup}>
