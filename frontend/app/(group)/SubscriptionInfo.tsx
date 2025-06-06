@@ -19,6 +19,7 @@ type FormatData = {
   day: string;
   cycle: string;
   currency: string;
+  logo: string;
 };
 
 type Subscription = {
@@ -112,6 +113,7 @@ export default function SubscriptionScreen() {
     setValue('subscriptionId', subscription.id);
     setValue('subscriptionName', subscription.name);
     setValue('category', subscription.category.toLowerCase());
+    setValue('logo', subscription.logo);
     setActiveDropdown(null);
   };
 
@@ -170,7 +172,8 @@ export default function SubscriptionScreen() {
         cycle: info.cycle,
         cycleDays: cycleDays,
         paymentFrequency: parseFloat(info.day), // Store the original frequency value
-        category: info.category
+        category: info.category,
+        logo: info.logo,
       });
       
       const groupId = response.data.groupId;
