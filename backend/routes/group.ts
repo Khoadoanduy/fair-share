@@ -10,8 +10,7 @@ const prisma = new PrismaClient();
 //Create group
 router.post('/create', async function (request, response) {
   try {
-    console.log("create group called")
-    const { groupName, subscriptionName, subscriptionId, planName, amount, cycle } = request.body;    
+    const { groupName, subscriptionName, subscriptionId, planName, amount, cycle,cycleDays } = request.body;    
 
     const group = await prisma.group.create({
       data: {
@@ -21,6 +20,9 @@ router.post('/create', async function (request, response) {
         planName,
         amount,
         cycle,
+        cycleDays,
+        amountEach: amount,
+        totalMem: 1
       }
     });
     response.status(201).json({
@@ -85,6 +87,46 @@ router.get('/invitation/:groupId', async (request: Request, response: Response) 
     } catch (error) {
         console.error(error);
         response.status(500).json({ message: 'Error getting invitation' });
+    }
+});
+
+//Get amount each member has to pay
+router.get('/amount-each/:groupId', async (request: Request, response: Response) => {
+    try {
+        const { groupId } = request.params;
+        if (!groupId) {
+            return response.status(400).json({ message: 'groupId are required' });
+        }
+        const group = await prisma.group.findFirst({
+          where: { id: groupId },
+        });
+        if (!group)
+          return response.status(404).json({message: "No group found"});
+        response.status(200).json(group.amountEach);
+
+    } catch (error) {
+        console.error(error);
+        response.status(500).json({ message: 'Error getting amount' });
+    }
+});
+
+//Get the number of members in the group
+router.get('/total-mem/:groupId', async (request: Request, response: Response) => {
+    try {
+        const { groupId } = request.params;
+        if (!groupId) {
+            return response.status(400).json({ message: 'groupId are required' });
+        }
+        const group = await prisma.group.findFirst({
+          where: { id: groupId },
+        })
+        if (!group)
+          return response.status(404).json({message: "No group found"});
+        response.status(200).json(group.totalMem);
+
+    } catch (error) {
+        console.error(error);
+        response.status(500).json({ message: 'Error getting total number of members' });
     }
 });
 

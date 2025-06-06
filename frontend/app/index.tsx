@@ -17,12 +17,10 @@ export default function Index() {
     return <Redirect href="/(onboarding)/user" />;
   }
   if (onboardingComplete && !isSignedIn) {
-    console.log("from main index.tsx to welcome")
     return <Redirect href="/(welcome)" />;
   }
   
   else{
-    console.log("from main index.tsx to tabs")
     return <Redirect href="/(tabs)" />;
   }
   
