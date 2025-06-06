@@ -20,7 +20,7 @@ import { setHasPayment, setStripeCustomerId } from "@/redux/slices/userSlice";
 import { formatISO } from "date-fns";
 import { router } from "expo-router";
 
-const API_URL = "http://localhost:3000";
+const API_URL = process.env.EXPO_PUBLIC_API_URL
 
 interface CountryCode {
   code: string;
@@ -263,8 +263,8 @@ export default function CollectPaymentScreen() {
     try {
       console.log(" I'm at fetchPaymentSheetParams");
       const customerInfo = userState.email;
-      const response = await axios.post(`${API_URL}/api/stripe-payment/payment-sheet`, {
-        customerInfo,
+      const response = await axios.post(`${API_URL}/api/stripe-customer/create-setup-intent`, {
+        email: customerInfo,
       });
       const { setupIntent, ephemeralKey, customer } = response.data;
       console.log(customer);

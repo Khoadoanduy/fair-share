@@ -3,10 +3,7 @@ import express, { Request, Response, Router, response } from 'express';
 import { User } from '@prisma/client';
 import prisma from '../prisma/client';
 
-
-
 const router: Router = express.Router();
-
 
 router.get('/', async function (request, response) {
     try {

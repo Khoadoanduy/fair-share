@@ -13,35 +13,6 @@ const stripe = require('stripe')(
 
 const router: Router = express.Router();
 
-router.post('/payment-sheet', async function (request, response) {
-    try {
-        const customerInfo = request.body.customerInfo;
-        const customer = await stripe.customers.create({
-            email: customerInfo
-        });
-        const ephemeralKey = await stripe.ephemeralKeys.create(
-            {customer: customer.id},
-            {apiVersion: '2025-03-31.basil'}
-        );
-        const setupIntent = await stripe.setupIntents.create(
-            {customer: customer.id,
-            payment_method_types: ['card']},
-            {apiVersion: '2025-03-31.basil'}
-        );
-        response.json({
-            setupIntent: setupIntent.client_secret,
-            ephemeralKey: ephemeralKey.secret,
-            customer: customer.id
-          });
-        } catch (err) {
-          // Log for debugging
-          console.error('Error creating Stripe paymentSheet:', err);
-      
-          // Send back the Stripe (or other) error message
-          response.status(500).json({err});
-        }
-    });
-
     router.post('/charge-user', async function (request, response) {
         try {
             const customerStripeID = request.body.customerStripeID;
