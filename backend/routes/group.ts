@@ -16,11 +16,12 @@ router.post('/create', async function (request, response) {
     const group = await prisma.group.create({
       data: {
         groupName,
-        subscriptionId,  // This is optional and might be null for custom subscriptions
-        subscriptionName, // Required for all groups
+        subscriptionId,
+        subscriptionName,
         planName,
         amount,
         cycle,
+        startDate: new Date(),
       }
     });
     response.status(201).json({
@@ -54,44 +55,104 @@ router.get('/search-user/:username', async (request, response) => {
       }
     })
 
-        //If user doesn't exist, give an empty list
-        if (users.length === 0) {
-            return response.status(404).json({ users: [] });
-        }
-        response.status(200).json({ users });
-    } catch (error) {
-        console.log(error);
-        response.status(500).json({ message: 'Error searching user' });
+    //If user doesn't exist, give an empty list
+    if (users.length === 0) {
+      return response.status(404).json({ users: [] });
     }
+    response.status(200).json({ users });
+  } catch (error) {
+    console.log(error);
+    response.status(500).json({ message: 'Error searching user' });
+  }
 });
 
 //Show all pending invitations for a group
 router.get('/invitation/:groupId', async (request: Request, response: Response) => {
-    try {
-        const { groupId } = request.params;
-        if (!groupId) {
-            return response.status(400).json({ message: 'groupId are required' });
-        }
-        //Check if the user has already been invited to this group
-        const invitation = await prisma.groupInvitation.findMany({
-          where: { groupId },
-          include: { user: true }
-        })
-        if (invitation.length == 0) {
-          return response.status(409).json({ message: 'No invitation sent' });
-        }
-        response.status(200).json(invitation);
-
-    } catch (error) {
-        console.error(error);
-        response.status(500).json({ message: 'Error getting invitation' });
+  try {
+    const { groupId } = request.params;
+    if (!groupId) {
+      return response.status(400).json({ message: 'groupId are required' });
     }
+    //Check if the user has already been invited to this group
+    const invitation = await prisma.groupInvitation.findMany({
+      where: { groupId },
+      include: { user: true }
+    })
+    if (invitation.length == 0) {
+      return response.status(409).json({ message: 'No invitation sent' });
+    }
+    response.status(200).json(invitation);
+
+  } catch (error) {
+    console.error(error);
+    response.status(500).json({ message: 'Error getting invitation' });
+  }
+});
+
+// Add credentials to group (leader only)
+router.put('/:groupId/credentials', async (request: Request, response: Response) => {
+  try {
+    const { groupId } = request.params;
+    const { credentialUsername, credentialPassword, userId } = request.body;
+
+    // Validate ObjectID format
+    if (!groupId || groupId.length !== 24 || !/^[0-9a-fA-F]{24}$/.test(groupId)) {
+      return response.status(400).json({ message: 'Invalid group ID format' });
+    }
+
+    // Check if user is the leader of this group
+    const memberRole = await prisma.groupMember.findFirst({
+      where: { groupId, userId, userRole: 'leader' }
+    });
+
+    if (!memberRole) {
+      return response.status(403).json({ message: 'Only group leaders can update credentials' });
+    }
+
+    await prisma.group.update({
+      where: { id: groupId },
+      data: {
+        credentialUsername,
+        credentialPassword
+      }
+    });
+
+    response.status(200).json({ message: 'Credentials updated successfully' });
+  } catch (error) {
+    console.error('Error updating credentials:', error);
+    response.status(500).json({ message: 'Error updating credentials' });
+  }
+});
+
+// Check user role in group
+router.get('/:groupId/user-role/:userId', async (request: Request, response: Response) => {
+  try {
+    const { groupId, userId } = request.params;
+
+    const member = await prisma.groupMember.findFirst({
+      where: { groupId, userId }
+    });
+
+    if (!member) {
+      return response.status(404).json({ message: 'User not found in group' });
+    }
+
+    response.status(200).json({ role: member.userRole });
+  } catch (error) {
+    console.error('Error checking user role:', error);
+    response.status(500).json({ message: 'Error checking user role' });
+  }
 });
 
 // Get subscription details for a group
 router.get('/:groupId/subscription-details', async (request: Request, response: Response) => {
   try {
     const { groupId } = request.params;
+
+    // Validate ObjectID format
+    if (!groupId || groupId.length !== 24 || !/^[0-9a-fA-F]{24}$/.test(groupId)) {
+      return response.status(400).json({ message: 'Invalid group ID format' });
+    }
 
     const group = await prisma.group.findUnique({
       where: { id: groupId },
@@ -112,32 +173,6 @@ router.get('/:groupId/subscription-details', async (request: Request, response: 
       return response.status(404).json({ message: 'Group not found' });
     }
 
-    // Calculate next payment date based on cycle and start date
-    const calculateNextPaymentDate = (startDate: Date | null, cycle: string | null): string => {
-      if (!startDate || !cycle) {
-        const nextMonth = new Date();
-        nextMonth.setMonth(nextMonth.getMonth() + 1);
-        return nextMonth.toISOString().split('T')[0];
-      }
-
-      const nextPayment = new Date(startDate);
-      switch (cycle.toLowerCase()) {
-        case 'weekly':
-          nextPayment.setDate(nextPayment.getDate() + 7);
-          break;
-        case 'monthly':
-          nextPayment.setMonth(nextPayment.getMonth() + 1);
-          break;
-        case 'yearly':
-          nextPayment.setFullYear(nextPayment.getFullYear() + 1);
-          break;
-        default:
-          nextPayment.setMonth(nextPayment.getMonth() + 1);
-      }
-
-      return nextPayment.toISOString().split('T')[0];
-    };
-
     const subscriptionDetails = {
       id: group.id,
       groupName: group.groupName,
@@ -146,12 +181,12 @@ router.get('/:groupId/subscription-details', async (request: Request, response: 
       amount: group.amount,
       cycle: group.cycle,
       currency: 'USD',
-      nextPaymentDate: calculateNextPaymentDate(group.startDate, group.cycle),
+      nextPaymentDate: '', // Left blank as requested
       subscription: group.subscription,
-      credentials: {
-        username: 'placeholder@example.com',
-        password: 'placeholder123'
-      }
+      credentials: group.credentialUsername && group.credentialPassword ? {
+        username: group.credentialUsername,
+        password: group.credentialPassword
+      } : null
     };
 
     response.status(200).json(subscriptionDetails);
