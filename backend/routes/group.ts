@@ -15,7 +15,7 @@ router.post('/create', async function (request, response) {
     const group = await prisma.group.create({
       data: {
         groupName,
-        subscriptionId,  // This is optional and might be null for custom subscriptions
+        subscriptionId,
         subscriptionName, // Required for all groups
         planName,
         amount,

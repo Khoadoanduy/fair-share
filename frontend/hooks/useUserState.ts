@@ -7,8 +7,7 @@ import { useMemo } from 'react';
  * Provides easy access to authentication status, payment status, and other user-related state
  */
 export function useUserState() {
-  const userState = useAppSelector(state => state.user);
-  console.log("hook called " + userState.stripeCustomerId +" "+ userState.hasPayment +" " + userState.username)
+  const userState = useAppSelector(state => state.user)
   return {
     // Authentication status
     isSignedIn: userState.isSignedIn,

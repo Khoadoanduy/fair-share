@@ -54,7 +54,6 @@ model Group {
   virtualCardId    String?           
   cycleDays        Int?
   members          GroupMember[]
-  cycle            String
   category         String
   startDate        DateTime?
   endDate          DateTime?
