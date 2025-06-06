@@ -211,6 +211,7 @@ export default function SubscriptionDetailsScreen() {
                                             value={editUsername}
                                             onChangeText={setEditUsername}
                                             placeholder="Enter username or email"
+                                            placeholderTextColor="#999"
                                             autoCapitalize="none"
                                             keyboardType="email-address"
                                         />
@@ -228,6 +229,7 @@ export default function SubscriptionDetailsScreen() {
                                             value={editPassword}
                                             onChangeText={setEditPassword}
                                             placeholder="Enter password"
+                                            placeholderTextColor="#999" 
                                             secureTextEntry={!isVisible}
                                         />
                                     </View>
