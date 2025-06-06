@@ -52,7 +52,6 @@ model Group {
   planName         String?
   amount           Float
   virtualCardId    String?           
-  cycle            String?
   cycleDays        Int?
   members          GroupMember[]
   cycle            String
