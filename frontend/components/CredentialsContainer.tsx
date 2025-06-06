@@ -60,10 +60,9 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 8,
     },
     title: {
-        fontSize: 20,
+        fontSize: 19,
         fontWeight: '600',
     },
     warning: {

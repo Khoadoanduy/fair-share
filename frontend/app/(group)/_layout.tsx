@@ -24,45 +24,52 @@ export default function AuthLayout() {
         headerLeft: () => <BackButton />, // your custom back button
       }}
     >
-    <Stack.Screen
-        name="createGroupName"
-        options={{
-          title: "",
-          headerTitle: () => null,
-        }}
-    />
-    <Stack.Screen
-        name="customSubscription"
-        options={{
-          title: "",
-          headerTitle: () => null,
-        }}
-    />
-    <Stack.Screen
-        name="customSubscription"
-        options={{
-          title: "",
-          headerTitle: () => null,
-        }}
-    />
-    <Stack.Screen
-        name="inviteMember"
-        options={{
-          title: "",
-          headerTitle: () => null,
-        }}
-    />
-    <Stack.Screen
-        name = "showAllInvitations"
-        options={{ title: ""}}
-    />
-    <Stack.Screen
-      name="SubscriptionDetails"
-      options={{
-        title: "",
-        headerTitle: () => null,
-      }}
-    />
+      <Stack.Screen
+          name="createGroupName"
+          options={{
+            title: "",
+            headerTitle: () => null,
+          }}
+      />
+      <Stack.Screen
+          name="subscriptionInfo"
+          options={{
+              title: "",
+              headerTitle: () => null,
+          }}
+      />
+      <Stack.Screen
+          name="customSubscription"
+          options={{
+            title: "",
+            headerTitle: () => null,
+          }}
+      />
+      <Stack.Screen
+          name="inviteMember"
+          options={{
+            title: "",
+            headerTitle: () => null,
+          }}
+      />
+      <Stack.Screen
+          name = "showAllInvitations"
+          options={{ title: ""}}
+      />
+      <Stack.Screen
+          name="subscriptionDetails"
+          options={{
+            title: "",
+            headerTitle: () => null,
+          }}
+      />
+      <Stack.Screen 
+          name="userGroups" 
+          options={{ 
+            headerShown: false,
+            title: 'My Groups'
+          }} 
+      />
     </Stack>
 
   );

@@ -12,6 +12,10 @@ export default function GroupsScreen() {
     router.push('/(group)/showAllInvitations')
   }
 
+  const showUserGroups = () => {
+    router.push('/(group)/userGroups')
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
@@ -19,15 +23,7 @@ export default function GroupsScreen() {
         <Text>Your groups will appear here</Text>
         <CustomButton text='Create Group' onPress={handleCreateGroup} />
         <CustomButton text='Show invitations' onPress={showAllInvitations}/>
-        <Pressable
-          style={{ backgroundColor: '#4A3DE3', padding: 15, borderRadius: 8, margin: 20 }}
-          onPress={() => router.push({
-            pathname: '/(group)/SubscriptionDetails',
-            params: { groupId: 'test-group-id' }
-          })}
-        >
-          <Text style={{ color: 'white', textAlign: 'center' }}>Test Subscription Details</Text>
-        </Pressable>
+        <CustomButton text='My Groups' onPress={showUserGroups} />
       </View>
     </SafeAreaView>
   );
