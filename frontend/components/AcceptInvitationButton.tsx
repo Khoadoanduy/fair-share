@@ -1,0 +1,55 @@
+import axios from 'axios';
+import CustomButton from './CustomButton';
+import { useState } from 'react';
+import { StyleSheet } from 'react-native';
+
+
+const API_URL = process.env.EXPO_PUBLIC_API_URL;
+
+type AcceptButtonProps = {
+  userId: string;
+  groupId: string;
+};
+
+const AcceptInvitationButton = ({ userId, groupId }: AcceptButtonProps) => {
+  const [accepted, setAccepted] = useState(false);
+  const handleAccept = async (groupId) => {
+    try {
+      await axios.put(`${API_URL}/api/invite/${groupId}/${userId}`);
+      await axios.post(`${API_URL}/api/groupMember/${groupId}/${userId}`, {userRole: "member"});
+      setAccepted((prev) => ({ ...prev, [groupId]: 'accepted' }));
+      console.log('Accept invitation successfully');
+    } catch (error) {
+      console.error('Error accepting invitation:', error);
+    }
+  };
+
+  return <CustomButton 
+            text={accepted? "Accepted" : "Accept"} 
+            onPress={handleAccept} 
+            style={[accepted ? styles.buttonAccepted : styles.buttonActive, styles.button]}
+            textStyle = {accepted ? styles.textAccepted : null}/>;
+};
+
+const styles = StyleSheet.create({
+  button: {
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  buttonActive: {
+    backgroundColor: '#4A3DE3', 
+  },
+  buttonAccepted: {
+    backgroundColor: 'green', 
+  },
+  textAccepted: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+});
+
+export default AcceptInvitationButton;
