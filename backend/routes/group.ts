@@ -20,7 +20,7 @@ router.post('/create', async function (request, response) {
         planName,
         amount,
         cycle,
-        category
+        category,
         cycleDays,
         amountEach: amount,
         totalMem: 1
