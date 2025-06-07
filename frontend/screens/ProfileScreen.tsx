@@ -5,56 +5,28 @@ import {
   StyleSheet,
   SafeAreaView,
   ScrollView,
-  TextInput,
   Alert,
   ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
   TouchableOpacity,
   Image,
 } from "react-native";
 import { useAuth, useUser } from "@clerk/clerk-expo";
 import { router } from "expo-router";
 import axios from "axios";
-import CustomButton from "../components/CustomButton";
-import * as Clipboard from "expo-clipboard";
 import { Ionicons } from "@expo/vector-icons";
+import { useStripe, PaymentSheet } from "@stripe/stripe-react-native";
 
-// API base URL - update with your actual backend URL
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
 export default function ProfileScreen() {
   const { isSignedIn, signOut, getToken } = useAuth();
   const { user } = useUser();
+  const { initPaymentSheet, presentPaymentSheet } = useStripe();
 
-  // User data state
-  const [userProfile, setUserProfile] = useState<any>(null);
-  const [phoneNumber, setPhoneNumber] = useState<string>("");
-  const [addressData, setAddressData] = useState<{
-    country: string;
-    street: string;
-    apartment: string;
-    city: string;
-    state: string;
-    zipCode: string;
-  }>({
-    country: "",
-    street: "",
-    apartment: "",
-    city: "",
-    state: "",
-    zipCode: "",
-  });
   const [paymentMethods, setPaymentMethods] = useState<any[]>([]);
   const [customerStripeID, setCustomerStripeID] = useState<string>("");
-
-  // UI state
-  const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-
-  const handleLoginPress = () => {
-    router.push("/sign-in");
-  };
+  const [defaultPaymentMethodId, setDefaultPaymentMethodId] = useState<string>("");
 
   const handleSignOutPress = async () => {
     try {
@@ -65,31 +37,16 @@ export default function ProfileScreen() {
     }
   };
 
-  const fetchJwt = async () => {
-    if (!isSignedIn) return;
-
-    try {
-      const token = await getToken();
-      return token;
-    } catch (error) {
-      console.error("Error fetching JWT:", error);
-      return null;
-    }
-  };
-
-  // Fetch user profile from backend
   const fetchUserProfile = async () => {
     if (!isSignedIn || !user) return null;
 
     setIsLoading(true);
     try {
-      const token = await fetchJwt();
+      const token = await getToken();
       if (!token) throw new Error("No authentication token");
 
       const response = await axios.get(`${API_URL}/api/user`, {
-        params: {
-          clerkID: user.id,
-        },
+        params: { clerkID: user.id },
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
@@ -97,56 +54,40 @@ export default function ProfileScreen() {
       });
 
       const userData = response.data;
-
       if (userData) {
-        setUserProfile(userData);
-        setPhoneNumber(userData.phoneNumber || "");
         setCustomerStripeID(userData.customerId);
-
-        if (userData.address) {
-          setAddressData(userData.address);
-        } else {
-          setAddressData({
-            country: "",
-            street: "",
-            apartment: "",
-            city: "",
-            state: "",
-            zipCode: "",
-          });
+        
+        // Get customer details to find default payment method
+        if (userData.customerId) {
+          const customerResponse = await axios.get(
+            `${API_URL}/api/stripe-customer/customers/${userData.customerId}`
+          );
+          
+          const defaultPM = customerResponse.data.customer?.invoice_settings?.default_payment_method;
+          if (defaultPM) {
+            setDefaultPaymentMethodId(defaultPM);
+          }
         }
-        return userData; // Return the userData
-      } else {
-        console.error("Failed to load profile: No user data returned");
-        Alert.alert("Error", "Failed to load profile");
-        return null;
+        
+        return userData;
       }
     } catch (error: any) {
       console.error("Error fetching profile:", error);
-      const errorMessage =
-        error.response?.data || "Could not connect to server";
-      Alert.alert("Error", errorMessage);
-      return null;
+      Alert.alert("Error", "Could not connect to server");
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Fetch payment methods
   const fetchPaymentMethods = async () => {
-    await fetchUserProfile();
-    console.log("stripeID: " + customerStripeID);
+    if (!customerStripeID) return;
 
     try {
       const response = await axios.get(
         `${API_URL}/api/stripe-customer/retrieve-paymentMethodId`,
-        {
-          params: {
-            customerStripeID: customerStripeID,
-          },
-        }
+        { params: { customerStripeID } }
       );
-      if (response.data && response.data.data) {
+      if (response.data?.data) {
         setPaymentMethods(response.data.data);
       }
     } catch (error) {
@@ -154,104 +95,120 @@ export default function ProfileScreen() {
     }
   };
 
-  // Update user profile
-  const updateProfile = async () => {
-    if (!isSignedIn || !user) return;
+  const handleAddPaymentMethod = async () => {
     try {
-      const token = await getToken();
-      if (!token) throw new Error("No authentication token");
+      setIsLoading(true);
 
-      // Validate phone number (optional field)
-      if (phoneNumber && !/^\+?[1-9]\d{1,14}$/.test(phoneNumber)) {
-        Alert.alert("Invalid Input", "Please enter a valid phone number");
-        setIsLoading(false);
+      if (!user?.primaryEmailAddress?.emailAddress) {
+        Alert.alert("Error", "Email address is required");
         return;
       }
 
-      // Check if any address field is filled
-      const hasAddressData = Object.values(addressData).some(
-        (value) => value.trim() !== ""
+      const response = await axios.post(
+        `${API_URL}/api/stripe-customer/create-setup-intent`,
+        { email: user.primaryEmailAddress.emailAddress }
       );
 
-      // Send address only if at least one field is filled
-      const addressToSend = hasAddressData ? addressData : null;
+      const { setupIntent, ephemeralKey, customer } = response.data;
 
-      const response = await axios.put(
-        `${API_URL}/api/user/${user.id}`,
-        {
-          phoneNumber: phoneNumber || null,
-          address: addressToSend,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      const updatedUser = response.data;
-
-      if (updatedUser) {
-        setUserProfile(updatedUser);
-        setIsEditing(false);
-        Alert.alert("Success", "Profile updated successfully");
-      } else {
-        Alert.alert("Update Failed", "Failed to update profile");
+      if (!customerStripeID) {
+        const token = await getToken();
+        await axios.put(
+          `${API_URL}/api/user/${user.id}`,
+          { customerId: customer },
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+        setCustomerStripeID(customer);
       }
-    } catch (error: any) {
-      console.error("Error updating profile:", error);
-      const errorMessage =
-        error.response?.data || "An error occurred while updating your profile";
-      Alert.alert("Error", errorMessage);
+
+      const { error } = await initPaymentSheet({
+        merchantDisplayName: "FairShare",
+        customerId: customer,
+        customerEphemeralKeySecret: ephemeralKey,
+        setupIntentClientSecret: setupIntent,
+        billingDetailsCollectionConfiguration: {
+          email: PaymentSheet.CollectionMode.NEVER,
+          address: PaymentSheet.AddressCollectionMode.FULL,
+          attachDefaultsToPaymentMethod: true,
+        },
+      });
+
+      if (error) {
+        Alert.alert("Error", error.message);
+        return;
+      }
+
+      const { error: presentError } = await presentPaymentSheet();
+      if (!presentError) {
+        Alert.alert("Success", "Payment method added successfully");
+        await fetchPaymentMethods();
+      }
+    } catch (error) {
+      console.error("Error adding payment method:", error);
+      Alert.alert("Error", "Failed to add payment method");
     } finally {
       setIsLoading(false);
     }
   };
-  // Toggle edit mode
-  const toggleEditMode = () => {
-    if (isEditing) {
-      // Discard changes
-      setPhoneNumber(userProfile?.phoneNumber || "");
-      if (userProfile?.address) {
-        setAddressData(userProfile.address);
-      } else {
-        setAddressData({
-          country: "",
-          street: "",
-          apartment: "",
-          city: "",
-          state: "",
-          zipCode: "",
-        });
-      }
-    }
-    setIsEditing(!isEditing);
+
+  const handleDeletePaymentMethod = (paymentMethodId: string) => {
+    Alert.alert(
+      "Delete Payment Method",
+      "Are you sure you want to delete this payment method?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await axios.delete(
+                `${API_URL}/api/stripe-customer/payment-methods/${paymentMethodId}`
+              );
+              Alert.alert("Success", "Payment method deleted successfully");
+              await fetchPaymentMethods();
+            } catch (error) {
+              console.error("Error deleting payment method:", error);
+              Alert.alert("Error", "Failed to delete payment method");
+            }
+          },
+        },
+      ]
+    );
   };
 
-  // Load profile when signed in
+  const handleSetDefaultPaymentMethod = async (paymentMethodId: string) => {
+    try {
+      await axios.post(`${API_URL}/api/stripe-customer/set-default-payment-method`, {
+        customerId: customerStripeID,
+        paymentMethodId: paymentMethodId,
+      });
+      
+      setDefaultPaymentMethodId(paymentMethodId);
+      Alert.alert("Success", "Default payment method updated");
+    } catch (error) {
+      console.error("Error setting default payment method:", error);
+      Alert.alert("Error", "Failed to set default payment method");
+    }
+  };
+
+  const navigateToPersonalInfo = () => {
+    router.push("/(profile)/personalInfo");
+  };
+
   useEffect(() => {
     if (isSignedIn) {
       const initializeUserData = async () => {
         setIsLoading(true);
         try {
           const userData = await fetchUserProfile();
-          if (userData && userData.customerId) {
-            try {
-              const response = await axios.get(
-                `${API_URL}/api/stripe-customer/retrieve-paymentMethodId`,
-                {
-                  params: {
-                    customerStripeID: userData.customerId,
-                  },
-                }
-              );
-              if (response.data && response.data.data) {
-                setPaymentMethods(response.data.data);
-              }
-            } catch (error) {
-              console.error("Error fetching payment methods:", error);
-            }
+          if (userData?.customerId) {
+            setCustomerStripeID(userData.customerId);
           }
         } catch (error) {
           console.error("Error initializing user data:", error);
@@ -259,20 +216,22 @@ export default function ProfileScreen() {
           setIsLoading(false);
         }
       };
-
       initializeUserData();
     }
   }, [isSignedIn]);
+
+  useEffect(() => {
+    if (customerStripeID) {
+      fetchPaymentMethods();
+    }
+  }, [customerStripeID]);
 
   if (!isSignedIn) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.content}>
           <Text style={styles.title}>Profile</Text>
-          <Text style={styles.message}>
-            Please sign in to view your profile
-          </Text>
-          <CustomButton text="Login" onPress={handleLoginPress} />
+          <Text style={styles.message}>Please sign in to view your profile</Text>
         </View>
       </SafeAreaView>
     );
@@ -280,217 +239,127 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={{ flex: 1 }}
-      >
-        <ScrollView contentContainerStyle={styles.scrollContent}>
-          {isLoading && (
-            <View style={styles.loadingOverlay}>
-              <ActivityIndicator size="large" color="#4353FD" />
-            </View>
-          )}
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        {isLoading && (
+          <View style={styles.loadingOverlay}>
+            <ActivityIndicator size="large" color="#4353FD" />
+          </View>
+        )}
 
-          <View style={styles.content}>
-            <View style={styles.header}>
-              <Text style={styles.title}>Profile</Text>
-              <TouchableOpacity
-                onPress={toggleEditMode}
-                style={styles.editButton}
-              >
-                <Ionicons
-                  name={isEditing ? "close" : "create-outline"}
-                  size={24}
-                  color="#4353FD"
-                />
-                <Text style={styles.editButtonText}>
-                  {isEditing ? "Cancel" : "Edit"}
+        <View style={styles.content}>
+          {/* Header - Centered */}
+          <View style={styles.header}>
+            <View style={styles.headerSpacer} />
+            <Text style={styles.title}>Profile</Text>
+            <TouchableOpacity style={styles.notificationButton}>
+              <Ionicons name="notifications-outline" size={24} color="#4353FD" />
+            </TouchableOpacity>
+          </View>
+
+          {/* Profile Avatar Section */}
+          <View style={styles.avatarContainer}>
+            {user?.imageUrl ? (
+              <Image source={{ uri: user.imageUrl }} style={styles.avatar} />
+            ) : (
+              <View style={styles.avatarPlaceholder}>
+                <Text style={styles.avatarText}>
+                  {user?.firstName?.charAt(0)}
+                  {user?.lastName?.charAt(0)}
                 </Text>
-              </TouchableOpacity>
+              </View>
+            )}
+            <Text style={styles.userName}>
+              {user?.fullName || `${user?.firstName} ${user?.lastName}`}
+            </Text>
+            <Text style={styles.userHandle}>
+              @{user?.username || user?.primaryEmailAddress?.emailAddress?.split("@")[0]}
+            </Text>
+          </View>
+
+          {/* Personal Information Card */}
+          <TouchableOpacity
+            style={styles.personalInfoCard}
+            onPress={navigateToPersonalInfo}
+          >
+            <View style={styles.personalInfoContent}>
+              <Ionicons name="person-outline" size={24} color="#4353FD" />
+              <Text style={styles.personalInfoText}>Personal information</Text>
             </View>
+            <Ionicons name="chevron-forward" size={20} color="#666" />
+          </TouchableOpacity>
 
-            {/* Personal Information Section */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Personal Information</Text>
-
-              {user && (
-                <View style={styles.userInfo}>
-                  <Text style={styles.userName}>
-                    {user.fullName || `${user.firstName} ${user.lastName}`}
-                  </Text>
-                  <Text style={styles.infoLabel}>Email:</Text>
-                  <View style={styles.emailContainer}>
-                    <Text style={styles.userEmail}>
-                      {user.primaryEmailAddress?.emailAddress}
+          {/* Payment Methods Section */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Payment Methods</Text>
+            {paymentMethods.length > 0 ? (
+              paymentMethods.map((method) => (
+                <View key={method.id} style={styles.paymentMethodItem}>
+                  <Image
+                    source={
+                      method.card.brand === "visa"
+                        ? require("../assets/images/visa-240.png")
+                        : require("../assets/images/mastercard-240.png")
+                    }
+                    style={styles.cardBrandImage}
+                  />
+                  <View style={styles.paymentMethodDetails}>
+                    <View style={styles.cardInfo}>
+                      <Text style={styles.paymentMethodText}>
+                        •••• {method.card.last4}
+                      </Text>
+                      {defaultPaymentMethodId === method.id && (
+                        <View style={styles.defaultBadge}>
+                          <Text style={styles.defaultText}>Default</Text>
+                        </View>
+                      )}
+                    </View>
+                    <Text style={styles.paymentMethodExpiry}>
+                      Expires {method.card.exp_month}/{method.card.exp_year}
                     </Text>
                   </View>
-                </View>
-              )}
-            </View>
-
-            {/* Contact Information Section */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Contact Information</Text>
-
-              <Text style={styles.infoLabel}>Phone Number:</Text>
-              {isEditing ? (
-                <TextInput
-                  style={styles.input}
-                  value={phoneNumber}
-                  onChangeText={setPhoneNumber}
-                  placeholder="Enter phone number"
-                  keyboardType="phone-pad"
-                />
-              ) : (
-                <Text style={styles.infoValue}>
-                  {userProfile?.phoneNumber || "Not provided"}
-                </Text>
-              )}
-            </View>
-
-            {/* Address Section */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Address</Text>
-
-              {isEditing ? (
-                <View style={styles.addressInputContainer}>
-                  <Text style={styles.infoLabel}>Country:</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={addressData.country}
-                    onChangeText={(text) =>
-                      setAddressData({ ...addressData, country: text })
-                    }
-                    placeholder="Country"
-                  />
-
-                  <Text style={styles.infoLabel}>Street:</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={addressData.street}
-                    onChangeText={(text) =>
-                      setAddressData({ ...addressData, street: text })
-                    }
-                    placeholder="Street address"
-                  />
-
-                  <Text style={styles.infoLabel}>Apartment (optional):</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={addressData.apartment}
-                    onChangeText={(text) =>
-                      setAddressData({ ...addressData, apartment: text })
-                    }
-                    placeholder="Apartment, suite, etc."
-                  />
-
-                  <Text style={styles.infoLabel}>City:</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={addressData.city}
-                    onChangeText={(text) =>
-                      setAddressData({ ...addressData, city: text })
-                    }
-                    placeholder="City"
-                  />
-
-                  <Text style={styles.infoLabel}>State:</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={addressData.state}
-                    onChangeText={(text) =>
-                      setAddressData({ ...addressData, state: text })
-                    }
-                    placeholder="State"
-                  />
-
-                  <Text style={styles.infoLabel}>Zip Code:</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={addressData.zipCode}
-                    onChangeText={(text) =>
-                      setAddressData({ ...addressData, zipCode: text })
-                    }
-                    placeholder="Zip code"
-                    keyboardType="numeric"
-                  />
-                </View>
-              ) : (
-                <View>
-                  {userProfile?.address ? (
-                    <View>
-                      <Text style={styles.infoValue}>
-                        {userProfile.address.street}
-                        {userProfile.address.apartment
-                          ? `, ${userProfile.address.apartment}`
-                          : ""}
-                      </Text>
-                      <Text style={styles.infoValue}>
-                        {userProfile.address.city}, {userProfile.address.state}{" "}
-                        {userProfile.address.zipCode}
-                      </Text>
-                      <Text style={styles.infoValue}>
-                        {userProfile.address.country}
-                      </Text>
-                    </View>
-                  ) : (
-                    <Text style={styles.infoValue}>No address provided</Text>
-                  )}
-                </View>
-              )}
-            </View>
-
-            {/* Payment Methods Section */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Payment Methods</Text>
-              {paymentMethods.length > 0 ? (
-                paymentMethods.map((method) => (
-                  <View key={method.id} style={styles.paymentMethodItem}>
-                    <Image
-                      source={
-                        method.card.brand === "visa"
-                          ? require("../assets/images/visa-240.png") // Make sure this path matches your actual image location
-                          : require("../assets/images/mastercard-240.png")
-                      } // Optional fallback for non-Visa cards
-                      style={{
-                        width: 40,
-                        height: 24,
-                        resizeMode: "contain",
-                        marginRight: 8,
-                      }}
-                    />
-                    <View style={styles.paymentMethodDetails}>
-                      <Text style={styles.paymentMethodText}>
-                        <Text style={styles.cardDots}>....</Text> {method.card.last4}
-                      </Text>
-                      <Text style={styles.paymentMethodExpiry}>
-                        Expires {method.card.exp_month}/{method.card.exp_year}
-                      </Text>
-                    </View>
+                  
+                  <View style={styles.cardActions}>
+                    {defaultPaymentMethodId !== method.id && (
+                      <TouchableOpacity
+                        onPress={() => handleSetDefaultPaymentMethod(method.id)}
+                        style={styles.setDefaultButton}
+                      >
+                        <Text style={styles.setDefaultText}>Set Default</Text>
+                      </TouchableOpacity>
+                    )}
+                    <TouchableOpacity
+                      onPress={() => handleDeletePaymentMethod(method.id)}
+                      style={styles.deleteButton}
+                    >
+                      <Ionicons name="trash-outline" size={20} color="#FF4B55" />
+                    </TouchableOpacity>
                   </View>
-                ))
-              ) : (
-                <Text style={styles.infoValue}>No payment methods added</Text>
-              )}
-            </View>
-
-            {/* Save Button in Edit Mode */}
-            {isEditing && (
-              <CustomButton
-                text="Save Changes"
-                onPress={updateProfile}
-                style={styles.saveButton}
-              />
+                </View>
+              ))
+            ) : (
+              <Text style={styles.infoValue}>No payment methods added</Text>
             )}
-
-            <CustomButton
-              text="Sign Out"
-              onPress={handleSignOutPress}
-              style={styles.signOutButton}
-            />
           </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+
+          {/* Add Payment Method Button */}
+          <TouchableOpacity
+            style={styles.addPaymentMethodButton}
+            onPress={handleAddPaymentMethod}
+          >
+            <Ionicons name="add-circle-outline" size={24} color="#fff" />
+            <Text style={styles.addPaymentMethodText}>Add Payment Method</Text>
+          </TouchableOpacity>
+
+          {/* Log Out Button */}
+          <TouchableOpacity
+            style={styles.logoutCard}
+            onPress={handleSignOutPress}
+          >
+            <Ionicons name="log-out-outline" size={24} color="#000" />
+            <Text style={styles.logoutText}>Log out</Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -511,11 +380,22 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 20,
+    marginBottom: 30,
+  },
+  headerSpacer: {
+    width: 40, // Same width as notification button for balance
+  },
+  notificationButton: {
+    width: 40,
+    height: 40,
+    justifyContent: "center",
+    alignItems: "center",
   },
   title: {
     fontSize: 24,
     fontWeight: "bold",
+    flex: 1,
+    textAlign: "center",
   },
   message: {
     fontSize: 16,
@@ -527,7 +407,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#f9f9f9",
     borderRadius: 12,
     padding: 16,
-    width: "100%",
   },
   sectionTitle: {
     fontSize: 18,
@@ -535,117 +414,31 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     color: "#4353FD",
   },
-  userInfo: {
-    marginBottom: 8,
-  },
   userName: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: "600",
-    marginBottom: 16,
-  },
-  infoLabel: {
-    fontSize: 14,
-    color: "#666",
-    marginBottom: 4,
+    marginBottom: 8,
   },
   infoValue: {
     fontSize: 16,
     marginBottom: 12,
   },
-  emailContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  userEmail: {
-    fontSize: 16,
-    flex: 1,
-  },
-  readOnlyText: {
-    fontSize: 12,
-    color: "#666",
-    fontStyle: "italic",
-    marginLeft: 8,
-  },
-  editButton: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  editButtonText: {
-    marginLeft: 4,
-    color: "#4353FD",
-    fontWeight: "500",
-  },
-  input: {
-    backgroundColor: "#fff",
-    borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    marginBottom: 12,
-  },
-  multilineInput: {
-    minHeight: 80,
-    textAlignVertical: "top",
-  },
-  saveButton: {
-    backgroundColor: "#4353FD",
-    marginBottom: 24,
-  },
-  signOutButton: {
-    backgroundColor: "#FF4B55",
-    marginBottom: 24,
-  },
-  tokenContainer: {
-    width: "100%",
-    marginVertical: 8,
-  },
-  tokenTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    marginBottom: 10,
-  },
-  tokenScroll: {
-    maxHeight: 120,
-    backgroundColor: "#e0e0e0",
-    padding: 10,
-    borderRadius: 5,
-  },
-  tokenText: {
-    fontFamily: "monospace",
-    fontSize: 12,
-  },
-  loadingOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(255, 255, 255, 0.7)",
-    justifyContent: "center",
-    alignItems: "center",
-    zIndex: 100,
-  },
-  addressInputContainer: {
-    marginBottom: 12,
-  },
   paymentMethodItem: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#fff",
-    padding: 4,
+    backgroundColor: "#f9f9f9",
+    padding: 12,
     borderRadius: 8,
     marginBottom: 8,
-    borderWidth: 1,
-    borderColor: "#ddd",
+  },
+  cardBrandImage: {
+    width: 40,
+    height: 24,
+    resizeMode: "contain",
+    marginRight: 12,
   },
   paymentMethodDetails: {
-    marginLeft: 12,
-    marginTop: 4,
     flex: 1,
-  },
-  cardDots: {
-    fontSize: 20,
-    letterSpacing: 3,
-    fontWeight: "bold",
-    color: "black",
   },
   paymentMethodText: {
     fontSize: 16,
@@ -654,6 +447,132 @@ const styles = StyleSheet.create({
   paymentMethodExpiry: {
     fontSize: 12,
     color: "#666",
-    marginTop: 10,
+  },
+  deleteButton: {
+    width: 40,
+    height: 40,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  avatarContainer: {
+    alignItems: "center",
+    marginBottom: 32,
+  },
+  avatar: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    marginBottom: 16,
+  },
+  avatarPlaceholder: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: "#4353FD",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  avatarText: {
+    fontSize: 32,
+    fontWeight: "bold",
+    color: "#fff",
+  },
+  userHandle: {
+    fontSize: 16,
+    color: "#666",
+    marginBottom: 8,
+  },
+  personalInfoCard: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: "#ddd",
+  },
+  personalInfoContent: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  personalInfoText: {
+    fontSize: 16,
+    fontWeight: "500",
+    marginLeft: 8,
+  },
+  addPaymentMethodButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#4353FD",
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 24,
+  },
+  addPaymentMethodText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "500",
+    marginLeft: 8,
+  },
+  logoutCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "transparent",
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+  },
+  logoutText: {
+    color: "#000",
+    fontSize: 16,
+    fontWeight: "500",
+    marginLeft: 12,
+  },
+  loadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(255, 255, 255, 0.7)",
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 100,
+  },
+  cardInfo: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 4,
+  },
+  defaultBadge: {
+    backgroundColor: "#4353FD",
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 12,
+    marginLeft: 8,
+  },
+  defaultText: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "500",
+  },
+  cardActions: {
+    flexDirection: "column",
+    alignItems: "flex-end",
+  },
+  setDefaultButton: {
+    backgroundColor: "#E8F0FE",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    marginBottom: 8,
+  },
+  setDefaultText: {
+    color: "#4353FD",
+    fontSize: 12,
+    fontWeight: "500",
   },
 });

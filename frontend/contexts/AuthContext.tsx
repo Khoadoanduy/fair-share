@@ -5,6 +5,7 @@ import {
   setSignedIn,
   setUserInfo,
   initializeUserState,
+  fetchUserData,
 } from "../redux/slices/userSlice";
 
 type AuthContextType = {
@@ -25,14 +26,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     dispatch(setSignedIn(isSignedIn || false));
 
     if (isSignedIn && user) {
-      dispatch(
-        setUserInfo({
-          userId: user.id,
-          email: user.primaryEmailAddress?.emailAddress || "",
-          name: user.fullName || undefined,
-          username: user.username || undefined, // Add this
+      // First fetch MongoDB user data using Clerk ID
+      dispatch(fetchUserData(user.id))
+        .unwrap()
+        .then((mongoUser) => {
+          // Once we have MongoDB data, set complete user info
+          dispatch(
+            setUserInfo({
+              id: mongoUser._id || mongoUser.id, // MongoDB ID
+              clerkId: user.id, // Clerk ID
+              email: user.primaryEmailAddress?.emailAddress || "",
+              name: user.fullName || undefined,
+              username: user.username || undefined,
+            })
+          );
         })
-      );
+        .catch((error) => {
+          console.error("Failed to fetch MongoDB user data:", error);
+        });
     }
   }, [isLoaded, isSignedIn, user]);
 

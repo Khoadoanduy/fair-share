@@ -7,34 +7,65 @@ dotenv.config();
 const router: Router = express.Router();
 const prisma = new PrismaClient();
 
+// Helper function to calculate the next payment date
+const calculateNextPaymentDate = (cycle: string, cycleDays: number): Date => {
+  const today = new Date();
+  const nextPaymentDate = new Date(today);
+  
+  // Add the appropriate number of days based on the cycle
+  nextPaymentDate.setDate(today.getDate() + cycleDays);
+  
+  return nextPaymentDate;
+};
+
 //Create group
-router.post('/create', async function (request, response) {
+router.post('/create', async (request: Request, response: Response) => {
   try {
-    const { groupName, subscriptionName, subscriptionId, planName, amount, cycle } = request.body;
-    const { groupName, subscriptionName, subscriptionId, planName, logo, amount, cycle, category,cycleDays } = request.body;    
-    const group = await prisma.group.create({
-      data: {
-        groupName,
-        subscriptionId,
-        subscriptionName, // Required for all groups
-        logo,
-        planName,
-        amount,
-        cycle,
-        category,
-        cycleDays,
-        amountEach: amount,
-        totalMem: 1
-      }
+    const { groupName, subscriptionName, subscriptionId, planName, amount, cycle, category, cycleDays, userId,nextPaymentDate } = request.body;
+
+    if (!groupName || !subscriptionName || !amount || !userId) {
+      return response.status(400).json({ message: 'Missing required fields' });
+    }
+
+    // Use a transaction to ensure both group and membership are created together
+    const result = await prisma.$transaction(async (tx) => {
+      // Create the group
+      const newGroup = await tx.group.create({
+        data: {
+          groupName,
+          subscriptionName,
+          subscriptionId,
+          planName,
+          amount: parseFloat(amount),
+          cycleDays,
+          category,
+          totalMem: 1,
+          amountEach: parseFloat(amount)
+        }
+      });
+
+      // Automatically add the creator as leader
+      const groupMember = await tx.groupMember.create({
+        data: {
+          userId: userId,
+          groupId: newGroup.id,
+          userRole: "leader"
+        }
+      });
+
+      return { group: newGroup, membership: groupMember };
     });
+
     response.status(201).json({
-      message: 'Group created successfully',
-      group: groupName,
-      groupId: group.id
+      message: 'Group created successfully with leader',
+      group: result.group.groupName,
+      groupId: result.group.id,
+      nextPaymentDate: nextPaymentDate
     });
-  } catch (err) {
-    console.error(err);
-    response.status(500).json({ message: 'An error occurred while creating the group' });
+
+  } catch (error) {
+    console.error('Error creating group:', error);
+    response.status(500).json({ message: 'Error creating group' });
   }
 });
 
@@ -200,74 +231,164 @@ router.get('/:groupId/subscription-details', async (request: Request, response: 
 });
 
 router.get('/search-group/:userId/:groupName', async (request, response) => {
-    try {
-        const { userId, groupName } = request.params;
+  try {
+    const { userId, groupName } = request.params;
 
-        const groups = await prisma.groupMember.findMany({
-            where: { 
-              userId: userId,
-              group: {
-                is: {
-                  groupName: {
-                    contains: groupName,
-                    mode: 'insensitive'
-                }
-              }
-             }
-            },
-            select: {
-                group: true
+    const groups = await prisma.groupMember.findMany({
+      where: {
+        userId: userId,
+        group: {
+          is: {
+            groupName: {
+              contains: groupName,
+              mode: 'insensitive'
             }
-        })
-
-        //If user doesn't exist, give an empty list
-        if (groups.length === 0) {
-            return response.status(404).json({ groups: [] });
+          }
         }
-        response.status(200).json({ groups });
-    } catch (error) {
-        console.log(error);
-        response.status(500).json({ message: 'Error searching group' });
+      },
+      select: {
+        group: true
+      }
+    })
+
+    //If user doesn't exist, give an empty list
+    if (groups.length === 0) {
+      return response.status(404).json({ groups: [] });
     }
+    response.status(200).json({ groups });
+  } catch (error) {
+    console.log(error);
+    response.status(500).json({ message: 'Error searching group' });
+  }
 });
 
 //Get amount each member has to pay
 router.get('/amount-each/:groupId', async (request: Request, response: Response) => {
-    try {
-        const { groupId } = request.params;
-        if (!groupId) {
-            return response.status(400).json({ message: 'groupId are required' });
-        }
-        const group = await prisma.group.findFirst({
-          where: { id: groupId },
-        });
-        if (!group)
-          return response.status(404).json({message: "No group found"});
-        response.status(200).json(group.amountEach);
-
-    } catch (error) {
-        console.error(error);
-        response.status(500).json({ message: 'Error getting amount' });
+  try {
+    const { groupId } = request.params;
+    if (!groupId) {
+      return response.status(400).json({ message: 'groupId are required' });
     }
+    const group = await prisma.group.findFirst({
+      where: { id: groupId },
+    });
+    if (!group)
+      return response.status(404).json({ message: "No group found" });
+    response.status(200).json(group.amountEach);
+
+  } catch (error) {
+    console.error(error);
+    response.status(500).json({ message: 'Error getting amount' });
+  }
 });
 
 //Get the number of members in the group
 router.get('/total-mem/:groupId', async (request: Request, response: Response) => {
+  try {
+    const { groupId } = request.params;
+    if (!groupId) {
+      return response.status(400).json({ message: 'groupId are required' });
+    }
+    const group = await prisma.group.findFirst({
+      where: { id: groupId },
+    })
+    if (!group)
+      return response.status(404).json({ message: "No group found" });
+    response.status(200).json(group.totalMem);
+
+  } catch (error) {
+    console.error(error);
+    response.status(500).json({ message: 'Error getting total number of members' });
+  }
+});
+
+//Get group details
+router.get('/:groupId', async (request: Request, response: Response) => {
     try {
         const { groupId } = request.params;
         if (!groupId) {
-            return response.status(400).json({ message: 'groupId are required' });
+            return response.status(400).json({ message: 'groupId is required' });
         }
-        const group = await prisma.group.findFirst({
-          where: { id: groupId },
-        })
-        if (!group)
-          return response.status(404).json({message: "No group found"});
-        response.status(200).json(group.totalMem);
-
+        
+        const group = await prisma.group.findUnique({
+            where: { id: groupId },
+            include: {
+                members: {
+                    include: {
+                        user: true
+                    }
+                }
+            }
+        });
+        
+        if (!group) {
+            return response.status(404).json({ message: 'Group not found' });
+        }
+        
+        // Calculate days until next payment
+        let daysUntilNextPayment = 0;
+        let nextPaymentDate = null;
+        
+        if (group.endDate) {
+            nextPaymentDate = group.endDate;
+            const today = new Date();
+            const diffTime = Math.abs(nextPaymentDate.getTime() - today.getTime());
+            daysUntilNextPayment = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        }
+        
+        response.status(200).json({
+            ...group,
+            daysUntilNextPayment,
+            nextPaymentDate
+        });
     } catch (error) {
         console.error(error);
-        response.status(500).json({ message: 'Error getting total number of members' });
+        response.status(500).json({ message: 'Error getting group details' });
+    }
+});
+
+//Get group details
+router.get('/:groupId', async (request: Request, response: Response) => {
+    try {
+        const { groupId } = request.params;
+        if (!groupId) {
+            return response.status(400).json({ message: 'groupId is required' });
+        }
+        
+        const group = await prisma.group.findUnique({
+            where: { id: groupId },
+            include: {
+                members: {
+                    include: {
+                        user: true
+                    }
+                }
+            }
+        });
+        
+        if (!group) {
+            return response.status(404).json({ message: 'Group not found' });
+        }
+        
+        // Calculate days until next payment
+        let daysUntilNextPayment = 0;
+        let nextPaymentDate = null;
+        
+        if (group.endDate) {
+            nextPaymentDate = group.endDate;
+            const today = new Date();
+            const diffTime = Math.abs(nextPaymentDate.getTime() - today.getTime());
+            daysUntilNextPayment = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        }
+        
+        response.status(200).json({
+            ...group,
+            daysUntilNextPayment,
+            nextPaymentDate
+        });
+    } catch (error) {
+        console.error(error);
+        response.status(500).json({ message: 'Error getting group details' });
     }
 });
 

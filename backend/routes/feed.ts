@@ -8,15 +8,30 @@ router.get('/subscriptions/:userId', async (req: Request, res: Response) => {
     try {
         const { userId } = req.params;
 
-        // Get user's friends
+        // Get user's friends (both directions of friendship)
         const friends = await prisma.friend.findMany({
-            where: { userId },
-            select: { friendId: true }
+            where: {
+                OR: [
+                    { userId: userId },
+                    { friendId: userId }
+                ]
+            },
+            select: { 
+                userId: true,
+                friendId: true 
+            }
         });
 
-        const friendIds = friends.map(f => f.friendId);
+        // Extract friend IDs (excluding the current user)
+        const friendIds = friends.map(f => 
+            f.userId === userId ? f.friendId : f.userId
+        ).filter(id => id !== userId);
 
-        // Get user's current groups to exclude them
+        if (friendIds.length === 0) {
+            return res.json([]);
+        }
+
+        // Get user's current groups to exclude them from feed
         const userGroups = await prisma.groupMember.findMany({
             where: { userId },
             select: { groupId: true }
@@ -39,7 +54,19 @@ router.get('/subscriptions/:userId', async (req: Request, res: Response) => {
                         username: true
                     }
                 },
-                group: true
+                group: {
+                    select: {
+                        id: true,
+                        groupName: true,
+                        subscriptionName: true,
+                        amount: true,
+                        cycleDays: true,
+                        category: true
+                    }
+                }
+            },
+            orderBy: {
+                id: 'desc' // Show most recent activities first
             }
         });
 
@@ -55,40 +82,6 @@ router.get('/subscriptions/:userId', async (req: Request, res: Response) => {
     } catch (error) {
         console.error('Error fetching subscription feed:', error);
         res.status(500).json({ error: 'Failed to fetch subscription feed' });
-    }
-});
-
-// Endpoint to create fake subscriptions - FOR TESTING ONLY
-router.post('/test-subscription', async (req: Request, res: Response) => {
-    try {
-        const { friendId, subscriptionName, amount } = req.body;
-
-        // Create test group/subscription
-        const group = await prisma.group.create({
-            data: {
-                groupName: `${subscriptionName} Group`,
-                subscriptionName,
-                amount,
-                cycle: "monthly"
-            }
-        });
-
-        // Add friend to this group
-        await prisma.groupMember.create({
-            data: {
-                userId: friendId,
-                groupId: group.id
-            }
-        });
-
-        res.status(201).json({
-            success: true,
-            message: `Created test subscription for friend ID: ${friendId}`,
-            group
-        });
-    } catch (error) {
-        console.error('Error creating test subscription:', error);
-        res.status(500).json({ error: 'Failed to create test subscription' });
     }
 });
 

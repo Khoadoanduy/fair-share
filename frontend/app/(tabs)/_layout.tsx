@@ -33,6 +33,16 @@ export default function TabLayout() {
           name="groups"
           options={{
             title: "Manage",
+            headerShown: false,
+            tabBarIcon: ({ color, size }) => (
+              <Ionicons name="people" size={size} color={color} />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="friends"
+          options={{
+            title: "Friends",
             tabBarIcon: ({ color, size }) => (
               <Ionicons name="people" size={size} color={color} />
             ),
@@ -56,15 +66,7 @@ export default function TabLayout() {
             ),
           }}
         />
-        <Tabs.Screen
-          name="friends"
-          options={{
-            title: "Friends",
-            tabBarIcon: ({ color, size }) => (
-              <Ionicons name="people" size={size} color={color} />
-            ),
-          }}
-        />
+        
       </Tabs>
     </StripeProvider>
   );

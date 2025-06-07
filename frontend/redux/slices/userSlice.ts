@@ -9,6 +9,7 @@ interface UserState {
   isSignedIn: boolean | false;
   hasPayment: boolean;
   userId: string | null;
+  clerkId: string | null; // Add this line for Clerk ID
   email: string | null;
   name: string | null;
   username: string | null;
@@ -26,6 +27,7 @@ const initialState: UserState = {
   isSignedIn: false,
   hasPayment: false,
   userId: null,
+  clerkId: null, // Add this line
   email: null,
   name: null,
   username: null,
@@ -47,8 +49,7 @@ export const fetchUserData = createAsyncThunk(
     }
     
     try {
-      console.log(clerkId + " before fetchUserData")
-      const response = await axios.get(`http://localhost:3000/api/user/`, {
+      const response = await axios.get(`${API_URL}/api/user/`, {
         params: {
           clerkID: clerkId
         }
@@ -61,6 +62,7 @@ export const fetchUserData = createAsyncThunk(
       const userData = response.data;
       return {
         ...userData,
+        id: userData.id, // Ensure MongoDB _id is included as id
         hasPaymentMethod: Boolean(userData.customerId)
       };
     } catch (error: any) {
@@ -116,15 +118,17 @@ const userSlice = createSlice({
       state.isSignedIn = action.payload;
     },
     setUserInfo: (state, action: PayloadAction<{
-      userId: string;
+      clerkId: string;
       email: string;
       name?: string;
-      username?: string; // Add this
+      username?: string;
+      id: string;      // This is the MongoDB _id
     }>) => {
-      state.userId = action.payload.userId;
+      state.userId = action.payload.id;    
+      state.clerkId = action.payload.clerkId;       // Store MongoDB ID
       state.email = action.payload.email;
       state.name = action.payload.name || null;
-      state.username = action.payload.username || null; // Add this
+      state.username = action.payload.username || null;
     },
     setUserDetails: (state, action: PayloadAction<{
       dateOfBirth?: string;
@@ -178,13 +182,15 @@ const userSlice = createSlice({
       })
       .addCase(fetchUserData.fulfilled, (state, action) => {
         state.loading = false;
-        // Only update if we have valid data
         if (action.payload) {
           state.email = action.payload.email || state.email;
           state.name = action.payload.firstName 
             ? `${action.payload.firstName} ${action.payload.lastName || ''}`
             : action.payload.name || state.name;
-      
+          state.userId = action.payload._id || action.payload.id || state.userId; // Handle both _id and id
+          state.clerkId = action.payload.clerkId || state.clerkId; // Store Clerk ID
+          state.stripeCustomerId = action.payload.customerId || state.stripeCustomerId;
+          state.hasPayment = Boolean(action.payload.customerId);
         }
       })
       .addCase(fetchUserData.rejected, (state, action) => {
