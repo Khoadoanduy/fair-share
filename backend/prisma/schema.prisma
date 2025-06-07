@@ -59,6 +59,9 @@ model Group {
   startDate        DateTime?
   endDate          DateTime?
   GroupInvitation  GroupInvitation[]
+  credentialUsername String?
+  credentialPassword String?
+  createdAt        DateTime          @default(now())
   amountEach       Float?
   totalMem         Int
 }

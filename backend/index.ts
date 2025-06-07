@@ -12,6 +12,7 @@ import groupRoute from './routes/group';
 import subscriptionRouter from './routes/subscription';
 import groupMemberRoute from './routes/groupMember'
 import virtualCardRoute from './routes/virtualCard';
+import customerRoutes from './routes/stripe_customer'; 
 import cors from 'cors';  // Add this
 
 import http from 'http';

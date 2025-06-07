@@ -21,7 +21,7 @@ const calculateNextPaymentDate = (cycle: string, cycleDays: number): Date => {
 //Create group
 router.post('/create', async (request: Request, response: Response) => {
   try {
-    const { groupName, subscriptionName, subscriptionId, planName, amount, cycle, category, cycleDays, userId } = request.body;
+    const { groupName, subscriptionName, subscriptionId, planName, amount, cycle, category, cycleDays, userId,nextPaymentDate } = request.body;
 
     if (!groupName || !subscriptionName || !amount || !userId) {
       return response.status(400).json({ message: 'Missing required fields' });
@@ -70,7 +70,7 @@ router.post('/create', async (request: Request, response: Response) => {
 });
 
 //Search user using username
-router.get('/search-user/:username', async (request, response) => {
+router.get('/search-user/:username', async (request: Request, response: Response) => {
   try {
     const { username } = request.params;
 
@@ -120,6 +120,113 @@ router.get('/invitation/:groupId', async (request: Request, response: Response) 
   } catch (error) {
     console.error(error);
     response.status(500).json({ message: 'Error getting invitation' });
+  }
+});
+
+// Add credentials to group (leader only)
+router.put('/:groupId/credentials', async (request: Request, response: Response) => {
+  try {
+    const { groupId } = request.params;
+    const { credentialUsername, credentialPassword, userId } = request.body;
+
+    // Validate ObjectID format
+    if (!groupId || groupId.length !== 24 || !/^[0-9a-fA-F]{24}$/.test(groupId)) {
+      return response.status(400).json({ message: 'Invalid group ID format' });
+    }
+
+    // Check if user is the leader of this group
+    const memberRole = await prisma.groupMember.findFirst({
+      where: { groupId, userId, userRole: 'leader' }
+    });
+
+    if (!memberRole) {
+      return response.status(403).json({ message: 'Only group leaders can update credentials' });
+    }
+
+    await prisma.group.update({
+      where: { id: groupId },
+      data: {
+        credentialUsername,
+        credentialPassword
+      }
+    });
+
+    response.status(200).json({ message: 'Credentials updated successfully' });
+  } catch (error) {
+    console.error('Error updating credentials:', error);
+    response.status(500).json({ message: 'Error updating credentials' });
+  }
+});
+
+// Check user role in group
+router.get('/:groupId/user-role/:userId', async (request: Request, response: Response) => {
+  try {
+    const { groupId, userId } = request.params;
+
+    const member = await prisma.groupMember.findFirst({
+      where: { groupId, userId }
+    });
+
+    if (!member) {
+      return response.status(404).json({ message: 'User not found in group' });
+    }
+
+    response.status(200).json({ role: member.userRole });
+  } catch (error) {
+    console.error('Error checking user role:', error);
+    response.status(500).json({ message: 'Error checking user role' });
+  }
+});
+
+// Get subscription details for a group
+router.get('/:groupId/subscription-details', async (request: Request, response: Response) => {
+  try {
+    const { groupId } = request.params;
+
+    // Validate ObjectID format
+    if (!groupId || groupId.length !== 24 || !/^[0-9a-fA-F]{24}$/.test(groupId)) {
+      return response.status(400).json({ message: 'Invalid group ID format' });
+    }
+
+    const group = await prisma.group.findUnique({
+      where: { id: groupId },
+      include: {
+        subscription: {
+          select: {
+            id: true,
+            name: true,
+            logo: true,
+            category: true,
+            domain: true
+          }
+        }
+      }
+    });
+
+    if (!group) {
+      return response.status(404).json({ message: 'Group not found' });
+    }
+
+    const subscriptionDetails = {
+      id: group.id,
+      groupName: group.groupName,
+      subscriptionName: group.subscriptionName,
+      planName: group.planName,
+      amount: group.amount,
+      cycle: group.cycle,
+      currency: 'USD',
+      nextPaymentDate: '', // Left blank as requested
+      subscription: group.subscription,
+      credentials: group.credentialUsername && group.credentialPassword ? {
+        username: group.credentialUsername,
+        password: group.credentialPassword
+      } : null
+    };
+
+    response.status(200).json(subscriptionDetails);
+  } catch (error) {
+    console.error('Error fetching subscription details:', error);
+    response.status(500).json({ message: 'Error fetching subscription details' });
   }
 });
 
