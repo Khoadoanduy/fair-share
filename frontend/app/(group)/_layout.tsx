@@ -20,7 +20,7 @@ export default function AuthLayout() {
         headerShown: true,
         headerShadowVisible: false,
         headerStyle: { backgroundColor: "#fff" },
-        headerTitleStyle: { fontWeight: "bold" },
+        headerTitleStyle: { fontWeight: "bold", color: '#4A3DE3' },
         headerLeft: () => <BackButton />, // your custom back button
     }}
     >
@@ -54,7 +54,9 @@ export default function AuthLayout() {
     />
     <Stack.Screen
         name = "showAllInvitations"
-        options={{ title: ""}}
+        options={{ title: "", 
+                  headerTitle: () => null,
+                  headerLeft: () => null,}}
     />
     </Stack>
 

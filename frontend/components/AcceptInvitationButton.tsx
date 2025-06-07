@@ -9,15 +9,18 @@ const API_URL = process.env.EXPO_PUBLIC_API_URL;
 type AcceptButtonProps = {
   userId: string;
   groupId: string;
+  disabled?: boolean;
+  onResponse?: () => void;
 };
 
-const AcceptInvitationButton = ({ userId, groupId }: AcceptButtonProps) => {
+const AcceptInvitationButton = ({ userId, groupId, disabled, onResponse }: AcceptButtonProps) => {
   const [accepted, setAccepted] = useState(false);
-  const handleAccept = async (groupId) => {
+  const handleAccept = async () => {
     try {
       await axios.put(`${API_URL}/api/invite/${groupId}/${userId}`);
       await axios.post(`${API_URL}/api/groupMember/${groupId}/${userId}`, {userRole: "member"});
       setAccepted(true);
+      onResponse?.();
       console.log('Accept invitation successfully');
     } catch (error) {
       console.error('Error accepting invitation:', error);
@@ -25,10 +28,11 @@ const AcceptInvitationButton = ({ userId, groupId }: AcceptButtonProps) => {
   };
 
   return <CustomButton 
-            text={accepted? "Accepted" : "Accept"} 
-            onPress={handleAccept} 
+            text={accepted ? "Accepted" : "Accept"} 
+            onPress={handleAccept}
+            disabled={disabled} 
             style={[accepted ? styles.buttonAccepted : styles.buttonActive, styles.button]}
-            textStyle = {accepted ? styles.textAccepted : null}/>;
+            textStyle={accepted ? styles.textAccepted : styles.buttonText}/>;
 };
 
 const styles = StyleSheet.create({
@@ -38,6 +42,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     alignItems: 'center',
     justifyContent: 'center',
+    minWidth: '48%',
   },
   buttonActive: {
     backgroundColor: '#4A3DE3', 
@@ -47,6 +52,11 @@ const styles = StyleSheet.create({
   },
   textAccepted: {
     color: '#94A3B8',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  buttonText: {
+    color: 'white',
     fontSize: 16,
     fontWeight: '600',
   },

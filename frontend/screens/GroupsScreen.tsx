@@ -80,7 +80,7 @@ export default function GroupsScreen() {
         amountEach: item.group.amountEach,
         cycle: item.group.cycle,
         category: item.group.category,
-        logo: item.group.logo,,
+        logo: item.group.logo,
         startDate: item.group.startDate,
         endDate: item.group.endDate,
         totalMem: item.group.totalMem,
