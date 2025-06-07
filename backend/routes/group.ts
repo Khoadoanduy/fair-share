@@ -70,7 +70,7 @@ router.post('/create', async (request: Request, response: Response) => {
 });
 
 //Search user using username
-router.get('/search-user/:username', async (request, response) => {
+router.get('/search-user/:username', async (request: Request, response: Response) => {
   try {
     const { username } = request.params;
 
