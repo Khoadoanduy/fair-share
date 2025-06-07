@@ -89,6 +89,14 @@ export default function GroupDetailsScreen() {
     });
   };
 
+  // Add this near the other handler functions, before the return statement
+  const handleSubscriptionDetails = () => {
+    router.push({
+      pathname: "/(group)/SubscriptionDetails",
+      params: { groupId },
+    });
+  };
+
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
@@ -178,7 +186,10 @@ export default function GroupDetailsScreen() {
             </View>
           </View>
 
-          <TouchableOpacity style={styles.detailsRow}>
+          <TouchableOpacity
+            style={styles.detailsRow}
+            onPress={handleSubscriptionDetails}
+          >
             <View style={styles.detailsLeft}>
               <Ionicons name="person-outline" size={24} color="#000" />
               <Text style={styles.detailsText}>Subscription details</Text>
