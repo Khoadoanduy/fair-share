@@ -415,20 +415,11 @@ export default function SubscriptionDetailsScreen() {
                   }
                 }}
               >
-                <Ionicons name="card-outline" size={24} color="#4A3DE3" />
-                <Text style={styles.createVirtualCardText}>
-                  Create Virtual Card
-                </Text>
+              
               </Pressable>
             </View>
           )
         )}
-
-        {/* Payment History */}
-        <Pressable style={styles.paymentHistoryButton}>
-          <Text style={styles.paymentHistoryText}>Payment history</Text>
-          <Ionicons name="chevron-forward" size={20} color="#666" />
-        </Pressable>
       </ScrollView>
     </SafeAreaView>
   );

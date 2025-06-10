@@ -321,13 +321,6 @@ export default function GroupDetailsScreen() {
           )
         )}
 
-        {/* Payment Method - Only show if user is leader */}
-        {leader && (
-          <TouchableOpacity style={styles.paymentMethodRow}>
-            <Text style={styles.paymentMethodTitle}>Payment method</Text>
-            <Ionicons name="chevron-forward" size={20} color="#C7C7CC" />
-          </TouchableOpacity>
-        )}
       </ScrollView>
     </SafeAreaView>
   );
