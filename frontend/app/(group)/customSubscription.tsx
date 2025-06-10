@@ -10,6 +10,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import CustomDropdown, { DropdownOption } from '@/components/CustomDropdown';
 import { useUser } from '@clerk/clerk-expo';
+import { useUserState } from '@/hooks/useUserState';
 
 type FormatData = {
   subscriptionName: string;
@@ -27,6 +28,7 @@ export default function CustomSubscriptionScreen() {
   const { user } = useUser();
   const clerkId = user?.id;
   const { groupName } = useLocalSearchParams();
+  const customerId = useUserState();
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
 
   const { control, handleSubmit, setValue, watch } = useForm<FormatData>({
@@ -127,6 +129,8 @@ export default function CustomSubscriptionScreen() {
     try {
       const leaderId = await userFromMongo();
       const cycleDays = calculateTotalDays(info.day, info.cycle);
+      
+      // Create the group
       const response = await axios.post(`${API_URL}/api/group/create`, {
         groupName,
         subscriptionName: info.subscriptionName,
@@ -135,10 +139,24 @@ export default function CustomSubscriptionScreen() {
         cycle: info.cycle,
         cycleDays: cycleDays,
         paymentFrequency: parseFloat(info.day),
-        category: info.category
+        category: info.category,
+        userId: leaderId // Pass the leader ID to automatically add them as leader
       });
+      
       const groupId = response.data.groupId;
-      await axios.post(`${API_URL}/api/groupMember/${groupId}/${leaderId}`, {userRole: "leader"});
+      
+      // Create a virtual card for the group using leader info
+      try {
+        await axios.post(`http://localhost:3000/api/virtualCard/create-for-group`, {
+          groupId,
+          leaderId
+        });
+        console.log('Virtual card created successfully for group');
+      } catch (cardError) {
+        console.error('Error creating virtual card:', cardError);
+        // Continue even if virtual card creation fails
+      }
+      
       router.push({
         pathname: '/(group)/inviteMember',
         params: { groupId: response.data.groupId },

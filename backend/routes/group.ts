@@ -8,24 +8,48 @@ const router: Router = express.Router();
 const prisma = new PrismaClient();
 
 // Helper function to calculate the next payment date
-const calculateNextPaymentDate = (cycle: string, cycleDays: number): Date => {
-  const today = new Date();
-  const nextPaymentDate = new Date(today);
+const calculateNextPaymentDate = (cycleDays: number, startDate?: Date | null): Date => {
+  // Use startDate if provided, otherwise use today's date
+  const baseDate = startDate || new Date();
+  const nextPaymentDate = new Date(baseDate);
   
-  // Add the appropriate number of days based on the cycle
-  nextPaymentDate.setDate(today.getDate() + cycleDays);
+  // Add the appropriate number of days
+  nextPaymentDate.setDate(baseDate.getDate() + cycleDays);
   
   return nextPaymentDate;
+};
+
+// Helper function to calculate days between two dates
+const calculateDaysBetween = (startDate: Date, endDate: Date): number => {
+  const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
+  return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 };
 
 //Create group
 router.post('/create', async (request: Request, response: Response) => {
   try {
-    const { groupName, subscriptionName, subscriptionId, planName, amount, cycle, category, cycleDays, userId,nextPaymentDate } = request.body;
-
+    
+    const { groupName, subscriptionName, subscriptionId, planName, amount, category, cycleDays, userId } = request.body;
+    console.log(request.body);
     if (!groupName || !subscriptionName || !amount || !userId) {
       return response.status(400).json({ message: 'Missing required fields' });
     }
+
+    // Set the start date to today
+    const startDate = new Date();
+    
+    // Calculate next payment date if cycleDays is provided
+    let nextPaymentDate = null;
+    let daysUntilNextPayment = 0;
+    
+    if (cycleDays) {
+      const cycleDaysInt = parseInt(cycleDays);
+      nextPaymentDate = calculateNextPaymentDate(cycleDaysInt, startDate);
+      
+      // Calculate days until next payment (should be equal to cycleDays for a new group)
+      daysUntilNextPayment = cycleDaysInt;
+    }
+
 
     // Use a transaction to ensure both group and membership are created together
     const result = await prisma.$transaction(async (tx) => {
@@ -37,10 +61,14 @@ router.post('/create', async (request: Request, response: Response) => {
           subscriptionId,
           planName,
           amount: parseFloat(amount),
-          cycleDays,
+          cycleDays: cycleDays ? parseInt(cycleDays) : null,
           category,
           totalMem: 1,
-          amountEach: parseFloat(amount)
+          amountEach: parseFloat(parseFloat(amount).toFixed(2)),
+          // Set startDate to today
+          startDate: startDate,
+          // Set endDate as the next payment date if calculated
+          endDate: nextPaymentDate
         }
       });
 
@@ -56,11 +84,17 @@ router.post('/create', async (request: Request, response: Response) => {
       return { group: newGroup, membership: groupMember };
     });
 
+    // Format the dates for the response
+    const formattedStartDate = startDate.toISOString().split('T')[0];
+    const formattedNextPaymentDate = nextPaymentDate ? nextPaymentDate.toISOString().split('T')[0] : null;
+    
     response.status(201).json({
       message: 'Group created successfully with leader',
       group: result.group.groupName,
       groupId: result.group.id,
-      nextPaymentDate: nextPaymentDate
+      startDate: formattedStartDate,
+      nextPaymentDate: formattedNextPaymentDate,
+      daysUntilNextPayment: daysUntilNextPayment
     });
 
   } catch (error) {
@@ -207,15 +241,68 @@ router.get('/:groupId/subscription-details', async (request: Request, response: 
       return response.status(404).json({ message: 'Group not found' });
     }
 
+    // Calculate next payment date and days until next payment
+    let nextPaymentDate = '';
+    let daysUntilNextPayment = 0;
+    const today = new Date();
+    
+    // First check if endDate exists
+    if (group.endDate) {
+      nextPaymentDate = group.endDate.toISOString().split('T')[0]; // Format as YYYY-MM-DD
+      daysUntilNextPayment = calculateDaysBetween(today, group.endDate);
+    }
+    // If no endDate but both startDate and cycleDays exist, calculate next payment date
+    else if (group.startDate && group.cycleDays) {
+      // Calculate the next payment date based on startDate
+      let nextDate = calculateNextPaymentDate(group.cycleDays, group.startDate);
+      
+      // If the calculated date is in the past, recalculate based on today
+      if (nextDate < today) {
+        // Calculate how many payment cycles have passed
+        const daysSinceStart = calculateDaysBetween(group.startDate, today);
+        const cyclesPassed = Math.floor(daysSinceStart / group.cycleDays);
+        
+        // Calculate the next payment date by adding the appropriate number of cycles
+        const newStartDate = new Date(group.startDate);
+        newStartDate.setDate(group.startDate.getDate() + (cyclesPassed + 1) * group.cycleDays);
+        nextDate = newStartDate;
+      }
+      
+      nextPaymentDate = nextDate.toISOString().split('T')[0]; // Format as YYYY-MM-DD
+      daysUntilNextPayment = calculateDaysBetween(today, nextDate);
+      
+      // Update the group with the calculated endDate
+      await prisma.group.update({
+        where: { id: groupId },
+        data: { endDate: nextDate }
+      });
+    }
+    // If only cycleDays exists (no startDate), calculate based on today
+    else if (group.cycleDays) {
+      const nextDate = calculateNextPaymentDate(group.cycleDays);
+      nextPaymentDate = nextDate.toISOString().split('T')[0]; // Format as YYYY-MM-DD
+      daysUntilNextPayment = calculateDaysBetween(today, nextDate);
+      
+      // Update the group with today as startDate and the calculated endDate
+      await prisma.group.update({
+        where: { id: groupId },
+        data: { 
+          startDate: today,
+          endDate: nextDate 
+        }
+      });
+    }
+
     const subscriptionDetails = {
       id: group.id,
       groupName: group.groupName,
       subscriptionName: group.subscriptionName,
       planName: group.planName,
       amount: group.amount,
-      cycle: group.cycle,
+      cycleDays: group.cycleDays,
       currency: 'USD',
-      nextPaymentDate: '', // Left blank as requested
+      nextPaymentDate: nextPaymentDate,
+      daysUntilNextPayment: daysUntilNextPayment,
       subscription: group.subscription,
       credentials: group.credentialUsername && group.credentialPassword ? {
         username: group.credentialUsername,
@@ -274,7 +361,7 @@ router.get('/amount-each/:groupId', async (request: Request, response: Response)
     });
     if (!group)
       return response.status(404).json({ message: "No group found" });
-    response.status(200).json(group.amountEach);
+    response.status(200).json(group.amountEach?.toFixed(2));
 
   } catch (error) {
     console.error(error);
@@ -325,21 +412,67 @@ router.get('/:groupId', async (request: Request, response: Response) => {
             return response.status(404).json({ message: 'Group not found' });
         }
         
-        // Calculate days until next payment
+        // Calculate next payment date and days until next payment
         let daysUntilNextPayment = 0;
         let nextPaymentDate = null;
+        const today = new Date();
         
+        // First check if endDate exists (for backward compatibility)
         if (group.endDate) {
             nextPaymentDate = group.endDate;
-            const today = new Date();
-            const diffTime = Math.abs(nextPaymentDate.getTime() - today.getTime());
-            daysUntilNextPayment = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            daysUntilNextPayment = calculateDaysBetween(today, nextPaymentDate);
+        } 
+        // If no endDate but both startDate and cycleDays exist, calculate next payment date
+        else if (group.startDate && group.cycleDays) {
+            // Calculate the next payment date based on startDate
+            nextPaymentDate = calculateNextPaymentDate(group.cycleDays, group.startDate);
+            
+            // If the calculated date is in the past, recalculate based on today
+            if (nextPaymentDate < today) {
+                // Calculate how many payment cycles have passed
+                const daysSinceStart = calculateDaysBetween(group.startDate, today);
+                const cyclesPassed = Math.floor(daysSinceStart / group.cycleDays);
+                
+                // Calculate the next payment date by adding the appropriate number of cycles
+                const newStartDate = new Date(group.startDate);
+                newStartDate.setDate(group.startDate.getDate() + (cyclesPassed + 1) * group.cycleDays);
+                nextPaymentDate = newStartDate;
+            }
+            
+            // Calculate days until next payment
+            daysUntilNextPayment = calculateDaysBetween(today, nextPaymentDate);
+            
+            // Update the group with the calculated endDate
+            await prisma.group.update({
+                where: { id: groupId },
+                data: { endDate: nextPaymentDate }
+            });
         }
+        // If only cycleDays exists (no startDate), calculate based on today
+        else if (group.cycleDays) {
+            // Calculate the next payment date based on today
+            nextPaymentDate = calculateNextPaymentDate(group.cycleDays);
+            
+            // Calculate days until next payment
+            daysUntilNextPayment = calculateDaysBetween(today, nextPaymentDate);
+            
+            // Update the group with today as startDate and the calculated endDate
+            await prisma.group.update({
+                where: { id: groupId },
+                data: { 
+                    startDate: today,
+                    endDate: nextPaymentDate 
+                }
+            });
+        }
+        
+        // Format the nextPaymentDate to a string if it exists
+        const formattedNextPaymentDate = nextPaymentDate ? nextPaymentDate.toISOString().split('T')[0] : null;
         
         response.status(200).json({
             ...group,
             daysUntilNextPayment,
-            nextPaymentDate
+            nextPaymentDate: formattedNextPaymentDate
         });
     } catch (error) {
         console.error(error);
@@ -347,49 +480,86 @@ router.get('/:groupId', async (request: Request, response: Response) => {
     }
 });
 
-//Get group details
-router.get('/:groupId', async (request: Request, response: Response) => {
-    try {
-        const { groupId } = request.params;
-        if (!groupId) {
-            return response.status(400).json({ message: 'groupId is required' });
-        }
-        
-        const group = await prisma.group.findUnique({
-            where: { id: groupId },
-            include: {
-                members: {
-                    include: {
-                        user: true
-                    }
-                }
-            }
-        });
-        
-        if (!group) {
-            return response.status(404).json({ message: 'Group not found' });
-        }
-        
-        // Calculate days until next payment
-        let daysUntilNextPayment = 0;
-        let nextPaymentDate = null;
-        
-        if (group.endDate) {
-            nextPaymentDate = group.endDate;
-            const today = new Date();
-            const diffTime = Math.abs(nextPaymentDate.getTime() - today.getTime());
-            daysUntilNextPayment = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        }
-        
-        response.status(200).json({
-            ...group,
-            daysUntilNextPayment,
-            nextPaymentDate
-        });
-    } catch (error) {
-        console.error(error);
-        response.status(500).json({ message: 'Error getting group details' });
+// Update cycle days and recalculate next payment date
+router.put('/:groupId/update-cycle', async (request: Request, response: Response) => {
+  try {
+    const { groupId } = request.params;
+    const { cycleDays, userId } = request.body;
+    
+    if (!groupId || !cycleDays) {
+      return response.status(400).json({ message: 'Group ID and cycle days are required' });
     }
+    
+    // Check if user is the leader of this group
+    const memberRole = await prisma.groupMember.findFirst({
+      where: { groupId, userId, userRole: 'leader' }
+    });
+
+    if (!memberRole) {
+      return response.status(403).json({ message: 'Only group leaders can update cycle days' });
+    }
+    
+    // Get the current group to check if startDate exists
+    const group = await prisma.group.findUnique({
+      where: { id: groupId }
+    });
+    
+    if (!group) {
+      return response.status(404).json({ message: 'Group not found' });
+    }
+    
+    const cycleDaysInt = parseInt(cycleDays);
+    const today = new Date();
+    let nextPaymentDate;
+    
+    // If startDate exists, calculate next payment date based on it
+    if (group.startDate) {
+      // Calculate the next payment date based on startDate
+      nextPaymentDate = calculateNextPaymentDate(cycleDaysInt, group.startDate);
+      
+      // If the calculated date is in the past, recalculate based on today
+      if (nextPaymentDate < today) {
+        // Calculate how many payment cycles have passed
+        const daysSinceStart = calculateDaysBetween(group.startDate, today);
+        const cyclesPassed = Math.floor(daysSinceStart / cycleDaysInt);
+        
+        // Calculate the next payment date by adding the appropriate number of cycles
+        const newStartDate = new Date(group.startDate);
+        newStartDate.setDate(group.startDate.getDate() + (cyclesPassed + 1) * cycleDaysInt);
+        nextPaymentDate = newStartDate;
+      }
+    } else {
+      // If no startDate, use today as the base date
+      nextPaymentDate = calculateNextPaymentDate(cycleDaysInt);
+    }
+    
+    // Update the group with new cycle days and next payment date
+    const updatedGroup = await prisma.group.update({
+      where: { id: groupId },
+      data: {
+        cycleDays: cycleDaysInt,
+        startDate: group.startDate || today, // Set startDate if it doesn't exist
+        endDate: nextPaymentDate
+      }
+    });
+    
+    // Calculate days until next payment
+    const daysUntilNextPayment = calculateDaysBetween(today, nextPaymentDate);
+    
+    // Format the nextPaymentDate to a string
+    const formattedNextPaymentDate = nextPaymentDate.toISOString().split('T')[0];
+    
+    response.status(200).json({
+      message: 'Cycle days updated successfully',
+      cycleDays: cycleDaysInt,
+      nextPaymentDate: formattedNextPaymentDate,
+      daysUntilNextPayment
+    });
+    
+  } catch (error) {
+    console.error('Error updating cycle days:', error);
+    response.status(500).json({ message: 'Error updating cycle days' });
+  }
 });
 
 export default router

@@ -18,6 +18,7 @@ import axios from "axios";
 import CredentialsContainer from "@/components/CredentialsContainer";
 import CredentialItem from "@/components/CredentialItem";
 import CredentialsVisibilityToggle from "@/components/CredentialsVisibilityToggle";
+import VirtualCardDisplay from "@/components/VirtualCardDisplay";
 
 type SubscriptionDetailsData = {
   id: string;
@@ -28,11 +29,13 @@ type SubscriptionDetailsData = {
   cycle: string;
   currency: string;
   nextPaymentDate: string;
+  cycleDays: number;
+  category: string;
+  virtualCardId?: string;
   subscription?: {
     id: string;
     name: string;
     logo: string;
-    category: string;
     domain: string;
   };
   credentials: {
@@ -41,12 +44,25 @@ type SubscriptionDetailsData = {
   } | null;
 };
 
+type VirtualCard = {
+  id: string;
+  last4: string;
+  expMonth: number;
+  expYear: number;
+  brand: string;
+  cardholderName: string;
+  status: string;
+  type: string;
+  currency: string;
+};
+
 export default function SubscriptionDetailsScreen() {
   const API_URL = process.env.EXPO_PUBLIC_API_URL;
   const router = useRouter();
   const { user } = useUser();
   const { groupId } = useLocalSearchParams();
   const [details, setDetails] = useState<SubscriptionDetailsData | null>(null);
+  const [virtualCard, setVirtualCard] = useState<VirtualCard | null>(null);
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [mongoUserId, setMongoUserId] = useState<string | null>(null);
@@ -75,9 +91,21 @@ export default function SubscriptionDetailsScreen() {
         axios.get(`${API_URL}/api/group/${groupId}/user-role/${mongoId}`),
       ]);
 
-      console.log(detailsResponse.data)
       setDetails(detailsResponse.data);
       setUserRole(roleResponse.data.role);
+
+      // If the group has a virtual card ID, fetch the card details
+      if (detailsResponse.data.virtualCardId) {
+        try {
+          const cardResponse = await axios.get(
+            `${API_URL}/api/virtualCard/group/${groupId}`
+          );
+          setVirtualCard(cardResponse.data);
+        } catch (cardErr) {
+          console.error("Error fetching virtual card details:", cardErr);
+          // Don't set an error, just log it - virtual card is optional
+        }
+      }
     } catch (error) {
       console.error("Failed to initialize data:", error);
       Alert.alert("Error", "Failed to load subscription details");
@@ -316,9 +344,10 @@ export default function SubscriptionDetailsScreen() {
               <View style={styles.detailRow}>
                 <Text style={styles.detailLabel}>Next payment</Text>
                 <View>
-                  <Text style={styles.detailValue}>TBD</Text>
-                  <Text style={styles.detailSubtext}>
-                    To be handled by another person
+                  <Text style={styles.detailValue}>
+                    {details.nextPaymentDate
+                      ? new Date(details.nextPaymentDate).toLocaleDateString()
+                      : "Not available"}
                   </Text>
                 </View>
               </View>
@@ -339,6 +368,61 @@ export default function SubscriptionDetailsScreen() {
             </View>
           </View>
         </View>
+
+        {/* Virtual Card Section */}
+        {virtualCard ? (
+          <View style={styles.section}>
+            <View style={styles.virtualCardContainer}>
+              <Text style={styles.virtualCardTitle}>Virtual Card</Text>
+              <VirtualCardDisplay
+                cardBrand={virtualCard.brand}
+                last4={virtualCard.last4}
+                expMonth={virtualCard.expMonth}
+                expYear={virtualCard.expYear}
+                cardholderName={virtualCard.cardholderName}
+              />
+            </View>
+          </View>
+        ) : (
+          userRole === "leader" && (
+            <View style={styles.section}>
+              <Pressable
+                style={styles.createVirtualCardButton}
+                onPress={async () => {
+                  try {
+                    const response = await axios.post(
+                      `${API_URL}/api/virtualCard/create-for-group`,
+                      {
+                        groupId,
+                        leaderId: mongoUserId,
+                      }
+                    );
+
+                    if (response.data.success) {
+                      // Refresh the page to show the new virtual card
+                      const cardResponse = await axios.get(
+                        `${API_URL}/api/virtualCard/group/${groupId}`
+                      );
+                      setVirtualCard(cardResponse.data);
+                      Alert.alert(
+                        "Success",
+                        "Virtual card created successfully"
+                      );
+                    }
+                  } catch (error) {
+                    console.error("Error creating virtual card:", error);
+                    Alert.alert("Error", "Failed to create virtual card");
+                  }
+                }}
+              >
+                <Ionicons name="card-outline" size={24} color="#4A3DE3" />
+                <Text style={styles.createVirtualCardText}>
+                  Create Virtual Card
+                </Text>
+              </Pressable>
+            </View>
+          )
+        )}
 
         {/* Payment History */}
         <Pressable style={styles.paymentHistoryButton}>

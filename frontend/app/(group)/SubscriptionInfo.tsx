@@ -163,8 +163,10 @@ export default function SubscriptionScreen() {
     try {
       const leaderId = await userFromMongo();
       const cycleDays = calculateTotalDays(info.day, info.cycle);
+      
       const response = await axios.post(`${API_URL}/api/group/create`, {
         groupName,
+        userId: leaderId,
         subscriptionId: info.subscriptionId,
         subscriptionName: info.subscriptionName,
         planName: info.planName,
@@ -177,7 +179,18 @@ export default function SubscriptionScreen() {
       });
       
       const groupId = response.data.groupId;
-      await axios.post(`${API_URL}/api/groupMember/${groupId}/${leaderId}`, { userRole: "leader" });
+      
+      // Create a virtual card for the group using leader info
+      try {
+        await axios.post(`${API_URL}/api/virtualCard/create-for-group`, {
+          groupId,
+          leaderId
+        });
+        console.log('Virtual card created successfully for group');
+      } catch (cardError) {
+        console.error('Error creating virtual card:', cardError);
+        // Continue even if virtual card creation fails
+      }
       
       router.push({
         pathname: '/(group)/inviteMember',
