@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -15,6 +15,9 @@ import { router } from "expo-router";
 import axios from "axios";
 import { Ionicons } from "@expo/vector-icons";
 import { useStripe, PaymentSheet } from "@stripe/stripe-react-native";
+import { useUserState } from "@/hooks/useUserState"; 
+import { useAppDispatch } from "@/redux/hooks"; 
+import { fetchUserData } from "@/redux/slices/userSlice"; 
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
@@ -32,9 +35,12 @@ export default function ProfileScreen() {
   const { isSignedIn, signOut, getToken } = useAuth();
   const { user } = useUser();
   const { initPaymentSheet, presentPaymentSheet } = useStripe();
+  
+  // Use Redux state instead of local state
+  const { stripeCustomerId, loading } = useUserState();
+  const dispatch = useAppDispatch();
 
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
-  const [customerStripeID, setCustomerStripeID] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
   const [defaultPaymentMethodId, setDefaultPaymentMethodId] = useState<string>("");
 
@@ -54,54 +60,24 @@ export default function ProfileScreen() {
     }
   };
 
-  const fetchUserData = async () => {
-    if (!isSignedIn || !user?.id) return;
-
-    setIsLoading(true);
-    try {
-      const token = await getToken();
-      const response = await axios.get(`${API_URL}/api/user`, {
-        params: { clerkID: user.id },
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (response.data?.customerId) {
-        setCustomerStripeID(response.data.customerId);
-        await fetchPaymentMethods(response.data.customerId);
-        await fetchDefaultPaymentMethod(response.data.customerId);
-      }
-    } catch (error) {
-      showAlert("Error", "Could not connect to server");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const fetchPaymentMethods = async (customerId?: string) => {
-    const id = customerId || customerStripeID;
-    if (!id) return;
+  // Simplified - only fetch payment methods if we have a customer ID
+  const fetchPaymentMethods = async () => {
+    if (!stripeCustomerId) return;
 
     try {
-      const response = await axios.get(
-        `${API_URL}/api/stripe-customer/retrieve-paymentMethodId`,
-        { params: { customerStripeID: id } }
-      );
-      setPaymentMethods(response.data?.data || []);
-    } catch (error) {
-      console.error("Error fetching payment methods:", error);
-    }
-  };
+      const [methodsResponse, defaultResponse] = await Promise.all([
+        axios.get(`${API_URL}/api/stripe-customer/retrieve-paymentMethodId`, {
+          params: { customerStripeID: stripeCustomerId }
+        }),
+        axios.get(`${API_URL}/api/stripe-customer/customers/${stripeCustomerId}`)
+      ]);
 
-  const fetchDefaultPaymentMethod = async (customerId?: string) => {
-    const id = customerId || customerStripeID;
-    if (!id) return;
-
-    try {
-      const response = await axios.get(`${API_URL}/api/stripe-customer/customers/${id}`);
-      const defaultPM = response.data.customer?.invoice_settings?.default_payment_method;
+      setPaymentMethods(methodsResponse.data?.data || []);
+      
+      const defaultPM = defaultResponse.data.customer?.invoice_settings?.default_payment_method;
       if (defaultPM) setDefaultPaymentMethodId(defaultPM);
     } catch (error) {
-      console.error("Error fetching default payment method:", error);
+      console.error("Error fetching payment methods:", error);
     }
   };
 
@@ -121,14 +97,16 @@ export default function ProfileScreen() {
       const { setupIntent, ephemeralKey, customer } = response.data;
 
       // Update customer ID if needed
-      if (!customerStripeID && user?.id) {
+      if (!stripeCustomerId && user?.id) {
         const token = await getToken();
         await axios.put(
           `${API_URL}/api/user/${user.id}`,
           { customerId: customer },
           { headers: { Authorization: `Bearer ${token}` } }
         );
-        setCustomerStripeID(customer);
+        
+        // Refresh user data in Redux
+        dispatch(fetchUserData(user.id));
       }
 
       // Setup and present payment sheet
@@ -182,7 +160,7 @@ export default function ProfileScreen() {
   const handleSetDefaultPaymentMethod = async (paymentMethodId: string) => {
     try {
       await axios.post(`${API_URL}/api/stripe-customer/set-default-payment-method`, {
-        customerId: customerStripeID,
+        customerId: stripeCustomerId,
         paymentMethodId,
       });
       setDefaultPaymentMethodId(paymentMethodId);
@@ -205,7 +183,6 @@ export default function ProfileScreen() {
       <View style={styles.paymentMethodDetails}>
         <View style={styles.cardInfo}>
           <Text style={styles.paymentMethodText}>•••• {method.card.last4}</Text>
-          {/* Default badge or Set Default button in the same position */}
           {defaultPaymentMethodId === method.id ? (
             <View style={styles.defaultBadge}>
               <Text style={styles.defaultText}>Default</Text>
@@ -224,7 +201,6 @@ export default function ProfileScreen() {
         </Text>
       </View>
 
-      {/* Only delete button in the actions column */}
       <View style={styles.cardActions}>
         <TouchableOpacity
           onPress={() => handleDeletePaymentMethod(method.id)}
@@ -236,9 +212,19 @@ export default function ProfileScreen() {
     </View>
   );
 
+  // Fetch payment methods when customer ID is available
   useEffect(() => {
-    if (isSignedIn) fetchUserData();
-  }, [isSignedIn]);
+    if (stripeCustomerId) {
+      fetchPaymentMethods();
+    }
+  }, [stripeCustomerId]);
+
+  // Initialize user data on mount
+  useEffect(() => {
+    if (isSignedIn && user?.id) {
+      dispatch(fetchUserData(user.id));
+    }
+  }, [isSignedIn, user?.id, dispatch]);
 
   if (!isSignedIn) {
     return (
@@ -254,7 +240,7 @@ export default function ProfileScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        {isLoading && (
+        {(isLoading || loading) && (
           <View style={styles.loadingOverlay}>
             <ActivityIndicator size="large" color="#4353FD" />
           </View>
@@ -329,62 +315,109 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff" },
-  scrollContent: { flexGrow: 1 },
-  content: { flex: 1, padding: 20 },
-  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 30 },
-  headerSpacer: { width: 40 },
-  notificationButton: { width: 40, height: 40, justifyContent: "center", alignItems: "center" },
-  title: { fontSize: 24, fontWeight: "bold", flex: 1, textAlign: "center" },
-  message: { fontSize: 16, marginBottom: 20, textAlign: "center" },
-  section: { marginBottom: 24, backgroundColor: "#f9f9f9", borderRadius: 12, padding: 16 },
-  sectionTitle: { fontSize: 18, fontWeight: "600", marginBottom: 16, color: "#4353FD" },
-  userName: { fontSize: 24, fontWeight: "600", marginBottom: 8 },
-  infoValue: { fontSize: 16, marginBottom: 12 },
+  container: {
+    flex: 1,
+    backgroundColor: "#fff",
+  },
+  scrollContent: {
+    flexGrow: 1,
+  },
+  content: {
+    flex: 1,
+    padding: 20,
+  },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 30,
+  },
+  headerSpacer: {
+    width: 40,
+  },
+  notificationButton: {
+    width: 40,
+    height: 40,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: "bold",
+    flex: 1,
+    textAlign: "center",
+  },
+  message: {
+    fontSize: 16,
+    marginBottom: 20,
+    textAlign: "center",
+  },
+  section: {
+    marginBottom: 24,
+    backgroundColor: "#f9f9f9",
+    borderRadius: 12,
+    padding: 16,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    marginBottom: 16,
+    color: "#4353FD",
+  },
+  userName: {
+    fontSize: 24,
+    fontWeight: "600",
+    marginBottom: 8,
+  },
+  infoValue: {
+    fontSize: 16,
+    marginBottom: 12,
+  },
   paymentMethodItem: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#fff",
-    padding: 16, // Reduced from 16 to make cards more compact
-    borderRadius: 12, // Reduced from 12 for consistency
-    marginBottom: 12, // Reduced from 12 for tighter spacing
-    elevation: 1, // Reduced shadow
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 12,
+    elevation: 1,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05, // Lighter shadow
+    shadowOpacity: 0.05,
     shadowRadius: 2,
-    height: 70, // Fixed height for consistency
+    height: 70,
   },
   cardBrandImage: {
-    width: 40, // Slightly smaller
-    height: 28, // Slightly smaller
+    width: 40,
+    height: 28,
     resizeMode: "contain",
-    marginRight: 16
+    marginRight: 16,
   },
   paymentMethodDetails: {
     flex: 1,
     justifyContent: "center",
   },
   paymentMethodText: {
-    fontSize: 16, // Slightly smaller
+    fontSize: 16,
     fontWeight: "500",
     color: "#000",
     marginBottom: 2,
   },
   paymentMethodExpiry: {
-    fontSize: 12, // Smaller
+    fontSize: 12,
     color: "#666",
     fontWeight: "400",
   },
-  deleteButton: {
-    width: 28, // Smaller delete button
-    height: 28,
-    justifyContent: "center",
+  avatarContainer: {
     alignItems: "center",
-    borderRadius: 14,
+    marginBottom: 32,
   },
-  avatarContainer: { alignItems: "center", marginBottom: 32 },
-  avatar: { width: 100, height: 100, borderRadius: 50, marginBottom: 16 },
+  avatar: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    marginBottom: 16,
+  },
   avatarPlaceholder: {
     width: 100,
     height: 100,
@@ -394,8 +427,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 16,
   },
-  avatarText: { fontSize: 32, fontWeight: "bold", color: "#fff" },
-  userHandle: { fontSize: 16, color: "#666", marginBottom: 8 },
+  avatarText: {
+    fontSize: 32,
+    fontWeight: "bold",
+    color: "#fff",
+  },
+  userHandle: {
+    fontSize: 16,
+    color: "#666",
+    marginBottom: 8,
+  },
   personalInfoCard: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -410,24 +451,31 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 2,
   },
-  personalInfoContent: { flexDirection: "row", alignItems: "center" },
-  personalInfoText: { fontSize: 16, fontWeight: "500", marginLeft: 8 },
+  personalInfoContent: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  personalInfoText: {
+    fontSize: 16,
+    fontWeight: "500",
+    marginLeft: 8,
+  },
   addPaymentMethodButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "#4353FD",
-    borderRadius: 8, // Smaller radius
-    paddingVertical: 12, // Reduced from 16
+    borderRadius: 8,
+    paddingVertical: 12,
     paddingHorizontal: 16,
     marginBottom: 24,
-    height: 48, // Fixed height to match other elements
+    height: 48,
   },
   addPaymentMethodText: {
     color: "#fff",
-    fontSize: 15, // Slightly smaller
+    fontSize: 15,
     fontWeight: "500",
-    marginLeft: 6 // Reduced spacing
+    marginLeft: 6,
   },
   logoutCard: {
     flexDirection: "row",
@@ -440,7 +488,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#E5E7EB",
   },
-  logoutText: { color: "#000", fontSize: 16, fontWeight: "500", marginLeft: 12 },
+  logoutText: {
+    color: "#000",
+    fontSize: 16,
+    fontWeight: "500",
+    marginLeft: 12,
+  },
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(255, 255, 255, 0.7)",
@@ -452,27 +505,27 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 4,
-    gap: 8, // Add gap between card number and button/badge
+    gap: 8,
   },
   defaultBadge: {
     backgroundColor: "#4353FD",
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
-    height: 24, // Fixed height for consistency
+    height: 24,
     justifyContent: "center",
   },
   defaultText: {
     color: "#fff",
     fontSize: 11,
-    fontWeight: "500"
+    fontWeight: "500",
   },
   setDefaultButton: {
     backgroundColor: "#E8F0FE",
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
-    height: 24, // Same height as default badge
+    height: 24,
     justifyContent: "center",
   },
   setDefaultText: {
@@ -484,7 +537,7 @@ const styles = StyleSheet.create({
   cardActions: {
     alignItems: "center",
     justifyContent: "center",
-    width: 40, // Just enough for delete button
+    width: 40,
   },
   deleteButton: {
     width: 32,
