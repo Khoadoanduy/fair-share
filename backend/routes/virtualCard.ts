@@ -15,93 +15,139 @@ const router: Router = express.Router();
 
 router.post('/create', async function (request, response) {
     try {
+        const { groupId, leaderId } = request.body;
         const customerId = request.query.stripeId as string;
-
-        const customer = await prisma.user.findUnique({
+        
+        // Determine if this is a group card creation or individual card creation
+        const isGroupCard = groupId && leaderId;
+        
+        // Get user information (either customer or leader)
+        const user = await prisma.user.findUnique({
             where: {
-                customerId: customerId,
+                ...(isGroupCard ? { id: leaderId } : { customerId: customerId })
             }
         });
 
-        if (!customer) {
-            return response.status(400).json({ error: 'Customer not found' });
+        if (!user) {
+            return response.status(400).json({ error: 'User not found' });
         }
 
-        if (!customer.dateOfBirth || !customer.firstName || !customer.lastName || !customer.email || !customer.phoneNumber) {
-            return response.status(400).json({ error: 'Customer information is incomplete' });
+        if (!user.dateOfBirth || !user.firstName || !user.lastName || !user.email || !user.phoneNumber) {
+            return response.status(400).json({ error: 'User information is incomplete' });
+        }
+
+        if (isGroupCard && !user.customerId) {
+            return response.status(400).json({ error: 'Leader does not have a Stripe customer ID' });
+        }
+
+        // Get group information if it's a group card
+        let group;
+        if (isGroupCard) {
+            group = await prisma.group.findUnique({
+                where: { id: groupId }
+            });
+
+            if (!group) {
+                return response.status(400).json({ error: 'Group not found' });
+            }
         }
 
         const ip = request.headers['x-forwarded-for'] || 
              request.socket.remoteAddress ||
              request.ip;
 
-        const paymentMethods = await stripe.customers.listPaymentMethods(customerId);
+        // Get payment method for billing address
+        const paymentMethods = await stripe.customers.listPaymentMethods(
+            isGroupCard ? user.customerId : customerId
+        );
+        
+        if (paymentMethods.data.length === 0) {
+            return response.status(400).json({ error: 'No payment method found' });
+        }
+
         const paymentMethod = paymentMethods.data[0];
+        const address = paymentMethod.billing_details.address;
 
-        const address = paymentMethod.billing_details.address
-
-        const cardholder = await stripe.issuing.cardholders.create({
-            type: 'individual',
-            name: customer.firstName + ' ' + customer.lastName,
-            email: customer.email,
-            billing: {
-                address: {
-                    line1: address.line1 || '',
-                    city: address.city || '',
-                    state: address.state || '',
-                    postal_code: address.postal_code || '',
-                    country: address?.country || 'US' // Default to US if not provided
-                }
-            },
-            phone_number: customer.phoneNumber,
-            individual: {
-                card_issuing: {
-                    user_terms_acceptance: {
-                        date: Math.floor(Date.now() / 1000), // Current timestamp in seconds
-                        ip: ip, // Client IP address where terms were accepted
+        // Create or get existing cardholder
+        let cardholderId = user.cardholderId;
+        
+        if (!cardholderId) {
+            // Create a new cardholder
+            const cardholder = await stripe.issuing.cardholders.create({
+                type: 'individual',
+                name: user.firstName + ' ' + user.lastName,
+                email: user.email,
+                billing: {
+                    address: {
+                        line1: address.line1 || '',
+                        city: address.city || '',
+                        state: address.state || '',
+                        postal_code: address.postal_code || '',
+                        country: address?.country || 'US'
+                    }
+                },
+                phone_number: user.phoneNumber,
+                individual: {
+                    card_issuing: {
+                        user_terms_acceptance: {
+                            date: Math.floor(Date.now() / 1000),
+                            ip: ip,
+                        },
                     },
-                },
-                dob: {
-                    day: customer.dateOfBirth.getDate(),
-                    month: customer.dateOfBirth.getMonth() + 1, // Months are 0-indexed in JavaScript
-                    year: customer.dateOfBirth.getFullYear()
-                },
-                first_name: customer.firstName,
-                last_name: customer.lastName
-            }
-        });
+                    dob: {
+                        day: user.dateOfBirth.getDate(),
+                        month: user.dateOfBirth.getMonth() + 1,
+                        year: user.dateOfBirth.getFullYear()
+                    },
+                    first_name: user.firstName,
+                    last_name: user.lastName
+                }
+            });
+            
+            cardholderId = cardholder.id;
+            
+            // Update user with cardholder ID
+            await prisma.user.update({
+                where: { id: user.id },
+                data: { cardholderId: cardholderId }
+            });
+        }
 
+        // Create the virtual card
         const card = await stripe.issuing.cards.create({
-            cardholder: cardholder.id,
+            cardholder: cardholderId,
             currency: 'usd',
             type: 'virtual',
             status: 'active',
             spending_controls: {
                 spending_limits: [{
-                    amount: 100000, // $1000 in cents
+                    amount: isGroupCard 
+                        ? Math.round(group.amount * 100) // Group amount in cents
+                        : 100000, // Default $1000 in cents for individual cards
                     interval: 'all_time'
                 }]
             },
         });
 
-        // Update user with cardholder ID
-        await prisma.user.update({
-            where: { id: customer.id },
-            data: { cardholderId: cardholder.id }
-        });
+        // If it's a group card, update the group with the virtual card ID
+        if (isGroupCard) {
+            await prisma.group.update({
+                where: { id: groupId },
+                data: { virtualCardId: card.id }
+            });
+        }
 
         response.json({
+            success: true,
             card: card.id,
-            cardholder: cardholder.id
-          });
-        } catch (err) {
-          // Log for debugging
-          console.error('Error creating Stripe virtual card:', err);
-      
-          // Send back the Stripe (or other) error message
-          response.status(500).json({err});
-        }
-    });
+            cardholder: cardholderId
+        });
+
+    } catch (err) {
+        console.error('Error creating virtual card:', err);
+        response.status(500).json({err});
+    }
+});
 
 // Create a virtual card for a group using leader info
 router.post('/create-for-group', async function (request, response) {

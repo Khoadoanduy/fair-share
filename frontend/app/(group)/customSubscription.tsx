@@ -145,18 +145,6 @@ export default function CustomSubscriptionScreen() {
       
       const groupId = response.data.groupId;
       
-      // Create a virtual card for the group using leader info
-      try {
-        await axios.post(`http://localhost:3000/api/virtualCard/create-for-group`, {
-          groupId,
-          leaderId
-        });
-        console.log('Virtual card created successfully for group');
-      } catch (cardError) {
-        console.error('Error creating virtual card:', cardError);
-        // Continue even if virtual card creation fails
-      }
-      
       router.push({
         pathname: '/(group)/inviteMember',
         params: { groupId: response.data.groupId },
