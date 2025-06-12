@@ -21,7 +21,7 @@ const calculateNextPaymentDate = (cycle: string, cycleDays: number): Date => {
 //Create group
 router.post('/create', async (request: Request, response: Response) => {
   try {
-    const { groupName, subscriptionName, subscriptionId, planName, amount, cycle, category, cycleDays, userId,nextPaymentDate } = request.body;
+    const { groupName, subscriptionName, subscriptionId, planName, amount, cycle, category, cycleDays, userId } = request.body;
 
     if (!groupName || !subscriptionName || !amount || !userId) {
       return response.status(400).json({ message: 'Missing required fields' });
@@ -38,6 +38,7 @@ router.post('/create', async (request: Request, response: Response) => {
           planName,
           amount: parseFloat(amount),
           cycleDays,
+          cycle,
           category,
           totalMem: 1,
           amountEach: parseFloat(amount)
@@ -60,7 +61,6 @@ router.post('/create', async (request: Request, response: Response) => {
       message: 'Group created successfully with leader',
       group: result.group.groupName,
       groupId: result.group.id,
-      nextPaymentDate: nextPaymentDate
     });
 
   } catch (error) {

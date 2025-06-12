@@ -1,7 +1,7 @@
 import React from "react";
 import { View, Text, Image, StyleSheet } from "react-native";
 
-interface GroupCardProps {
+interface SubscriptionCardProps {
   logo?: any;
   subscriptionName?: string;
   amountEach?: number;
@@ -10,7 +10,7 @@ interface GroupCardProps {
   category?: string;
 }
 
-const GroupCard: React.FC<GroupCardProps> = ({
+const SubscriptionCard: React.FC<SubscriptionCardProps> = ({
   logo,
   subscriptionName,
   amountEach,
@@ -119,4 +119,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default GroupCard;
+export default SubscriptionCard;

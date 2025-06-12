@@ -78,7 +78,7 @@ export default function UserGroupsScreen() {
 
   const handleGroupPress = (groupId: string) => {
     router.push({
-      pathname: '/(group)/subscriptionDetails',
+      pathname: '/(group)/SubscriptionDetails',
       params: { groupId }
     });
   };

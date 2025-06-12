@@ -13,8 +13,9 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import axios from "axios";
 import { Ionicons } from "@expo/vector-icons";
 import CustomButton from "@/components/CustomButton";
-import { formatPaymentDate, getDaysRemaining } from "@/utils/dateUtils";
 import { useUserState } from "@/hooks/useUserState";
+import SubscriptionCard from "@/components/SubscriptionCard";
+import GroupMembers from "@/components/GroupMember";
 
 // Define the Group type
 type GroupMember = {
@@ -37,6 +38,7 @@ type Group = {
   amount: number;
   amountEach: number;
   totalMem: number;
+  logo: string;
   cycle: string;
   cycleDays: number;
   category: string;
@@ -60,11 +62,12 @@ export default function GroupDetailsScreen() {
     const fetchGroupDetails = async () => {
       try {
         setLoading(true);
+        console.log('here');
         const [groupResponse, roleResponse] = await Promise.all([
           axios.get(`${API_URL}/api/group/${groupId}`),
           axios.get(`${API_URL}/api/groupMember/${groupId}/${userId}`),
         ]);
-
+        console.log(groupResponse);
         setGroup(groupResponse.data);
         setIsLeader(roleResponse.data.isLeader);
         setError(null);
@@ -84,6 +87,14 @@ export default function GroupDetailsScreen() {
   const handleInviteMembers = () => {
     router.push({
       pathname: "/(group)/inviteMember",
+      params: { groupId },
+    });
+  };
+
+  // Add this near the other handler functions, before the return statement
+  const handleSubscriptionDetails = () => {
+    router.push({
+      pathname: "/(group)/SubscriptionDetails",
       params: { groupId },
     });
   };
@@ -110,17 +121,11 @@ export default function GroupDetailsScreen() {
     );
   }
 
-  const daysRemaining = getDaysRemaining(group.nextPaymentDate);
 
   // Update the JSX for the info cards
   const InfoCard = ({
     label,
-    value,
     icon,
-  }: {
-    label: string;
-    value: string;
-    icon: string;
   }) => (
     <View style={styles.infoCard}>
       <View style={styles.labelContainer}>
@@ -128,10 +133,12 @@ export default function GroupDetailsScreen() {
         <Ionicons name={icon} size={24} color="#000" />
       </View>
       <View style={styles.infoValueContainer}>
-        <Text style={styles.infoValue}>{value}</Text>
+        <View style={styles.placeholderBox} />
       </View>
     </View>
   );
+
+  //const handleChargeMoney = router.push('/(group)/setMemberShares')
 
   return (
     <SafeAreaView style={styles.container}>
@@ -149,12 +156,10 @@ export default function GroupDetailsScreen() {
           <View style={styles.infoCardsContainer}>
             <InfoCard
               label="Your share"
-              value={`$${group.amountEach}`}
               icon="pie-chart-outline"
             />
             <InfoCard
               label="Payment in"
-              value={`${daysRemaining} days`}
               icon="time-outline"
             />
           </View>
@@ -162,22 +167,18 @@ export default function GroupDetailsScreen() {
 
         {/* Service Card */}
         <View style={styles.serviceCard}>
-          <View style={styles.serviceHeader}>
-            <View style={styles.serviceLeft}>
-              <View style={styles.serviceInfo}>
-                <Text style={styles.serviceName}>{group.subscriptionName}</Text>
-                <View style={styles.categoryBadge}>
-                  <Text style={styles.categoryText}>{group.category}</Text>
-                </View>
-              </View>
-            </View>
-            <View style={styles.serviceRight}>
-              <Text style={styles.servicePriceAmount}>${group.amount}</Text>
-              <Text style={styles.servicePriceCycle}>monthly</Text>
-            </View>
-          </View>
-
-          <TouchableOpacity style={styles.detailsRow}>
+            <SubscriptionCard
+                logo={{ uri: group.logo}}
+                subscriptionName={group.subscriptionName}
+                amountEach={group.amountEach.toFixed(2)}
+                cycle={group.cycle}
+                isShared={true} // or item.isShared if available
+                category={group.category}
+            />
+          <TouchableOpacity
+            style={styles.detailsRow}
+            onPress={handleSubscriptionDetails}
+          >
             <View style={styles.detailsLeft}>
               <Ionicons name="person-outline" size={24} color="#000" />
               <Text style={styles.detailsText}>Subscription details</Text>
@@ -186,68 +187,15 @@ export default function GroupDetailsScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Subscription Details */}
 
         {/* Members Section */}
-        <View style={styles.membersSection}>
-          <View style={styles.membersSectionHeader}>
-            <Text style={styles.membersTitle}>Members</Text>
-            <TouchableOpacity
-              style={styles.addButton}
-              onPress={handleInviteMembers}
-            >
-              <Ionicons name="add" size={20} color="#007AFF" />
-            </TouchableOpacity>
-          </View>
-
-          {group.members.map((member, index) => (
-            <View key={member.id} style={styles.memberRow}>
-              <View
-                style={[
-                  styles.memberAvatar,
-                  { backgroundColor: getAvatarColor(index) },
-                ]}
-              >
-                <Text style={styles.memberInitials}>
-                  {member.user.firstName.charAt(0).toUpperCase()}
-                </Text>
-              </View>
-              <View style={styles.memberInfo}>
-                <View style={styles.memberNameContainer}>
-                  <Text style={styles.memberName}>
-                    {member.user.firstName} {member.user.lastName}
-                  </Text>
-                  {member.userRole === "leader" && (
-                    <View style={styles.leaderBadge}>
-                      <Text style={styles.leaderText}>Leader</Text>
-                    </View>
-                  )}
-                </View>
-                <Text style={styles.memberUsername}>
-                  {member.user.username}
-                </Text>
-              </View>
-              <Text style={styles.memberAmount}>${group.amountEach}</Text>
-            </View>
-          ))}
-        </View>
-
-        {/* Payment Method - Only show if user is leader */}
-        {leader && (
-          <TouchableOpacity style={styles.paymentMethodRow}>
-            <Text style={styles.paymentMethodTitle}>Payment method</Text>
-            <Ionicons name="chevron-forward" size={20} color="#C7C7CC" />
-          </TouchableOpacity>
+        {groupId && userId && (
+            <GroupMembers groupId={groupId as string} userId={userId} />
         )}
       </ScrollView>
     </SafeAreaView>
   );
 }
-
-const getAvatarColor = (index: number) => {
-  const colors = ["#4CD964", "#007AFF", "#5856D6", "#34C759", "#FF9500"];
-  return colors[index % colors.length];
-};
 
 const styles = StyleSheet.create({
   container: {
@@ -551,4 +499,17 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#FFF",
   },
+  nextButton: {
+    backgroundColor: '#5E5AEF',
+    borderRadius: 12,
+    paddingVertical: 14,
+    width: '100%',
+  },
+  placeholderBox: {
+    width: 80,
+    height: 30,
+    backgroundColor: "#E5E7EB",
+    borderRadius: 6,
+    },
+
 });

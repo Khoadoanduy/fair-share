@@ -54,6 +54,7 @@ model Group {
   amount           Float
   virtualCardId    String?           
   cycleDays        Int?
+  cycle            String
   members          GroupMember[]
   category         String
   startDate        DateTime?

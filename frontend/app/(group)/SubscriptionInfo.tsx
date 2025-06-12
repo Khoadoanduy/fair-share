@@ -152,7 +152,6 @@ export default function SubscriptionScreen() {
       Alert.alert('Missing Info', 'Please fill in all fields');
       return;
     }
-
     // Validate day input
     const parsedDay = parseFloat(info.day);
     if (isNaN(parsedDay) || parsedDay <= 0) {
@@ -174,10 +173,10 @@ export default function SubscriptionScreen() {
         paymentFrequency: parseFloat(info.day), // Store the original frequency value
         category: info.category,
         logo: info.logo,
+        userId: leaderId
       });
       
       const groupId = response.data.groupId;
-      await axios.post(`${API_URL}/api/groupMember/${groupId}/${leaderId}`, { userRole: "leader" });
       
       router.push({
         pathname: '/(group)/inviteMember',

@@ -16,7 +16,7 @@ import { useUser } from "@clerk/clerk-expo";
 import { Ionicons } from "@expo/vector-icons";
 import BackButton from "@/components/BackButton";
 import { formatRelativeDate, getDaysRemaining } from "@/utils/dateUtils";
-import GroupCard from '@/components/GroupCard';
+import SubscriptionCard from '@/components/SubscriptionCard';
 
 interface Group {
   id: string;
@@ -25,6 +25,7 @@ interface Group {
   subscriptionId?: string;
   planName?: string;
   amountEach: number;
+  amount: number;
   cycle: string;
   category: string;
   startDate?: string;
@@ -150,7 +151,7 @@ export default function GroupsScreen() {
             style={styles.subscriptionCard}
             onPress={() =>
               router.push({
-                pathname: "/(group)/groupDetails",
+                pathname: "/(group)/newGroupDetails",
                 params: { groupId: item.id },
               })
             }
