@@ -68,7 +68,7 @@ export function usePushNotifications() {
     try {
     console.log('Registering token for user:', user?.id);
     console.log('Token:', token);
-        const response = await axios.post(`${API_URL}/api/notifcations/register`, {
+        const response = await axios.post(`${API_URL}/api/notifications/register`, {
                 clerkId: user?.id,
                 token: token
             })

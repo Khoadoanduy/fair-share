@@ -81,12 +81,11 @@ export const checkPaymentMethod = createAsyncThunk(
     }
     
     try {
-      const response = await axios.get(`http://localhost:3000/api/user/`, {
+      const response = await axios.get(`${API_URL}/api/user/`, {
         params: {
           clerkID: clerkId
         }
-      }); 
-      console.log("get data "+response.data);
+      });
       return response.data
     } catch (error: any) {
       console.error('Error checking payment method:', error);
