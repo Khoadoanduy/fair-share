@@ -89,8 +89,6 @@ router.post('/register', async (req, res) => {
             },
         }));
 
-        // Chunk messages to respect Expo's rate limits
-        // const chunks = expo.chunkPushNotifications(messages);
         const tickets = [];
         const errors = [];
 
