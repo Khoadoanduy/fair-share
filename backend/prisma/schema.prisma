@@ -61,6 +61,7 @@ model Group {
   GroupInvitation  GroupInvitation[]
   credentialUsername String?
   credentialPassword String?
+  visibility         String   @default("friends")
   amountEach       Float?
   totalMem         Int
 }
