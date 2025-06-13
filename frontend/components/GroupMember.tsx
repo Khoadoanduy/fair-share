@@ -152,37 +152,41 @@ const GroupMembers: React.FC<Props> = ({ groupId, userId }) => {
           </View>
         </View>
       ))}
-      {isLeader && (<CustomButton
-        text="Set shares & request confirmation"
-        //onPress={handleChargeMoney}
-        size="large"
-        fullWidth
-      />)}
-      <Text style={styles.textInvitation}>Pending invites</Text>
-      {invitations.map((invitation, index) => (
-        <View key={invitation.id} style={styles.memberRow}>
-          <View
-            style={[styles.avatar, { backgroundColor: "#4A3DE3" }]}
-          >
-            <Text style={styles.initials}>
-              {invitation.user.firstName.charAt(0).toUpperCase()}
-            </Text>
+      {isLeader && (
+        <>
+        <CustomButton
+          text="Set shares & request confirmation"
+          //onPress={handleChargeMoney}
+          size="large"
+          fullWidth
+        />
+        <Text style={styles.textInvitation}>Pending invites</Text>
+        {invitations.map((invitation, index) => (
+          <View key={invitation.id} style={styles.memberRow}>
+            <View
+              style={[styles.avatar, { backgroundColor: "#4A3DE3" }]}
+            >
+              <Text style={styles.initials}>
+                {invitation.user.firstName.charAt(0).toUpperCase()}
+              </Text>
+            </View>
+            <View style={styles.info}>
+                <View style={styles.nameRow}>
+                  <Text style={styles.name}>
+                    {invitation.user.firstName} {invitation.user.lastName}
+                  </Text>
+                </View>
+                <Text style={styles.username}>{invitation.user.username}</Text>
+            </View>
+            <CustomButton 
+                text="Invited"
+                style={styles.buttonInvited}
+                textStyle = {styles.textInvited}
+            />
           </View>
-          <View style={styles.info}>
-              <View style={styles.nameRow}>
-                <Text style={styles.name}>
-                  {invitation.user.firstName} {invitation.user.lastName}
-                </Text>
-              </View>
-              <Text style={styles.username}>{invitation.user.username}</Text>
-          </View>
-          <CustomButton 
-              text="Invited"
-              style={styles.buttonInvited}
-              textStyle = {styles.textInvited}
-          />
-        </View>
-      ))}
+        ))}
+      </>
+      )}
     </ScrollView>
   );
 };
