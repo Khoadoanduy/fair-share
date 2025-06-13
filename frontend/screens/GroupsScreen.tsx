@@ -31,6 +31,7 @@ interface Group {
   startDate?: string;
   endDate?: string; // Used as next payment date
   totalMem?: number;
+  nextPaymentDate?: string;
 }
 
 export default function GroupsScreen() {
@@ -151,7 +152,7 @@ export default function GroupsScreen() {
             style={styles.subscriptionCard}
             onPress={() =>
               router.push({
-                pathname: "/(group)/newGroupDetails",
+                pathname: item.endDate === null ? "/(group)/newGroupDetails" : "/(group)/groupDetails",
                 params: { groupId: item.id },
               })
             }

@@ -47,6 +47,13 @@ type Group = {
   members: GroupMember[];
   daysUntilNextPayment: number;
   nextPaymentDate: string;
+  subscription?: {
+    id: string;
+    name: string;
+    logo: string;
+    category: string;
+    domain: string;
+  };
 };
 
 export default function GroupDetailsScreen() {
@@ -62,12 +69,10 @@ export default function GroupDetailsScreen() {
     const fetchGroupDetails = async () => {
       try {
         setLoading(true);
-        console.log('here');
         const [groupResponse, roleResponse] = await Promise.all([
           axios.get(`${API_URL}/api/group/${groupId}`),
           axios.get(`${API_URL}/api/groupMember/${groupId}/${userId}`),
         ]);
-        console.log(groupResponse);
         setGroup(groupResponse.data);
         setIsLeader(roleResponse.data.isLeader);
         setError(null);
@@ -167,14 +172,14 @@ export default function GroupDetailsScreen() {
 
         {/* Service Card */}
         <View style={styles.serviceCard}>
-            <SubscriptionCard
-                logo={{ uri: group.logo}}
-                subscriptionName={group.subscriptionName}
-                amountEach={group.amountEach.toFixed(2)}
-                cycle={group.cycle}
-                isShared={true} // or item.isShared if available
-                category={group.category}
-            />
+          <SubscriptionCard
+              logo={{uri: group.subscription?.logo}}
+              subscriptionName={group.subscriptionName}
+              amountEach={group.amountEach.toFixed(2)}
+              cycle={group.cycle}
+              isShared={true} // or item.isShared if available
+              category={group.category}
+          />
           <TouchableOpacity
             style={styles.detailsRow}
             onPress={handleSubscriptionDetails}
@@ -243,13 +248,13 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     marginVertical: 16,
     borderRadius: 24,
-    padding: 24,
+    padding: 15,
   },
   lockContainer: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center", // Add this
-    marginBottom: 24,
+    marginBottom: 15,
     width: "100%", // Add this
   },
   groupName: {

@@ -70,6 +70,13 @@ export default function AuthLayout() {
             title: 'My Groups'
           }} 
       />
+      <Stack.Screen
+          name="newGroupDetails"
+          options={{
+            title: "",
+            headerTitle: () => null,
+          }}
+      />
     </Stack>
 
   );

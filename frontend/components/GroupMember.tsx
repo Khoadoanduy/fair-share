@@ -6,11 +6,13 @@ import {
   ActivityIndicator,
   Alert,
   TouchableOpacity,
+  ScrollView
 } from "react-native";
 import axios from "axios";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import CustomButton from "./CustomButton";
+import InviteButton from "./InviteButton";
 
 // Types
 type GroupMember = {
@@ -30,6 +32,20 @@ type Props = {
   userId: string;
 };
 
+type Group = {
+  amountEach: number;
+}
+
+type Invitation = {
+  id: string;
+  user: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    username: string;
+  };
+}
+
 const GroupMembers: React.FC<Props> = ({ groupId, userId }) => {
   const API_URL = process.env.EXPO_PUBLIC_API_URL;
   const router = useRouter();
@@ -38,20 +54,23 @@ const GroupMembers: React.FC<Props> = ({ groupId, userId }) => {
   const [error, setError] = useState<string | null>(null);
   const [isLeader, setIsLeader] = useState(false);
   const [group, setGroup] = useState<Group | null>(null);
+  const [invitations, setInvitations] = useState<Invitation[]>([])
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
 
-        const [groupRes, roleRes] = await Promise.all([
+        const [groupRes, roleRes, invitationRes] = await Promise.all([
           axios.get(`${API_URL}/api/group/${groupId}`),
           axios.get(`${API_URL}/api/groupMember/${groupId}/${userId}`),
+          axios.get(`${API_URL}/api/group/invitation/${groupId}`)
         ]);
 
         setMembers(groupRes.data.members);
         setGroup(groupRes.data);
         setIsLeader(roleRes.data.isLeader);
+        setInvitations(invitationRes.data);
         setError(null);
       } catch (err) {
         console.error("Failed to fetch members or role", err);
@@ -93,12 +112,12 @@ const GroupMembers: React.FC<Props> = ({ groupId, userId }) => {
   }
 
   return (
-    <View style={styles.container}>
+    <ScrollView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>Members</Text>
         {isLeader && (
           <TouchableOpacity style={styles.addButton} onPress={handleInvite}>
-            <Ionicons name="add" size={20} color="#007AFF" />
+            <Ionicons name="add" size={20} color="black" />
           </TouchableOpacity>
         )}
       </View>
@@ -127,8 +146,8 @@ const GroupMembers: React.FC<Props> = ({ groupId, userId }) => {
               <Text style={styles.estimate}>Estimated</Text>
             </View>
             <View style={styles.amountEach}>
-              <Text style={styles.username}>@{member.user.username}</Text>
-              <Text>${group.amountEach.toFixed(2)}</Text>
+              <Text style={styles.username}>{member.user.username}</Text>
+              <Text>${group?.amountEach.toFixed(2)}</Text>
             </View>
           </View>
         </View>
@@ -138,9 +157,33 @@ const GroupMembers: React.FC<Props> = ({ groupId, userId }) => {
         //onPress={handleChargeMoney}
         size="large"
         fullWidth
-        style={styles.nextButton}
       />)}
-    </View>
+      <Text style={styles.textInvitation}>Pending invites</Text>
+      {invitations.map((invitation, index) => (
+        <View key={invitation.id} style={styles.memberRow}>
+          <View
+            style={[styles.avatar, { backgroundColor: "#4A3DE3" }]}
+          >
+            <Text style={styles.initials}>
+              {invitation.user.firstName.charAt(0).toUpperCase()}
+            </Text>
+          </View>
+          <View style={styles.info}>
+              <View style={styles.nameRow}>
+                <Text style={styles.name}>
+                  {invitation.user.firstName} {invitation.user.lastName}
+                </Text>
+              </View>
+              <Text style={styles.username}>{invitation.user.username}</Text>
+          </View>
+          <CustomButton 
+              text="Invited"
+              style={styles.buttonInvited}
+              textStyle = {styles.textInvited}
+          />
+        </View>
+      ))}
+    </ScrollView>
   );
 };
 
@@ -255,5 +298,19 @@ const styles = StyleSheet.create({
   amountEach: {
     flexDirection: 'row',
     justifyContent: 'space-between'
-  }
+  },
+  textInvitation: {
+    color: "#64748B",
+    margin: 12,
+    fontWeight: 500,
+    fontSize: 16,
+  },
+  buttonInvited: {
+    backgroundColor: '#E2E8F0', 
+  },
+  textInvited: {
+    color: '#9EA2AE',
+    fontSize: 14,
+    fontWeight: '600',
+  },
 });

@@ -109,7 +109,7 @@ router.get('/invitation/:groupId', async (request: Request, response: Response) 
     }
     //Check if the user has already been invited to this group
     const invitation = await prisma.groupInvitation.findMany({
-      where: { groupId },
+      where: { groupId, status: "pending" },
       include: { user: true }
     })
     if (invitation.length == 0) {
@@ -317,52 +317,8 @@ router.get('/:groupId', async (request: Request, response: Response) => {
                     include: {
                         user: true
                     }
-                }
-            }
-        });
-        
-        if (!group) {
-            return response.status(404).json({ message: 'Group not found' });
-        }
-        
-        // Calculate days until next payment
-        let daysUntilNextPayment = 0;
-        let nextPaymentDate = null;
-        
-        if (group.endDate) {
-            nextPaymentDate = group.endDate;
-            const today = new Date();
-            const diffTime = Math.abs(nextPaymentDate.getTime() - today.getTime());
-            daysUntilNextPayment = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        }
-        
-        response.status(200).json({
-            ...group,
-            daysUntilNextPayment,
-            nextPaymentDate
-        });
-    } catch (error) {
-        console.error(error);
-        response.status(500).json({ message: 'Error getting group details' });
-    }
-});
-
-//Get group details
-router.get('/:groupId', async (request: Request, response: Response) => {
-    try {
-        const { groupId } = request.params;
-        if (!groupId) {
-            return response.status(400).json({ message: 'groupId is required' });
-        }
-        
-        const group = await prisma.group.findUnique({
-            where: { id: groupId },
-            include: {
-                members: {
-                    include: {
-                        user: true
-                    }
-                }
+                },
+                subscription: true
             }
         });
         
