@@ -149,6 +149,7 @@ export default function setMemberShares() {
                 <CustomButton 
                     text="Confirm & Send" 
                     onPress={() => {
+                        axios.post(`${API_URL}/api/cfshare/${groupId}`);
                         setModalVisible(false);
                         router.push({pathname:'/(group)/newGroupDetails', params: {groupId}})}} 
                 />

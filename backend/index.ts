@@ -13,6 +13,7 @@ import subscriptionRouter from './routes/subscription';
 import groupMemberRoute from './routes/groupMember'
 import virtualCardRoute from './routes/virtualCard';
 import customerRoutes from './routes/stripe_customer'; 
+import confirmShare from './routes/confirmShare';
 import cors from 'cors';  // Add this
 
 import http from 'http';
@@ -66,6 +67,7 @@ app.use('/api/group', groupRoute);
 app.use('/api/groupMember', groupMemberRoute);
 app.use('/api/virtual-card', virtualCardRoute);
 app.use('/api/subscriptions', subscriptionRouter);
+app.use('/api/cfshare', confirmShare);
 
 
 // Error handling (must be after all routes)
