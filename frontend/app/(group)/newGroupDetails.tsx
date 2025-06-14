@@ -15,6 +15,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useUserState } from "@/hooks/useUserState";
 import SubscriptionCard from "@/components/SubscriptionCard";
 import GroupMembers from "@/components/GroupMember";
+import GroupHeader from "@/components/GroupHeader";
 
 // Define the Group type
 type GroupMember = {
@@ -63,17 +64,21 @@ export default function GroupDetailsScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [leader, setIsLeader] = useState<boolean>(false);
+  const [confirmRequestSent, setConfirmRequestSent] = useState<boolean>(false);
   const { userId } = useUserState();
+
   useEffect(() => {
     const fetchGroupDetails = async () => {
       try {
         setLoading(true);
-        const [groupResponse, roleResponse] = await Promise.all([
+        const [groupResponse, roleResponse, requestSent] = await Promise.all([
           axios.get(`${API_URL}/api/group/${groupId}`),
           axios.get(`${API_URL}/api/groupMember/${groupId}/${userId}`),
+          axios.get(`${API_URL}/api/cfshare/${groupId}`)
         ]);
         setGroup(groupResponse.data);
         setIsLeader(roleResponse.data.isLeader);
+        setConfirmRequestSent(requestSent.data);
         setError(null);
       } catch (err) {
         console.error("Error fetching group details:", err);
@@ -126,24 +131,6 @@ export default function GroupDetailsScreen() {
   }
 
 
-  // Update the JSX for the info cards
-  const InfoCard = ({
-    label,
-    icon,
-  }) => (
-    <View style={styles.infoCard}>
-      <View style={styles.labelContainer}>
-        <Text style={styles.infoLabel}>{label}</Text>
-        <Ionicons name={icon} size={24} color="#000" />
-      </View>
-      <View style={styles.infoValueContainer}>
-        <View style={styles.placeholderBox} />
-      </View>
-    </View>
-  );
-
-  //const handleChargeMoney = router.push('/(group)/setMemberShares')
-
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView
@@ -151,23 +138,11 @@ export default function GroupDetailsScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* Top Info Card */}
-        <View style={styles.topCard}>
-          <View style={styles.lockContainer}>
-            <Ionicons name="lock-closed-outline" size={24} color="#4353ED" />
-            <Text style={styles.groupName}>{group.groupName}</Text>
-          </View>
-
-          <View style={styles.infoCardsContainer}>
-            <InfoCard
-              label="Your share"
-              icon="pie-chart-outline"
-            />
-            <InfoCard
-              label="Payment in"
-              icon="time-outline"
-            />
-          </View>
-        </View>
+        <GroupHeader
+          groupName={group.groupName}
+          showShare={false}
+          showPayment={false}
+        />
 
         {/* Service Card */}
         <View style={styles.serviceCard}>
@@ -194,14 +169,25 @@ export default function GroupDetailsScreen() {
 
         {/* Members Section */}
         {groupId && userId && (
+          confirmRequestSent ?
             <GroupMembers 
               groupId={groupId as string} 
               userId={userId} 
-                showAmountEach={true}
-                showEstimatedText={true}
-                showInvitations={true}
-                showHeader={true}
-              />
+              showAmountEach={false}
+              showEstimatedText={false}
+              showInvitations={false}
+              showHeader={true}
+              requestConfirmSent={true}
+            /> :
+            <GroupMembers 
+              groupId={groupId as string} 
+              userId={userId} 
+              showAmountEach={true}
+              showEstimatedText={true}
+              showInvitations={true}
+              showHeader={true}
+              requestConfirmSent={false}
+            />
         )}
       </ScrollView>
     </SafeAreaView>
@@ -269,40 +255,6 @@ const styles = StyleSheet.create({
     color: "#4A3DE3",
     marginLeft: 12,
     textAlign: "center", // Add this
-  },
-  infoCardsContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    gap: 16,
-  },
-  infoCard: {
-    flex: 1,
-    backgroundColor: "#FCFBFF",
-    borderRadius: 12,
-    padding: 10,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-  },
-  labelContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  infoLabel: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#000",
-  },
-  infoValueContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  infoValue: {
-    fontSize: 30,
-    fontWeight: "600",
-    color: "#4A3DE3",
   },
   serviceCard: {
     backgroundColor: "white",
@@ -388,6 +340,6 @@ const styles = StyleSheet.create({
     height: 30,
     backgroundColor: "#E5E7EB",
     borderRadius: 6,
-    },
+  },
 
 });

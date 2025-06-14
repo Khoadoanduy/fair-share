@@ -113,7 +113,7 @@ router.get('/invitation/:groupId', async (request: Request, response: Response) 
       include: { user: true }
     })
     if (invitation.length == 0) {
-      return response.status(409).json({ message: 'No invitation sent' });
+      return response.status(200).json({invitation: []});
     }
     response.status(200).json(invitation);
 
