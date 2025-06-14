@@ -12,13 +12,14 @@ router.post('/:groupId', async (request: Request, response: Response) => {
     try {
         const { groupId } = request.params;
         if (!groupId) {
-            return response.status(400).json({ message: 'groupId are required' });
+            return response.status(400).json({ message: 'groupId is required' });
         }
         //Find the member of the group
         const groupMembers = await prisma.groupMember.findMany({
             where: { groupId: groupId},
             select: {
-                userId: true
+                userId: true,
+                userRole: true
             }
         });
 
@@ -31,7 +32,7 @@ router.post('/:groupId', async (request: Request, response: Response) => {
                 data: {
                     userId: member.userId,
                     groupId: groupId,
-                    status: false
+                    status: member.userRole === "leader"
                 }
             }))
         );   
