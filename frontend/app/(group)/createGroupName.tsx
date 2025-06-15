@@ -42,7 +42,7 @@ export default function CreateGroupName() {
 
     //move and pass the group name to the next page
     router.push({
-      pathname: '/(group)/subscriptionInfo',
+      pathname: '/(group)/SubscriptionInfo',
       params: { groupName: data.groupName },
     });
   };

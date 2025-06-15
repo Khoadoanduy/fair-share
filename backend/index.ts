@@ -35,7 +35,7 @@ app.use('/api/friend', friendRoute)
 app.use('/api/feed', feedRouter);
 app.use('/api/group', groupRoute);
 app.use('/api/groupMember', groupMemberRoute);
-app.use('/api/virtual-card', virtualCardRoute);
+app.use('/api/virtualCard', virtualCardRoute);
 app.use('/api/subscriptions', subscriptionRouter);
 app.use('/api/notifications', notificationsRoute);
 
