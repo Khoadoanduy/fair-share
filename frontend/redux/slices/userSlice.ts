@@ -3,7 +3,6 @@ import axios from 'axios';
 import { useAuth } from '@clerk/clerk-expo';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-// const API_URL = "http://localhost:3000"
 const API_URL = process.env.EXPO_PUBLIC_API_URL
 // Define types for our state
 interface UserState {
