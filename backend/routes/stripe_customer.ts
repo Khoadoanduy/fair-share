@@ -2,7 +2,7 @@
 // npm install express cors body-parser stripe dotenv
 // npm install --save-dev @types/express @types/cors @types/body-parser typescript ts-node
 
-import dotenv from 'dotenv';
+// import dotenv from 'dotenv';
 import express, { Request, Response, Router } from 'express';
 import Stripe from 'stripe';
 import prisma from '../prisma/client';
@@ -19,7 +19,7 @@ interface CreateCustomerRequest {
 }
 
 // Initialize environment variables
-dotenv.config();
+// dotenv.config();
 
 // Initialize Stripe with secret key
 const stripe = require('stripe')(
