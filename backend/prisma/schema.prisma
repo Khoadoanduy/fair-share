@@ -41,6 +41,7 @@ model User {
   receivedInvitations FriendInvitation[] @relation("ReceivedInvitations")
   friends             Friend[]           @relation("UserFriends")
   friendOf            Friend[]           @relation("FriendsOf")
+  pushToken         String? @unique
 }
 
 model Group {
