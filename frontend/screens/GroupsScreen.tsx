@@ -10,13 +10,13 @@ import {
   Pressable,
 } from "react-native";
 import { Link, useRouter } from "expo-router";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { useUser } from "@clerk/clerk-expo";
 import { Ionicons } from "@expo/vector-icons";
-import BackButton from "@/components/BackButton";
-import { formatRelativeDate, getDaysRemaining } from "@/utils/dateUtils";
 import GroupCard from '@/components/GroupCard';
+import AddSubscriptionModal from '@/components/AddSubscriptionModal';
+import PersonalSubscriptionModal from '@/components/PersonalSubscriptionModal';
 
 interface Group {
   id: string;
@@ -28,8 +28,14 @@ interface Group {
   cycle: string;
   category: string;
   startDate?: string;
-  endDate?: string; // Used as next payment date
+  endDate?: string;
   totalMem?: number;
+  logo?: string;
+  subscription?: {
+    logo?: string;
+    name?: string;
+    category?: string;
+  };
 }
 
 export default function GroupsScreen() {
@@ -39,7 +45,29 @@ export default function GroupsScreen() {
   const [userId, setUserId] = useState<string | null>(null);
   const [groups, setGroups] = useState<Group[]>([]);
   const [selectedFilter, setSelectedFilter] = useState("All");
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showPersonalModal, setShowPersonalModal] = useState(false);
+  const [buttonPosition, setButtonPosition] = useState<{ x: number, y: number, width: number, height: number } | null>(null);
+  const buttonRef = useRef<any>(null);
   const clerkId = user?.id;
+  const [personalSubscriptions, setPersonalSubscriptions] = useState<PersonalSubscription[]>([]);
+
+  interface PersonalSubscription {
+    id: string;
+    subscriptionName: string;
+    planName: string;
+    amount: number;
+    cycle: string;
+    category: string;
+    logo?: string;
+    subscription?: {
+      logo?: string;
+      name?: string;
+      category?: string;
+    };
+    credentialUsername?: string;
+    credentialPassword?: string;
+  }
 
   const handleCreateGroup = () => {
     router.push("/(group)/createGroupName");
@@ -52,6 +80,43 @@ export default function GroupsScreen() {
   const showUserGroups = () => {
     router.push('/(group)/userGroups')
   }
+
+  const handleAddPress = () => {
+    if (buttonRef.current) {
+      buttonRef.current.measure((fx: number, fy: number, width: number, height: number, px: number, py: number) => {
+        setButtonPosition({ x: px, y: py, width, height });
+        setShowAddModal(true);
+      });
+    } else {
+      setShowAddModal(true);
+    }
+  };
+
+  const handlePersonalPress = () => {
+    setShowAddModal(false);
+    router.push('/(personal)/personalSubscriptionChoice');
+  };
+
+  const handleGroupPress = () => {
+    setShowAddModal(false);
+    router.push('/(group)/createGroupName');
+  };
+
+  const handleExistingSubscription = () => {
+    setShowPersonalModal(false);
+    router.push({
+      pathname: '/(personal)/personalSubscriptionInfo',
+      params: { subscriptionType: 'existing' }
+    });
+  };
+
+  const handleVirtualCardSubscription = () => {
+    setShowPersonalModal(false);
+    router.push({
+      pathname: '/(personal)/personalSubscriptionInfo',
+      params: { subscriptionType: 'virtual' }
+    });
+  };
 
   useEffect(() => {
     const fetchUserId = async () => {
@@ -84,7 +149,7 @@ export default function GroupsScreen() {
         amountEach: item.group.amountEach,
         cycle: item.group.cycle,
         category: item.group.category,
-        logo: item.group.logo,
+        logo: item.group.subscription?.logo || item.group.logo, // Add this line
         startDate: item.group.startDate,
         endDate: item.group.endDate,
         totalMem: item.group.totalMem,
@@ -95,11 +160,53 @@ export default function GroupsScreen() {
     }
   };
 
+  const fetchPersonalSubscriptions = async () => {
+    if (!userId) return;
+    try {
+      const response = await axios.get(`${API_URL}/api/personal-subscription/user/${userId}`);
+      setPersonalSubscriptions(response.data);
+    } catch (error) {
+      console.error("Error fetching personal subscriptions:", error);
+    }
+  };
+
   useEffect(() => {
     if (userId) {
       fetchGroups();
+      fetchPersonalSubscriptions();
     }
   }, [userId]);
+
+  const getDisplayData = () => {
+    // Add personal subscriptions
+    const personalSubs = personalSubscriptions.map(sub => ({
+      id: sub.id,
+      groupName: sub.subscriptionName,
+      subscriptionName: sub.subscriptionName,
+      planName: sub.planName,
+      amountEach: sub.amount,
+      cycle: sub.cycle,
+      category: sub.category,
+      logo: sub.subscription?.logo || sub.logo,
+      isPersonal: true
+    }));
+
+    // Add group subscriptions with real logos
+    const groupSubs = groups.map(group => ({
+      ...group,
+      logo: group.subscription?.logo || group.logo,
+      isPersonal: false
+    }));
+
+    if (selectedFilter === "Personal") {
+      return personalSubs;
+    } else if (selectedFilter === "Shared") {
+      return groupSubs;
+    } else {
+      // "All" - combine both
+      return [...personalSubs, ...groupSubs];
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -142,74 +249,49 @@ export default function GroupsScreen() {
         ))}
       </View>
       <FlatList
-        data={selectedFilter === "Personal" ? [] : groups}
+        data={getDisplayData()}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContainer}
         renderItem={({ item }) => (
-          <Pressable
-            style={styles.subscriptionCard}
-            onPress={() =>
-              router.push({
-                pathname: "/(group)/groupDetails",
-                params: { groupId: item.id },
-              })
-            }
-          >
-            <View style={styles.subscriptionDetails}>
-              <Text style={styles.subscriptionName}>
-                {item.subscriptionName}
-              </Text>
-              <View style={styles.tagsContainer}>
-                <View style={[styles.tag, { backgroundColor: "#FEC260" }]}>
-                  <Text style={styles.tagText}>Shared</Text>
-                </View>
-                <View style={[styles.tag, { backgroundColor: "#10B981" }]}>
-                  <Text style={styles.tagText}>{item.category}</Text>
-                </View>
-              </View>
-              {item.endDate && (
-                <View style={styles.nextPaymentContainer}>
-                  <Ionicons
-                    name="calendar-outline"
-                    size={12}
-                    color="#6B7280"
-                    style={styles.calendarIcon}
-                  />
-                  <Text style={styles.nextPaymentText}>
-                    Next payment: {formatRelativeDate(item.endDate)}
-                  </Text>
-                </View>
-              )}
-            </View>
-            <View style={styles.subscriptionRight}>
-              <Text style={styles.price}>
-                $
-                {item.amountEach
-                  ? item.amountEach.toFixed(2)
-                  : item.amount.toFixed(2)}
-              </Text>
-              <View style={styles.cycleContainer}>
-                <Image
-                  source={require("../assets/refresh-cw.png")}
-                  style={styles.refreshIcon}
-                />
-                <Text style={styles.billingCycle}>{item.cycle}</Text>
-              </View>
-              {item.totalMem && item.totalMem > 1 && (
-                <View style={styles.membersContainer}>
-                  <Ionicons name="people-outline" size={12} color="#6B7280" />
-                  <Text style={styles.membersText}>
-                    {item.totalMem} members
-                  </Text>
-                </View>
-              )}
-            </View>
-          </Pressable>
+          <GroupCard
+            group={item}
+            onPress={() => {
+              if (item.isPersonal) {
+                router.push({
+                  pathname: '/(personal)/personalSubscriptionDetails',
+                  params: { subscriptionId: item.id, fromManage: 'true' }
+                });
+              } else {
+                router.push({
+                  pathname: "/(group)/groupDetails",
+                  params: { groupId: item.id },
+                });
+              }
+            }}
+          />
         )}
       />
-      <Pressable style={styles.fab} onPress={handleCreateGroup}>
-        <Ionicons name="add" size={24} color="white" />
+      <Pressable
+        ref={buttonRef}
+        style={styles.floatingButton}
+        onPress={handleAddPress}
+      >
+        <Ionicons name="add" size={28} color="white" />
       </Pressable>
+
+      <AddSubscriptionModal
+        visible={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        onPersonalPress={handlePersonalPress}
+        onGroupPress={handleGroupPress}
+      />
+
+      <PersonalSubscriptionModal
+        visible={showPersonalModal}
+        onClose={() => setShowPersonalModal(false)}
+        onExistingPress={handleExistingSubscription}
+        onVirtualCardPress={handleVirtualCardSubscription}
+      />
     </SafeAreaView>
   );
 }
@@ -290,100 +372,13 @@ const styles = StyleSheet.create({
   listContainer: {
     padding: 20,
   },
-  subscriptionCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "white",
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  subscriptionLogo: {
-    width: 40,
-    height: 40,
-    marginRight: 16,
-    borderRadius: 8,
-  },
-  subscriptionDetails: {
-    flex: 1,
-  },
-  subscriptionName: {
-    fontSize: 16,
-    fontWeight: "600",
-    marginBottom: 4,
-    color: "#111827",
-  },
-  tagsContainer: {
-    flexDirection: "row",
-    gap: 8,
-  },
-  tag: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  tagText: {
-    fontSize: 12,
-    color: "black",
-    fontWeight: "600",
-  },
-  subscriptionRight: {
-    alignItems: "flex-end",
-  },
-  price: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#111827",
-    marginBottom: 4,
-  },
-  cycleContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  refreshIcon: {
-    width: 14,
-    height: 14,
-    tintColor: "#6B7280",
-  },
-  billingCycle: {
-    fontSize: 12,
-    color: "#6B7280",
-  },
-  nextPaymentContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 6,
-  },
-  calendarIcon: {
-    marginRight: 4,
-  },
-  nextPaymentText: {
-    fontSize: 12,
-    color: "#6B7280",
-  },
-  membersContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 4,
-    gap: 4,
-  },
-  membersText: {
-    fontSize: 12,
-    color: "#6B7280",
-  },
-  fab: {
+  floatingButton: {
     position: "absolute",
     right: 20,
     bottom: 20,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     backgroundColor: "#4A3DE3",
     justifyContent: "center",
     alignItems: "center",
