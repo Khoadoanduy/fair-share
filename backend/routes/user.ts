@@ -91,11 +91,16 @@ router.get('/groups/:userId', async (request: Request, response: Response) => {
         if (!userId) {
             return response.status(400).json({ message: 'userId are required' });
         }
-        //Check if the user has already been invited to this group
         const allGroups = await prisma.groupMember.findMany({
           where: { userId },
-          include: { group: true }
-        })
+          include: { 
+            group: {
+              include: {
+                subscription: true // Add this line to include subscription data
+              }
+            }
+          }
+        });
         
         if (allGroups.length == 0) {
           return response.json({ message: 'No group found' });
