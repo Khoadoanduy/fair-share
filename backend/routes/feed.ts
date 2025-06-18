@@ -16,14 +16,14 @@ router.get('/subscriptions/:userId', async (req: Request, res: Response) => {
                     { friendId: userId }
                 ]
             },
-            select: { 
+            select: {
                 userId: true,
-                friendId: true 
+                friendId: true
             }
         });
 
         // Extract friend IDs (excluding the current user)
-        const friendIds = friends.map(f => 
+        const friendIds = friends.map(f =>
             f.userId === userId ? f.friendId : f.userId
         ).filter(id => id !== userId);
 
@@ -39,11 +39,20 @@ router.get('/subscriptions/:userId', async (req: Request, res: Response) => {
 
         const userGroupIds = userGroups.map(g => g.groupId);
 
-        // Get groups that friends are in but user is not
+        // First, get all groups that actually exist
+        const existingGroups = await prisma.group.findMany({
+            select: { id: true }
+        });
+        const existingGroupIds = existingGroups.map(g => g.id);
+
+        // Get groups that friends are in but user is not, and that actually exist
         const friendGroups = await prisma.groupMember.findMany({
             where: {
                 userId: { in: friendIds },
-                groupId: { notIn: userGroupIds }
+                groupId: {
+                    notIn: userGroupIds,
+                    in: existingGroupIds // Only include groups that actually exist
+                }
             },
             include: {
                 user: {
@@ -61,16 +70,18 @@ router.get('/subscriptions/:userId', async (req: Request, res: Response) => {
                         subscriptionName: true,
                         amount: true,
                         cycleDays: true,
-                        category: true
+                        category: true,
+                        totalMem: true,
+                        amountEach: true
                     }
                 }
             },
             orderBy: {
-                id: 'desc' // Show most recent activities first
+                id: 'desc' // Use id instead of createdAt
             }
         });
 
-        // Format for feed display
+        // Format for feed display (no need to filter for null since we pre-filtered)
         const feed = friendGroups.map(item => ({
             id: item.id,
             friend: item.user,

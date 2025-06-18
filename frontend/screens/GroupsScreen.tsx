@@ -49,6 +49,10 @@ export default function GroupsScreen() {
     router.push("/(group)/showAllInvitations");
   };
 
+  const showUserGroups = () => {
+    router.push('/(group)/userGroups')
+  }
+
   useEffect(() => {
     const fetchUserId = async () => {
       try {
@@ -100,9 +104,10 @@ export default function GroupsScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <BackButton></BackButton>
         <Text style={styles.headerTitle}>Manage Subscriptions</Text>
-        <Ionicons name="search" size={20} color="#4A3DE3" />
+        <Pressable onPress={showUserGroups}>
+          <Ionicons name="list" size={20} color="#4A3DE3" />
+        </Pressable>
       </View>
       <View style={styles.toggleContainer}>
         <Pressable style={styles.toggleBtnActive}>

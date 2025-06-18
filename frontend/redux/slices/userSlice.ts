@@ -3,7 +3,7 @@ import axios from 'axios';
 import { useAuth } from '@clerk/clerk-expo';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const API_URL = "http://localhost:3000"
+const API_URL = process.env.EXPO_PUBLIC_API_URL
 // Define types for our state
 interface UserState {
   isSignedIn: boolean | false;
@@ -80,12 +80,11 @@ export const checkPaymentMethod = createAsyncThunk(
     }
     
     try {
-      const response = await axios.get(`http://localhost:3000/api/user/`, {
+      const response = await axios.get(`${API_URL}/api/user/`, {
         params: {
           clerkID: clerkId
         }
-      }); 
-      console.log("get data "+response.data);
+      });
       return response.data
     } catch (error: any) {
       console.error('Error checking payment method:', error);

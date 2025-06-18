@@ -1,35 +1,37 @@
 import express, { Request, Response, Router } from 'express';
-import dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
-
-dotenv.config();
 
 const router: Router = express.Router();
 const prisma = new PrismaClient();
 
 // Helper function to calculate the next payment date
-const calculateNextPaymentDate = (cycle: string, cycleDays: number): Date => {
-  const today = new Date();
-  const nextPaymentDate = new Date(today);
-  
-  // Add the appropriate number of days based on the cycle
-  nextPaymentDate.setDate(today.getDate() + cycleDays);
-  
+const calculateNextPaymentDate = (cycleDays: number, startDate?: Date | null): Date => {
+  const baseDate = startDate || new Date();
+  const nextPaymentDate = new Date(baseDate);
+  nextPaymentDate.setDate(baseDate.getDate() + cycleDays);
   return nextPaymentDate;
 };
 
-//Create group
+// Helper function to calculate days between two dates
+const calculateDaysBetween = (startDate: Date, endDate: Date): number => {
+  const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
+  return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+};
+
+// Create group
 router.post('/create', async (request: Request, response: Response) => {
   try {
-    const { groupName, subscriptionName, subscriptionId, planName, amount, cycle, category, cycleDays, userId } = request.body;
-
+    const { groupName, subscriptionName, subscriptionId, planName, amount, category, cycleDays, userId } = request.body;
+    
     if (!groupName || !subscriptionName || !amount || !userId) {
       return response.status(400).json({ message: 'Missing required fields' });
     }
 
-    // Use a transaction to ensure both group and membership are created together
+    const startDate = new Date();
+    const nextPaymentDate = calculateNextPaymentDate(cycleDays, startDate);
+    const daysUntilNextPayment = cycleDays;
+
     const result = await prisma.$transaction(async (tx) => {
-      // Create the group
       const newGroup = await tx.group.create({
         data: {
           groupName,
@@ -37,17 +39,18 @@ router.post('/create', async (request: Request, response: Response) => {
           subscriptionId,
           planName,
           amount: parseFloat(amount),
-          cycleDays,
+          cycleDays: cycleDays ? parseInt(cycleDays) : null,
           category,
           totalMem: 1,
-          amountEach: parseFloat(amount)
+          amountEach: parseFloat(parseFloat(amount).toFixed(2)),
+          startDate,
+          endDate: nextPaymentDate
         }
       });
 
-      // Automatically add the creator as leader
       const groupMember = await tx.groupMember.create({
         data: {
-          userId: userId,
+          userId,
           groupId: newGroup.id,
           userRole: "leader"
         }
@@ -58,9 +61,10 @@ router.post('/create', async (request: Request, response: Response) => {
 
     response.status(201).json({
       message: 'Group created successfully with leader',
-      group: result.group.groupName,
       groupId: result.group.id,
-      nextPaymentDate: nextPaymentDate
+      startDate: startDate.toISOString().split('T')[0],
+      nextPaymentDate: nextPaymentDate.toISOString().split('T')[0],
+      daysUntilNextPayment
     });
 
   } catch (error) {
@@ -69,11 +73,10 @@ router.post('/create', async (request: Request, response: Response) => {
   }
 });
 
-//Search user using username
-router.get('/search-user/:username', async (request, response) => {
+// Search users
+router.get('/search-user/:username', async (request: Request, response: Response) => {
   try {
     const { username } = request.params;
-
     const users = await prisma.user.findMany({
       where: {
         username: {
@@ -87,202 +90,95 @@ router.get('/search-user/:username', async (request, response) => {
         lastName: true,
         username: true,
       }
-    })
+    });
 
-    //If user doesn't exist, give an empty list
-    if (users.length === 0) {
-      return response.status(404).json({ users: [] });
-    }
-    response.status(200).json({ users });
+    response.status(200).json({ users: users.length ? users : [] });
   } catch (error) {
-    console.log(error);
-    response.status(500).json({ message: 'Error searching user' });
+    console.error('Error searching users:', error);
+    response.status(500).json({ message: 'Error searching users' });
   }
 });
 
-//Show all pending invitations for a group
-router.get('/invitation/:groupId', async (request: Request, response: Response) => {
+// Get group details with members
+router.get('/:groupId', async (request: Request, response: Response) => {
   try {
     const { groupId } = request.params;
     if (!groupId) {
-      return response.status(400).json({ message: 'groupId are required' });
+      return response.status(400).json({ message: 'groupId is required' });
     }
-    //Check if the user has already been invited to this group
-    const invitation = await prisma.groupInvitation.findMany({
-      where: { groupId },
-      include: { user: true }
-    })
-    if (invitation.length == 0) {
-      return response.status(409).json({ message: 'No invitation sent' });
-    }
-    response.status(200).json(invitation);
-
-  } catch (error) {
-    console.error(error);
-    response.status(500).json({ message: 'Error getting invitation' });
-  }
-});
-
-router.get('/search-group/:userId/:groupName', async (request, response) => {
-  try {
-    const { userId, groupName } = request.params;
-
-    const groups = await prisma.groupMember.findMany({
-      where: {
-        userId: userId,
-        group: {
-          is: {
-            groupName: {
-              contains: groupName,
-              mode: 'insensitive'
-            }
+    
+    const group = await prisma.group.findUnique({
+      where: { id: groupId },
+      include: {
+        members: {
+          include: {
+            user: true
           }
         }
-      },
-      select: {
-        group: true
       }
-    })
-
-    //If user doesn't exist, give an empty list
-    if (groups.length === 0) {
-      return response.status(404).json({ groups: [] });
-    }
-    response.status(200).json({ groups });
-  } catch (error) {
-    console.log(error);
-    response.status(500).json({ message: 'Error searching group' });
-  }
-});
-
-//Get amount each member has to pay
-router.get('/amount-each/:groupId', async (request: Request, response: Response) => {
-  try {
-    const { groupId } = request.params;
-    if (!groupId) {
-      return response.status(400).json({ message: 'groupId are required' });
-    }
-    const group = await prisma.group.findFirst({
-      where: { id: groupId },
     });
-    if (!group)
-      return response.status(404).json({ message: "No group found" });
-    response.status(200).json(group.amountEach);
+    
+    if (!group) {
+      return response.status(404).json({ message: 'Group not found' });
+    }
+    
+    const today = new Date();
+    let nextPaymentDate = group.endDate;
+    let daysUntilNextPayment = 0;
 
+    if (group.startDate && group.cycleDays) {
+      nextPaymentDate = calculateNextPaymentDate(group.cycleDays, group.startDate);
+      
+      if (nextPaymentDate < today) {
+        const daysSinceStart = calculateDaysBetween(group.startDate, today);
+        const cyclesPassed = Math.floor(daysSinceStart / group.cycleDays);
+        nextPaymentDate = new Date(group.startDate);
+        nextPaymentDate.setDate(group.startDate.getDate() + (cyclesPassed + 1) * group.cycleDays);
+      }
+      
+      daysUntilNextPayment = calculateDaysBetween(today, nextPaymentDate);
+      
+      await prisma.group.update({
+        where: { id: groupId },
+        data: { endDate: nextPaymentDate }
+      });
+    }
+    
+    response.status(200).json({
+      ...group,
+      daysUntilNextPayment,
+      nextPaymentDate: nextPaymentDate?.toISOString().split('T')[0]
+    });
   } catch (error) {
     console.error(error);
-    response.status(500).json({ message: 'Error getting amount' });
+    response.status(500).json({ message: 'Error getting group details' });
   }
 });
 
-//Get the number of members in the group
-router.get('/total-mem/:groupId', async (request: Request, response: Response) => {
+// Update credentials (leader only)
+router.put('/:groupId/credentials', async (request: Request, response: Response) => {
   try {
     const { groupId } = request.params;
-    if (!groupId) {
-      return response.status(400).json({ message: 'groupId are required' });
+    const { credentialUsername, credentialPassword, userId } = request.body;
+
+    const memberRole = await prisma.groupMember.findFirst({
+      where: { groupId, userId, userRole: 'leader' }
+    });
+
+    if (!memberRole) {
+      return response.status(403).json({ message: 'Only group leaders can update credentials' });
     }
-    const group = await prisma.group.findFirst({
+
+    await prisma.group.update({
       where: { id: groupId },
-    })
-    if (!group)
-      return response.status(404).json({ message: "No group found" });
-    response.status(200).json(group.totalMem);
+      data: { credentialUsername, credentialPassword }
+    });
 
+    response.status(200).json({ message: 'Credentials updated successfully' });
   } catch (error) {
-    console.error(error);
-    response.status(500).json({ message: 'Error getting total number of members' });
+    console.error('Error updating credentials:', error);
+    response.status(500).json({ message: 'Error updating credentials' });
   }
-});
-
-//Get group details
-router.get('/:groupId', async (request: Request, response: Response) => {
-    try {
-        const { groupId } = request.params;
-        if (!groupId) {
-            return response.status(400).json({ message: 'groupId is required' });
-        }
-        
-        const group = await prisma.group.findUnique({
-            where: { id: groupId },
-            include: {
-                members: {
-                    include: {
-                        user: true
-                    }
-                }
-            }
-        });
-        
-        if (!group) {
-            return response.status(404).json({ message: 'Group not found' });
-        }
-        
-        // Calculate days until next payment
-        let daysUntilNextPayment = 0;
-        let nextPaymentDate = null;
-        
-        if (group.endDate) {
-            nextPaymentDate = group.endDate;
-            const today = new Date();
-            const diffTime = Math.abs(nextPaymentDate.getTime() - today.getTime());
-            daysUntilNextPayment = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        }
-        
-        response.status(200).json({
-            ...group,
-            daysUntilNextPayment,
-            nextPaymentDate
-        });
-    } catch (error) {
-        console.error(error);
-        response.status(500).json({ message: 'Error getting group details' });
-    }
-});
-
-//Get group details
-router.get('/:groupId', async (request: Request, response: Response) => {
-    try {
-        const { groupId } = request.params;
-        if (!groupId) {
-            return response.status(400).json({ message: 'groupId is required' });
-        }
-        
-        const group = await prisma.group.findUnique({
-            where: { id: groupId },
-            include: {
-                members: {
-                    include: {
-                        user: true
-                    }
-                }
-            }
-        });
-        
-        if (!group) {
-            return response.status(404).json({ message: 'Group not found' });
-        }
-        
-        // Calculate days until next payment
-        let daysUntilNextPayment = 0;
-        let nextPaymentDate = null;
-        
-        if (group.endDate) {
-            nextPaymentDate = group.endDate;
-            const today = new Date();
-            const diffTime = Math.abs(nextPaymentDate.getTime() - today.getTime());
-            daysUntilNextPayment = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        }
-        
-        response.status(200).json({
-            ...group,
-            daysUntilNextPayment,
-            nextPaymentDate
-        });
-    } catch (error) {
-        console.error(error);
-        response.status(500).json({ message: 'Error getting group details' });
-    }
 });
 
 //Get group leader
@@ -311,4 +207,4 @@ router.get('/leader/:groupId', async (request: Request, response: Response) => {
   }
 });
 
-export default router
+export default router;

@@ -15,95 +15,80 @@ import { router } from "expo-router";
 import axios from "axios";
 import { Ionicons } from "@expo/vector-icons";
 import { useStripe, PaymentSheet } from "@stripe/stripe-react-native";
+import { useUserState } from "@/hooks/useUserState"; 
+import { useAppDispatch } from "@/redux/hooks"; 
+import { fetchUserData } from "@/redux/slices/userSlice"; 
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
+
+interface PaymentMethod {
+  id: string;
+  card: {
+    brand: string;
+    last4: string;
+    exp_month: number;
+    exp_year: number;
+  };
+}
 
 export default function ProfileScreen() {
   const { isSignedIn, signOut, getToken } = useAuth();
   const { user } = useUser();
   const { initPaymentSheet, presentPaymentSheet } = useStripe();
+  
+  // Use Redux state instead of local state
+  const { stripeCustomerId, loading } = useUserState();
+  const dispatch = useAppDispatch();
 
-  const [paymentMethods, setPaymentMethods] = useState<any[]>([]);
-  const [customerStripeID, setCustomerStripeID] = useState<string>("");
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [defaultPaymentMethodId, setDefaultPaymentMethodId] = useState<string>("");
+
+  // Sort payment methods with default first
+  const sortedPaymentMethods = paymentMethods.sort((a, b) =>
+    defaultPaymentMethodId === a.id ? -1 : defaultPaymentMethodId === b.id ? 1 : 0
+  );
+
+  const showAlert = (title: string, message: string) => Alert.alert(title, message);
 
   const handleSignOutPress = async () => {
     try {
       await signOut();
       router.replace("/(welcome)");
     } catch (error) {
-      console.error("Error during sign out:", error);
+      showAlert("Error", "Failed to sign out");
     }
   };
 
-  const fetchUserProfile = async () => {
-    if (!isSignedIn || !user) return null;
-
-    setIsLoading(true);
-    try {
-      const token = await getToken();
-      if (!token) throw new Error("No authentication token");
-
-      const response = await axios.get(`${API_URL}/api/user`, {
-        params: { clerkID: user.id },
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      });
-
-      const userData = response.data;
-      if (userData) {
-        setCustomerStripeID(userData.customerId);
-        
-        // Get customer details to find default payment method
-        if (userData.customerId) {
-          const customerResponse = await axios.get(
-            `${API_URL}/api/stripe-customer/customers/${userData.customerId}`
-          );
-          
-          const defaultPM = customerResponse.data.customer?.invoice_settings?.default_payment_method;
-          if (defaultPM) {
-            setDefaultPaymentMethodId(defaultPM);
-          }
-        }
-        
-        return userData;
-      }
-    } catch (error: any) {
-      console.error("Error fetching profile:", error);
-      Alert.alert("Error", "Could not connect to server");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
+  // Simplified - only fetch payment methods if we have a customer ID
   const fetchPaymentMethods = async () => {
-    if (!customerStripeID) return;
+    if (!stripeCustomerId) return;
 
     try {
-      const response = await axios.get(
-        `${API_URL}/api/stripe-customer/retrieve-paymentMethodId`,
-        { params: { customerStripeID } }
-      );
-      if (response.data?.data) {
-        setPaymentMethods(response.data.data);
-      }
+      const [methodsResponse, defaultResponse] = await Promise.all([
+        axios.get(`${API_URL}/api/stripe-customer/retrieve-paymentMethodId`, {
+          params: { customerStripeID: stripeCustomerId }
+        }),
+        axios.get(`${API_URL}/api/stripe-customer/customers/${stripeCustomerId}`)
+      ]);
+
+      setPaymentMethods(methodsResponse.data?.data || []);
+      
+      const defaultPM = defaultResponse.data.customer?.invoice_settings?.default_payment_method;
+      if (defaultPM) setDefaultPaymentMethodId(defaultPM);
     } catch (error) {
       console.error("Error fetching payment methods:", error);
     }
   };
 
   const handleAddPaymentMethod = async () => {
+    if (!user?.primaryEmailAddress?.emailAddress) {
+      showAlert("Error", "Email address is required");
+      return;
+    }
+
+    setIsLoading(true);
     try {
-      setIsLoading(true);
-
-      if (!user?.primaryEmailAddress?.emailAddress) {
-        Alert.alert("Error", "Email address is required");
-        return;
-      }
-
       const response = await axios.post(
         `${API_URL}/api/stripe-customer/create-setup-intent`,
         { email: user.primaryEmailAddress.emailAddress }
@@ -111,22 +96,21 @@ export default function ProfileScreen() {
 
       const { setupIntent, ephemeralKey, customer } = response.data;
 
-      if (!customerStripeID) {
+      // Update customer ID if needed
+      if (!stripeCustomerId && user?.id) {
         const token = await getToken();
         await axios.put(
           `${API_URL}/api/user/${user.id}`,
           { customerId: customer },
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-            },
-          }
+          { headers: { Authorization: `Bearer ${token}` } }
         );
-        setCustomerStripeID(customer);
+        
+        // Refresh user data in Redux
+        dispatch(fetchUserData(user.id));
       }
 
-      const { error } = await initPaymentSheet({
+      // Setup and present payment sheet
+      await initPaymentSheet({
         merchantDisplayName: "FairShare",
         customerId: customer,
         customerEphemeralKeySecret: ephemeralKey,
@@ -138,19 +122,13 @@ export default function ProfileScreen() {
         },
       });
 
-      if (error) {
-        Alert.alert("Error", error.message);
-        return;
-      }
+      const { error } = await presentPaymentSheet();
+      if (error) throw new Error(error.message);
 
-      const { error: presentError } = await presentPaymentSheet();
-      if (!presentError) {
-        Alert.alert("Success", "Payment method added successfully");
-        await fetchPaymentMethods();
-      }
-    } catch (error) {
-      console.error("Error adding payment method:", error);
-      Alert.alert("Error", "Failed to add payment method");
+      showAlert("Success", "Payment method added successfully");
+      await fetchPaymentMethods();
+    } catch (error: any) {
+      showAlert("Error", error.message || "Failed to add payment method");
     } finally {
       setIsLoading(false);
     }
@@ -167,14 +145,11 @@ export default function ProfileScreen() {
           style: "destructive",
           onPress: async () => {
             try {
-              await axios.delete(
-                `${API_URL}/api/stripe-customer/payment-methods/${paymentMethodId}`
-              );
-              Alert.alert("Success", "Payment method deleted successfully");
+              await axios.delete(`${API_URL}/api/stripe-customer/payment-methods/${paymentMethodId}`);
+              showAlert("Success", "Payment method deleted successfully");
               await fetchPaymentMethods();
             } catch (error) {
-              console.error("Error deleting payment method:", error);
-              Alert.alert("Error", "Failed to delete payment method");
+              showAlert("Error", "Failed to delete payment method");
             }
           },
         },
@@ -185,46 +160,71 @@ export default function ProfileScreen() {
   const handleSetDefaultPaymentMethod = async (paymentMethodId: string) => {
     try {
       await axios.post(`${API_URL}/api/stripe-customer/set-default-payment-method`, {
-        customerId: customerStripeID,
-        paymentMethodId: paymentMethodId,
+        customerId: stripeCustomerId,
+        paymentMethodId,
       });
-      
       setDefaultPaymentMethodId(paymentMethodId);
-      Alert.alert("Success", "Default payment method updated");
+      showAlert("Success", "Default payment method updated");
     } catch (error) {
-      console.error("Error setting default payment method:", error);
-      Alert.alert("Error", "Failed to set default payment method");
+      showAlert("Error", "Failed to set default payment method");
     }
   };
 
-  const navigateToPersonalInfo = () => {
-    router.push("/(profile)/personalInfo");
-  };
-
-  useEffect(() => {
-    if (isSignedIn) {
-      const initializeUserData = async () => {
-        setIsLoading(true);
-        try {
-          const userData = await fetchUserProfile();
-          if (userData?.customerId) {
-            setCustomerStripeID(userData.customerId);
-          }
-        } catch (error) {
-          console.error("Error initializing user data:", error);
-        } finally {
-          setIsLoading(false);
+  const renderPaymentMethod = (method: PaymentMethod) => (
+    <View key={method.id} style={styles.paymentMethodItem}>
+      <Image
+        source={
+          method.card.brand === "visa"
+            ? require("../assets/images/visa-240.png")
+            : require("../assets/images/mastercard-240.png")
         }
-      };
-      initializeUserData();
-    }
-  }, [isSignedIn]);
+        style={styles.cardBrandImage}
+      />
+      <View style={styles.paymentMethodDetails}>
+        <View style={styles.cardInfo}>
+          <Text style={styles.paymentMethodText}>•••• {method.card.last4}</Text>
+          {defaultPaymentMethodId === method.id ? (
+            <View style={styles.defaultBadge}>
+              <Text style={styles.defaultText}>Default</Text>
+            </View>
+          ) : (
+            <TouchableOpacity
+              onPress={() => handleSetDefaultPaymentMethod(method.id)}
+              style={styles.setDefaultButton}
+            >
+              <Text style={styles.setDefaultText}>Set Default</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+        <Text style={styles.paymentMethodExpiry}>
+          Expires {method.card.exp_month}/{method.card.exp_year}
+        </Text>
+      </View>
 
+      <View style={styles.cardActions}>
+        <TouchableOpacity
+          onPress={() => handleDeletePaymentMethod(method.id)}
+          style={styles.deleteButton}
+        >
+          <Ionicons name="trash-outline" size={18} color="#FF4B55" />
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
+  // Fetch payment methods when customer ID is available
   useEffect(() => {
-    if (customerStripeID) {
+    if (stripeCustomerId) {
       fetchPaymentMethods();
     }
-  }, [customerStripeID]);
+  }, [stripeCustomerId]);
+
+  // Initialize user data on mount
+  useEffect(() => {
+    if (isSignedIn && user?.id) {
+      dispatch(fetchUserData(user.id));
+    }
+  }, [isSignedIn, user?.id, dispatch]);
 
   if (!isSignedIn) {
     return (
@@ -240,14 +240,14 @@ export default function ProfileScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        {isLoading && (
+        {(isLoading || loading) && (
           <View style={styles.loadingOverlay}>
             <ActivityIndicator size="large" color="#4353FD" />
           </View>
         )}
 
         <View style={styles.content}>
-          {/* Header - Centered */}
+          {/* Header */}
           <View style={styles.header}>
             <View style={styles.headerSpacer} />
             <Text style={styles.title}>Profile</Text>
@@ -256,15 +256,14 @@ export default function ProfileScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Profile Avatar Section */}
+          {/* Profile Avatar */}
           <View style={styles.avatarContainer}>
             {user?.imageUrl ? (
               <Image source={{ uri: user.imageUrl }} style={styles.avatar} />
             ) : (
               <View style={styles.avatarPlaceholder}>
                 <Text style={styles.avatarText}>
-                  {user?.firstName?.charAt(0)}
-                  {user?.lastName?.charAt(0)}
+                  {user?.firstName?.charAt(0)}{user?.lastName?.charAt(0)}
                 </Text>
               </View>
             )}
@@ -276,10 +275,10 @@ export default function ProfileScreen() {
             </Text>
           </View>
 
-          {/* Personal Information Card */}
+          {/* Personal Information */}
           <TouchableOpacity
             style={styles.personalInfoCard}
-            onPress={navigateToPersonalInfo}
+            onPress={() => router.push("/(profile)/personalInfo")}
           >
             <View style={styles.personalInfoContent}>
               <Ionicons name="person-outline" size={24} color="#4353FD" />
@@ -288,73 +287,24 @@ export default function ProfileScreen() {
             <Ionicons name="chevron-forward" size={20} color="#666" />
           </TouchableOpacity>
 
-          {/* Payment Methods Section */}
+          {/* Payment Methods */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Payment Methods</Text>
-            {paymentMethods.length > 0 ? (
-              paymentMethods.map((method) => (
-                <View key={method.id} style={styles.paymentMethodItem}>
-                  <Image
-                    source={
-                      method.card.brand === "visa"
-                        ? require("../assets/images/visa-240.png")
-                        : require("../assets/images/mastercard-240.png")
-                    }
-                    style={styles.cardBrandImage}
-                  />
-                  <View style={styles.paymentMethodDetails}>
-                    <View style={styles.cardInfo}>
-                      <Text style={styles.paymentMethodText}>
-                        •••• {method.card.last4}
-                      </Text>
-                      {defaultPaymentMethodId === method.id && (
-                        <View style={styles.defaultBadge}>
-                          <Text style={styles.defaultText}>Default</Text>
-                        </View>
-                      )}
-                    </View>
-                    <Text style={styles.paymentMethodExpiry}>
-                      Expires {method.card.exp_month}/{method.card.exp_year}
-                    </Text>
-                  </View>
-                  
-                  <View style={styles.cardActions}>
-                    {defaultPaymentMethodId !== method.id && (
-                      <TouchableOpacity
-                        onPress={() => handleSetDefaultPaymentMethod(method.id)}
-                        style={styles.setDefaultButton}
-                      >
-                        <Text style={styles.setDefaultText}>Set Default</Text>
-                      </TouchableOpacity>
-                    )}
-                    <TouchableOpacity
-                      onPress={() => handleDeletePaymentMethod(method.id)}
-                      style={styles.deleteButton}
-                    >
-                      <Ionicons name="trash-outline" size={20} color="#FF4B55" />
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              ))
+            {sortedPaymentMethods.length > 0 ? (
+              sortedPaymentMethods.map(renderPaymentMethod)
             ) : (
               <Text style={styles.infoValue}>No payment methods added</Text>
             )}
           </View>
 
-          {/* Add Payment Method Button */}
-          <TouchableOpacity
-            style={styles.addPaymentMethodButton}
-            onPress={handleAddPaymentMethod}
-          >
+          {/* Add Payment Method */}
+          <TouchableOpacity style={styles.addPaymentMethodButton} onPress={handleAddPaymentMethod}>
             <Ionicons name="add-circle-outline" size={24} color="#fff" />
             <Text style={styles.addPaymentMethodText}>Add Payment Method</Text>
           </TouchableOpacity>
 
-          {/* Log Out Button */}
-          <TouchableOpacity
-            style={styles.logoutCard}
-            onPress={handleSignOutPress}
-          >
+          {/* Log Out */}
+          <TouchableOpacity style={styles.logoutCard} onPress={handleSignOutPress}>
             <Ionicons name="log-out-outline" size={24} color="#000" />
             <Text style={styles.logoutText}>Log out</Text>
           </TouchableOpacity>
@@ -383,7 +333,7 @@ const styles = StyleSheet.create({
     marginBottom: 30,
   },
   headerSpacer: {
-    width: 40, // Same width as notification button for balance
+    width: 40,
   },
   notificationButton: {
     width: 40,
@@ -426,33 +376,37 @@ const styles = StyleSheet.create({
   paymentMethodItem: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#f9f9f9",
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 8,
+    backgroundColor: "#fff",
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 12,
+    elevation: 1,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    height: 70,
   },
   cardBrandImage: {
     width: 40,
-    height: 24,
+    height: 28,
     resizeMode: "contain",
-    marginRight: 12,
+    marginRight: 16,
   },
   paymentMethodDetails: {
     flex: 1,
+    justifyContent: "center",
   },
   paymentMethodText: {
     fontSize: 16,
     fontWeight: "500",
+    color: "#000",
+    marginBottom: 2,
   },
   paymentMethodExpiry: {
     fontSize: 12,
     color: "#666",
-  },
-  deleteButton: {
-    width: 40,
-    height: 40,
-    justifyContent: "center",
-    alignItems: "center",
+    fontWeight: "400",
   },
   avatarContainer: {
     alignItems: "center",
@@ -491,8 +445,11 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     marginBottom: 24,
-    borderWidth: 1,
-    borderColor: "#ddd",
+    elevation: 1,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
   },
   personalInfoContent: {
     flexDirection: "row",
@@ -508,15 +465,17 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "#4353FD",
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
     marginBottom: 24,
+    height: 48,
   },
   addPaymentMethodText: {
     color: "#fff",
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: "500",
-    marginLeft: 8,
+    marginLeft: 6,
   },
   logoutCard: {
     flexDirection: "row",
@@ -546,33 +505,45 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 4,
+    gap: 8,
   },
   defaultBadge: {
     backgroundColor: "#4353FD",
     paddingHorizontal: 8,
-    paddingVertical: 2,
+    paddingVertical: 4,
     borderRadius: 12,
-    marginLeft: 8,
+    height: 24,
+    justifyContent: "center",
   },
   defaultText: {
     color: "#fff",
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "500",
-  },
-  cardActions: {
-    flexDirection: "column",
-    alignItems: "flex-end",
   },
   setDefaultButton: {
     backgroundColor: "#E8F0FE",
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 6,
-    marginBottom: 8,
+    borderRadius: 12,
+    height: 24,
+    justifyContent: "center",
   },
   setDefaultText: {
     color: "#4353FD",
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "500",
+    textAlign: "center",
+  },
+  cardActions: {
+    alignItems: "center",
+    justifyContent: "center",
+    width: 40,
+  },
+  deleteButton: {
+    width: 32,
+    height: 32,
+    justifyContent: "center",
+    alignItems: "center",
+    borderRadius: 16,
   },
 });
