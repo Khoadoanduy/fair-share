@@ -2,6 +2,7 @@ import axios from 'axios';
 import CustomButton from './CustomButton';
 import { useState } from 'react';
 import { StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
@@ -29,6 +30,7 @@ const AcceptInvitationButton = ({ userId, groupId, disabled, onResponse }: Accep
 
   return <CustomButton 
             text={accepted ? "Accepted" : "Accept"} 
+            rightIcon={ accepted ? <Ionicons name="checkmark" size={18} color="#94A3B8" /> : undefined }
             onPress={handleAccept}
             disabled={disabled} 
             style={[accepted ? styles.buttonAccepted : styles.buttonActive, styles.button]}
@@ -48,7 +50,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#4A3DE3', 
   },
   buttonAccepted: {
-    backgroundColor: 'green', 
+    backgroundColor: '#E2E8F0', 
   },
   textAccepted: {
     color: '#94A3B8',
@@ -57,7 +59,7 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: 'white',
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
   },
 });

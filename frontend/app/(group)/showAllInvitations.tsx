@@ -145,33 +145,29 @@ export default function AllInvitations() {
                 {groupLeader} has invited you to join {invite.groupName}!
               </Text>
               <GroupCard
-                logo={{ uri: invite.group.logo }}
+                logo={{ uri: invite.group.subscription.logo }}
                 subscriptionName={invite.group.subscriptionName}
                 cycle={invite.group.cycle}
                 isShared={true}
                 category={invite.group.category}
               />
               <View style={styles.buttonContainer}>
-                <AcceptInvitationButton
-                  userId={userId}
-                  groupId={groupId}
-                  disabled={responseStatus[groupId] !== undefined}
-                  onResponse={() => handleInvitationResponse(groupId, 'accepted')}
-                  style={[
-                    styles.button,
-                    responseStatus[groupId] === 'accepted' && styles.accepted,
-                  ]}
-                />
-                <DeclineInvitationButton
-                  userId={userId}
-                  groupId={groupId}
-                  disabled={responseStatus[groupId] !== undefined}
-                  onResponse={() => handleInvitationResponse(groupId, 'declined')}
-                  style={[
-                    styles.button,
-                    responseStatus[groupId] === 'declined' && styles.declined,
-                  ]}
-                />
+                {status !== 'declined' && (
+                  <AcceptInvitationButton
+                    userId={userId}
+                    groupId={groupId}
+                    disabled={status !== undefined}
+                    onResponse={() => handleInvitationResponse(groupId, 'accepted')}
+                  />
+                )}
+
+                {status !== 'accepted' && (
+                  <DeclineInvitationButton
+                    userId={userId}
+                    groupId={groupId}
+                    onResponse={() => handleInvitationResponse(groupId, 'declined')}
+                  />
+                )}
               </View>
             </View>
           );
@@ -218,22 +214,24 @@ const styles = StyleSheet.create({
     marginHorizontal: 20,
     marginBottom: 12,
   },
-  toggleContainer: {
+toggleContainer: {
     flexDirection: "row",
-    justifyContent: "space-evenly",
+    justifyContent: "space-around",
     gap: 10,
     backgroundColor: "#4A3DE31A",
     borderRadius: 12,
     padding: 8,
-    marginHorizontal: 20,
+    marginHorizontal: 16,
     marginVertical: 16,
   },
   toggleBtnActive: {
-    backgroundColor: "white",
+    flex: 1, 
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 10,
-    marginLeft: -25,
+    backgroundColor: "white",
+    alignContent: "center",
+    justifyContent: "center"
   },
   toggleBtnInactive: {
     paddingHorizontal: 20,
@@ -245,6 +243,7 @@ const styles = StyleSheet.create({
   toggleTextActive: {
     color: "black",
     fontWeight: "600",
+    alignSelf: "center"
   },
   toggleTextInactive: {
     color: "#6B7280",
@@ -296,15 +295,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'flex-end',
     gap: 10,
-  },
-  button: {
-    flex: 1,
-  },
-  accepted: {
-    backgroundColor: '#4caf50',
-  },
-  declined: {
-    backgroundColor: '#f44336',
   },
   emptyText: {
     textAlign: 'center',

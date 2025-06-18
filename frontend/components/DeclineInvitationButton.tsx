@@ -2,6 +2,7 @@ import axios from 'axios';
 import CustomButton from './CustomButton';
 import { useState } from 'react';
 import { StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
@@ -29,6 +30,7 @@ const DeclineInvitationButton = ({ userId, groupId, disabled, onResponse }: Decl
   return <CustomButton 
             text={declined ? "Declined" : "Decline"} 
             onPress={handleDecline}
+            rightIcon={ declined ? <Ionicons name="close" size={20} color="#94A3B8" /> : undefined }
             disabled={disabled} 
             style={[declined ? styles.buttonDeclined : styles.buttonActive, styles.button]}
             textStyle={declined ? styles.textDeclined : styles.text}/>;
@@ -36,7 +38,6 @@ const DeclineInvitationButton = ({ userId, groupId, disabled, onResponse }: Decl
 
 const styles = StyleSheet.create({
   button: {
-    flex: 1,
     borderRadius: 8,
     paddingVertical: 12,
     paddingHorizontal: 20,
@@ -48,7 +49,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#4A3DE31A', 
   },
   buttonDeclined: {
-    backgroundColor: 'red', 
+    backgroundColor: '#E2E8F0', 
   },
   text: {
     color: '#4A3DE3'
