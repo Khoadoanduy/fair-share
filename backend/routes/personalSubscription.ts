@@ -15,7 +15,7 @@ router.post('/create', async (req: Request, res: Response) => {
       cycleDays,
       category,
       logo,
-      subscriptionType, // Add this line
+      subscriptionType, // Optional field for subscription type
     } = req.body;
 
     if (!userId || !subscriptionName || !planName || !amount || !cycle || !category) {
@@ -32,7 +32,7 @@ router.post('/create', async (req: Request, res: Response) => {
         cycleDays: parseInt(cycleDays),
         category,
         logo: logo || null,
-        subscriptionType: subscriptionType || 'existing', // Add this line
+        subscriptionType: subscriptionType || 'existing', // Defult to 'existing' if not provided
       },
     });
 
