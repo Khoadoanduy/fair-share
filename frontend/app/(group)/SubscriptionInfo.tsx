@@ -177,7 +177,7 @@ export default function SubscriptionScreen() {
         category: info.category,
         logo: info.logo,
         userId: leaderId, // Add this line
-        visibility: visibility || 'private', // Add this line
+        visibility: visibility || 'friends', // Add this line
       });
 
       router.push({

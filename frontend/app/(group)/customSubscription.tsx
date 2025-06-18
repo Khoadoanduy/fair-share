@@ -26,7 +26,9 @@ export default function CustomSubscriptionScreen() {
   const router = useRouter();
   const { user } = useUser();
   const clerkId = user?.id;
-  const { groupName } = useLocalSearchParams();
+
+  // Add visibility to the destructured params
+  const { groupName, visibility } = useLocalSearchParams();
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
 
   const { control, handleSubmit, setValue, watch } = useForm<FormatData>({
@@ -39,18 +41,18 @@ export default function CustomSubscriptionScreen() {
   const dayValue = watch('day');
   const cycleValue = watch('cycle');
   const userFromMongo = async () => {
-        try{
-            const response = await axios.get(`${API_URL}/api/user/`,{
-                params:{
-                    clerkID : clerkId
-                }
-            })
-            return response.data.id
+    try {
+      const response = await axios.get(`${API_URL}/api/user/`, {
+        params: {
+          clerkID: clerkId
         }
-        catch(error){
-            console.error("Error fetching user data:", error);
-        }
+      })
+      return response.data.id
     }
+    catch (error) {
+      console.error("Error fetching user data:", error);
+    }
+  }
   const [subscriptionImage, setSubscriptionImage] = useState<string | null>(null);
   const [showCycleDropdown, setShowCycleDropdown] = useState(false);
   const [showCurrencyDropdown, setShowCurrencyDropdown] = useState(false);
@@ -100,7 +102,7 @@ export default function CustomSubscriptionScreen() {
   const calculateTotalDays = (dayValue: string, cycle: string): number => {
     // Parse the day value - handle decimal numbers
     const parsedDay = parseFloat(dayValue) || 1;
-    
+
     // Base days for each cycle
     const cycleDaysMap: { [key: string]: number } = {
       'weekly': 7,
@@ -109,10 +111,10 @@ export default function CustomSubscriptionScreen() {
     };
 
     const baseDays = cycleDaysMap[cycle.toLowerCase()] || 30;
-    
+
     // Calculate total days by multiplying base cycle days with the day value
     const totalDays = Math.round(parsedDay * baseDays);
-    
+
     return totalDays;
   };
   const getCurrentCalculatedDays = (): number => {
@@ -135,10 +137,12 @@ export default function CustomSubscriptionScreen() {
         cycle: info.cycle,
         cycleDays: cycleDays,
         paymentFrequency: parseFloat(info.day),
-        category: info.category
+        category: info.category,
+        userId: leaderId, // Add this line to match SubscriptionInfo.tsx
+        visibility: visibility || 'friends', // Add this line to match SubscriptionInfo.tsx
       });
       const groupId = response.data.groupId;
-      await axios.post(`${API_URL}/api/groupMember/${groupId}/${leaderId}`, {userRole: "leader"});
+      await axios.post(`${API_URL}/api/groupMember/${groupId}/${leaderId}`, { userRole: "leader" });
       router.push({
         pathname: '/(group)/inviteMember',
         params: { groupId: response.data.groupId },
@@ -229,7 +233,7 @@ export default function CustomSubscriptionScreen() {
             </View>
           </View>
 
-         {/* Category field using the imported CustomDropdown */}
+          {/* Category field using the imported CustomDropdown */}
           <Text style={styles.label}>Category</Text>
           <Controller
             control={control}

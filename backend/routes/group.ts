@@ -30,7 +30,7 @@ router.post('/create', async (request: Request, response: Response) => {
           category,
           totalMem: 1,
           amountEach: parseFloat(amount),
-          visibility: visibility || 'private' // Add this line with default fallback
+          visibility: visibility || 'friends' // Add this line with default fallback
         }
       });
 
