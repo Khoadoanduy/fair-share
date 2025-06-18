@@ -20,7 +20,7 @@ export default function AuthLayout() {
         headerShown: true,
         headerShadowVisible: false,
         headerStyle: { backgroundColor: "#fff" },
-        headerTitleStyle: { fontWeight: "bold" },
+        headerTitleStyle: { fontWeight: "bold", color: '#4A3DE3' },
         headerLeft: () => <BackButton />, // your custom back button
       }}
     >
@@ -39,7 +39,7 @@ export default function AuthLayout() {
           }}
       />
       <Stack.Screen
-          name="customSubscription"
+          name="CustomSubscription"
           options={{
             title: "",
             headerTitle: () => null,
@@ -53,11 +53,14 @@ export default function AuthLayout() {
           }}
       />
       <Stack.Screen
-          name = "showAllInvitations"
-          options={{ title: ""}}
+          name="SubscriptionDetails"
+          options={{
+            title: "",
+            headerTitle: () => null,
+          }}
       />
       <Stack.Screen
-          name="subscriptionDetails"
+          name="newGroupDetails"
           options={{
             title: "",
             headerTitle: () => null,
@@ -70,6 +73,12 @@ export default function AuthLayout() {
             title: 'My Groups'
           }} 
       />
+    <Stack.Screen
+        name = "showAllInvitations"
+        options={{ title: "", 
+                  headerTitle: () => null,
+                  headerLeft: () => null,}}
+    />
     </Stack>
 
   );

@@ -4,7 +4,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { StripeProvider } from '@stripe/stripe-react-native';
 
 export default function TabLayout() {
-  const publishableKey = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+  const publishableKey = process.env.STRIPE_PUBLISHABLE_KEY || "pk_test_51RHyoO05UULTmGntA6FTExtkuBE6cXD0X9SX9GsxUEcjzjQXOW0IWQkroU5emAbnOLvgJM47XHBznPQZo4cc7wUE00NX5dJR6D";
 
   if (!publishableKey) {
     throw new Error('EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY is not set in environment variables');

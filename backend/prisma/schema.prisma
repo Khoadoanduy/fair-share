@@ -45,25 +45,26 @@ model User {
 }
 
 model Group {
-  id               String            @id @default(auto()) @map("_id") @db.ObjectId
-  groupName        String
-  logo             String?
-  subscriptionName String
-  subscription     Subscription?     @relation(fields: [subscriptionId], references: [id])
-  subscriptionId   String?           @db.ObjectId
-  planName         String?
-  amount           Float
-  virtualCardId    String?           
-  cycleDays        Int?
-  members          GroupMember[]
-  category         String
-  startDate        DateTime?
-  endDate          DateTime?
-  GroupInvitation  GroupInvitation[]
+  id                 String            @id @default(auto()) @map("_id") @db.ObjectId
+  groupName          String
+  logo               String?
+  subscriptionName   String
+  subscription       Subscription?     @relation(fields: [subscriptionId], references: [id])
+  subscriptionId     String?           @db.ObjectId
+  planName           String?
+  amount             Float
+  virtualCardId      String?
+  cycle              String?
+  cycleDays          Int?
+  members            GroupMember[]
+  category           String
+  startDate          DateTime?
+  endDate            DateTime?
+  GroupInvitation    GroupInvitation[]
   credentialUsername String?
   credentialPassword String?
-  amountEach       Float?
-  totalMem         Int
+  amountEach         Float?
+  totalMem           Int
 }
 
 //junction table between User and Group

@@ -1,5 +1,5 @@
 import express from 'express';
-import dotenv from 'dotenv';
+// import dotenv from 'dotenv';
 import webhookRouter from './src/webhooks/clerk/route';
 import { authMiddleware, authErrorHandler } from './src/middleware';
 import paymentRoutes from './routes/stripe_payment';
@@ -13,16 +13,16 @@ import subscriptionRouter from './routes/subscription';
 import groupMemberRoute from './routes/groupMember'
 import virtualCardRoute from './routes/virtualCard';
 import webhookRoute from './routes/webhook';
+import notificationsRoute from './routes/notifications';
 import cors from 'cors';  // Add this
 
-import http from 'http';
-import WebSocket from 'ws';
-
-dotenv.config();
+// dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 app.use(express.json());
+
+
 
 // Mount webhook router
 app.use(cors());
@@ -37,8 +37,9 @@ app.use('/api/friend', friendRoute)
 app.use('/api/feed', feedRouter);
 app.use('/api/group', groupRoute);
 app.use('/api/groupMember', groupMemberRoute);
-app.use('/api/virtual-card', virtualCardRoute);
+app.use('/api/virtualCard', virtualCardRoute);
 app.use('/api/subscriptions', subscriptionRouter);
+app.use('/api/notifications', notificationsRoute);
 
 
 // Error handling (must be after all routes)
