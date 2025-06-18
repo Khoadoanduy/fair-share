@@ -22,7 +22,7 @@ const calculateDaysBetween = (startDate: Date, endDate: Date): number => {
 router.post('/create', async (request: Request, response: Response) => {
   try {
     const { groupName, subscriptionName, subscriptionId, planName, amount, category, cycleDays, userId } = request.body;
-    
+
     if (!groupName || !subscriptionName || !amount || !userId) {
       return response.status(400).json({ message: 'Missing required fields' });
     }
@@ -45,6 +45,9 @@ router.post('/create', async (request: Request, response: Response) => {
           amountEach: parseFloat(parseFloat(amount).toFixed(2)),
           startDate,
           endDate: nextPaymentDate
+        },
+        include: {
+          subscription: true // Include subscription data in response
         }
       });
 
@@ -106,7 +109,7 @@ router.get('/:groupId', async (request: Request, response: Response) => {
     if (!groupId) {
       return response.status(400).json({ message: 'groupId is required' });
     }
-    
+
     const group = await prisma.group.findUnique({
       where: { id: groupId },
       include: {
@@ -114,36 +117,37 @@ router.get('/:groupId', async (request: Request, response: Response) => {
           include: {
             user: true
           }
-        }
+        },
+        subscription: true // Add this line
       }
     });
-    
+
     if (!group) {
       return response.status(404).json({ message: 'Group not found' });
     }
-    
+
     const today = new Date();
     let nextPaymentDate = group.endDate;
     let daysUntilNextPayment = 0;
 
     if (group.startDate && group.cycleDays) {
       nextPaymentDate = calculateNextPaymentDate(group.cycleDays, group.startDate);
-      
+
       if (nextPaymentDate < today) {
         const daysSinceStart = calculateDaysBetween(group.startDate, today);
         const cyclesPassed = Math.floor(daysSinceStart / group.cycleDays);
         nextPaymentDate = new Date(group.startDate);
         nextPaymentDate.setDate(group.startDate.getDate() + (cyclesPassed + 1) * group.cycleDays);
       }
-      
+
       daysUntilNextPayment = calculateDaysBetween(today, nextPaymentDate);
-      
+
       await prisma.group.update({
         where: { id: groupId },
         data: { endDate: nextPaymentDate }
       });
     }
-    
+
     response.status(200).json({
       ...group,
       daysUntilNextPayment,
@@ -178,6 +182,55 @@ router.put('/:groupId/credentials', async (request: Request, response: Response)
   } catch (error) {
     console.error('Error updating credentials:', error);
     response.status(500).json({ message: 'Error updating credentials' });
+  }
+});
+
+// Get subscription details for a group
+router.get('/:groupId/subscription-details', async (request: Request, response: Response) => {
+  try {
+    const { groupId } = request.params;
+
+    const group = await prisma.group.findUnique({
+      where: { id: groupId },
+      include: {
+        subscription: true
+      }
+    });
+
+    if (!group) {
+      return response.status(404).json({ message: 'Group not found' });
+    }
+
+    response.status(200).json({
+      ...group,
+      credentials: group.credentialUsername && group.credentialPassword ? {
+        username: group.credentialUsername,
+        password: group.credentialPassword
+      } : null
+    });
+  } catch (error) {
+    console.error('Error fetching subscription details:', error);
+    response.status(500).json({ message: 'Error fetching subscription details' });
+  }
+});
+
+// Get user role in a group
+router.get('/:groupId/user-role/:userId', async (request: Request, response: Response) => {
+  try {
+    const { groupId, userId } = request.params;
+
+    const member = await prisma.groupMember.findFirst({
+      where: { groupId, userId }
+    });
+
+    if (!member) {
+      return response.status(404).json({ message: 'User not found in group' });
+    }
+
+    response.status(200).json({ role: member.userRole });
+  } catch (error) {
+    console.error('Error fetching user role:', error);
+    response.status(500).json({ message: 'Error fetching user role' });
   }
 });
 
