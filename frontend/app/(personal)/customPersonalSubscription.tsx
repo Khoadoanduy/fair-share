@@ -47,7 +47,11 @@ export default function CustomPersonalSubscriptionScreen() {
   const router = useRouter();
   const { user } = useUser();
   const { subscriptionType } = useLocalSearchParams();
-  
+
+  // Calculate progress dots based on subscription type
+  const totalSteps = subscriptionType === 'virtual' ? 4 : 3;
+  const currentStep = 2; // Always step 2 for both flows
+
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const [subscriptionImage, setSubscriptionImage] = useState<string | null>(null);
   const [showCustomCategoryModal, setShowCustomCategoryModal] = useState(false);
@@ -115,7 +119,7 @@ export default function CustomPersonalSubscriptionScreen() {
 
   const handleCreatePersonalSubscription: SubmitHandler<FormatData> = async (data) => {
     const { subscriptionName, planName, amount, cycle, category } = data;
-    
+
     if (!subscriptionName || !planName || !amount || !cycle || !category) {
       Alert.alert('Missing Info', 'Please fill in all fields');
       return;
@@ -124,7 +128,7 @@ export default function CustomPersonalSubscriptionScreen() {
     try {
       const userId = await getUserMongoId();
       const cycleDays = calculateTotalDays(data.day, cycle);
-      
+
       const response = await axios.post(`${API_URL}/api/personal-subscription/create`, {
         userId,
         subscriptionName,
@@ -136,11 +140,11 @@ export default function CustomPersonalSubscriptionScreen() {
         category,
         subscriptionType,
       });
-      
-      const nextRoute = subscriptionType === 'virtual' 
+
+      const nextRoute = subscriptionType === 'virtual'
         ? '/(personal)/createVirtualCard'
         : '/(personal)/personalSubscriptionDetails';
-        
+
       router.push({
         pathname: nextRoute,
         params: { subscriptionId: response.data.subscriptionId },
@@ -349,7 +353,7 @@ export default function CustomPersonalSubscriptionScreen() {
 
       {/* Bottom section */}
       <View style={styles.buttonContainer}>
-        <ProgressDots totalSteps={4} currentStep={3} />
+        <ProgressDots totalSteps={totalSteps} currentStep={currentStep} />
         <CustomButton
           text="Next"
           onPress={handleSubmit(handleCreatePersonalSubscription)}
