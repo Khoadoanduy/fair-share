@@ -126,7 +126,7 @@ export default function SubscriptionScreen() {
   const calculateTotalDays = (dayValue: string, cycle: string): number => {
     // Parse the day value - handle decimal numbers
     const parsedDay = parseFloat(dayValue) || 1;
-    
+
     // Base days for each cycle
     const cycleDaysMap: { [key: string]: number } = {
       'weekly': 7,
@@ -135,10 +135,10 @@ export default function SubscriptionScreen() {
     };
 
     const baseDays = cycleDaysMap[cycle.toLowerCase()] || 30;
-    
+
     // Calculate total days by multiplying base cycle days with the day value
     const totalDays = Math.round(parsedDay * baseDays);
-    
+
     return totalDays;
   };
 
@@ -163,7 +163,7 @@ export default function SubscriptionScreen() {
     try {
       const leaderId = await userFromMongo();
       const cycleDays = calculateTotalDays(info.day, info.cycle);
-      
+
       const response = await axios.post(`${API_URL}/api/group/create`, {
         groupName,
         userId: leaderId,
@@ -177,9 +177,9 @@ export default function SubscriptionScreen() {
         category: info.category,
         logo: info.logo,
       });
-      
+
       const groupId = response.data.groupId;
-      
+
       router.push({
         pathname: '/(group)/inviteMember',
         params: { groupId: response.data.groupId },
@@ -196,8 +196,9 @@ export default function SubscriptionScreen() {
     { label: 'Music', value: 'music' },
     { label: 'Gaming', value: 'gaming' },
     { label: 'Productivity', value: 'productivity' },
-    { label: 'Cloud Storage', value: 'cloud_storage' },
     { label: 'Fitness', value: 'fitness' },
+    { label: 'Food Delivery', value: 'food delivery' }, 
+    { label: 'News', value: 'news' },                   
   ];
 
   const cycleOptions: DropdownOption[] = [
