@@ -6,7 +6,7 @@ import axios from 'axios';
 import CredentialsContainer from '@/components/CredentialsContainer';
 import CredentialsVisibilityToggle from '@/components/CredentialsVisibilityToggle';
 import VirtualCardDisplay from '@/components/VirtualCardDisplay';
-import { useUser as useClerkUser } from '@clerk/clerk-expo';
+import { useUser } from '@clerk/clerk-expo';
 
 type PersonalSubscriptionData = {
   id: string;
@@ -26,7 +26,7 @@ type PersonalSubscriptionData = {
   credentialUsername?: string;
   credentialPassword?: string;
   virtualCardId?: string;
-  subscriptionType?: string; // Add this line
+  subscriptionType?: string; 
 };
 
 type VirtualCard = {
@@ -468,8 +468,8 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   infoLabel: {
-    fontSize: 14,
-    color: "#666",
+    fontSize: 15,
+    color: "#000",
     fontWeight: "500",
   },
   infoValue: {
@@ -706,8 +706,3 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
 });
-function useUser(): { user: any; } {
-  const { user } = useClerkUser();
-  return { user };
-}
-
