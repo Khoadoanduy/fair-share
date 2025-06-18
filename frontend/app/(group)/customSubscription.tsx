@@ -10,6 +10,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import CustomDropdown, { DropdownOption } from '@/components/CustomDropdown';
 import { useUser } from '@clerk/clerk-expo';
+import { useUserState } from '@/hooks/useUserState';
 
 type FormatData = {
   subscriptionName: string;
@@ -129,6 +130,8 @@ export default function CustomSubscriptionScreen() {
     try {
       const leaderId = await userFromMongo();
       const cycleDays = calculateTotalDays(info.day, info.cycle);
+      
+      // Create the group
       const response = await axios.post(`${API_URL}/api/group/create`, {
         groupName,
         subscriptionName: info.subscriptionName,
@@ -141,8 +144,10 @@ export default function CustomSubscriptionScreen() {
         userId: leaderId, // Add this line to match SubscriptionInfo.tsx
         visibility: visibility || 'friends', // Add this line to match SubscriptionInfo.tsx
       });
+      
       const groupId = response.data.groupId;
       await axios.post(`${API_URL}/api/groupMember/${groupId}/${leaderId}`, { userRole: "leader" });
+
       router.push({
         pathname: '/(group)/inviteMember',
         params: { groupId: response.data.groupId },
