@@ -1,5 +1,5 @@
 import express from 'express';
-// import dotenv from 'dotenv';
+import dotenv from 'dotenv';
 import webhookRouter from './src/webhooks/clerk/route';
 import { authMiddleware, authErrorHandler } from './src/middleware';
 import paymentRoutes from './routes/stripe_payment';
@@ -13,9 +13,10 @@ import subscriptionRouter from './routes/subscription';
 import groupMemberRoute from './routes/groupMember'
 import virtualCardRoute from './routes/virtualCard';
 import notificationsRoute from './routes/notifications';
-import cors from 'cors';  // Add this
+import cors from 'cors';  
+import personalSubscriptionRoute from './routes/personalSubscription'; 
 
-// dotenv.config();
+dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -38,6 +39,7 @@ app.use('/api/groupMember', groupMemberRoute);
 app.use('/api/virtualCard', virtualCardRoute);
 app.use('/api/subscriptions', subscriptionRouter);
 app.use('/api/notifications', notificationsRoute);
+app.use('/api/personal-subscription', personalSubscriptionRoute); // Add this route
 
 
 // Error handling (must be after all routes)
