@@ -84,8 +84,7 @@ export const checkPaymentMethod = createAsyncThunk(
         params: {
           clerkID: clerkId
         }
-      }); 
-      console.log("get data "+response.data);
+      });
       return response.data
     } catch (error: any) {
       console.error('Error checking payment method:', error);
