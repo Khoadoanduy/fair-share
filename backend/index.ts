@@ -41,7 +41,6 @@ app.use('/api/virtualCard', virtualCardRoute);
 app.use('/api/subscriptions', subscriptionRouter);
 app.use('/api/cfshare', confirmShare);
 app.use('/api/notifications', notificationsRoute);
-app.use('/api/cfshare', confirmShare);
 
 
 // Error handling (must be after all routes)

@@ -78,13 +78,6 @@ export default function AuthLayout() {
           }} 
       />
       <Stack.Screen
-          name="newGroupDetails"
-          options={{
-            title: "",
-            headerTitle: () => null,
-          }}
-      />
-      <Stack.Screen
           name="setMemberShares"
           options={{
             title: "Set member shares",
