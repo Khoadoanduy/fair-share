@@ -107,16 +107,18 @@ router.get('/:groupId', async (request: Request, response: Response) => {
     if (!groupId) {
       return response.status(400).json({ message: 'groupId is required' });
     }
+<<<<<<<<< Temporary merge branch 1
     //Check if the user has already been invited to this group
     const invitation = await prisma.groupInvitation.findMany({
-      where: { groupId },
+      where: { groupId, status: "pending" },
       include: { user: true }
     })
     if (invitation.length == 0) {
-      return response.status(200).json({invitation: []});
+      return response.status(409).json({ message: 'No invitation sent' });
+=========
     
     const group = await prisma.group.findUnique({
-      where: { id: groupId },
+      where: { id: groupId, status: "pending" },
       include: {
         members: {
           include: {

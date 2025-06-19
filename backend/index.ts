@@ -14,6 +14,7 @@ import groupMemberRoute from './routes/groupMember'
 import virtualCardRoute from './routes/virtualCard';
 import notificationsRoute from './routes/notifications';
 import confirmShare from './routes/confirmShare';
+import confirmShare from './routes/confirmShare';
 import cors from 'cors';  // Add this
 
 // dotenv.config();
@@ -38,6 +39,7 @@ app.use('/api/group', groupRoute);
 app.use('/api/groupMember', groupMemberRoute);
 app.use('/api/virtualCard', virtualCardRoute);
 app.use('/api/subscriptions', subscriptionRouter);
+app.use('/api/cfshare', confirmShare);
 app.use('/api/notifications', notificationsRoute);
 app.use('/api/cfshare', confirmShare);
 
