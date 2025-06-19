@@ -311,6 +311,32 @@ router.get('/amount-each/:groupId', async (request: Request, response: Response)
     response.status(500).json({ message: 'Error getting amount' });
   }
 });
+    
+//Get group leader
+router.get('/leader/:groupId', async (request: Request, response: Response) => {
+  try {
+    const { groupId } = request.params;
+    if (!groupId) {
+      return response.status(400).json({ message: 'groupId are required' });
+    }
+    const group = await prisma.groupMember.findFirst({
+      where: { 
+        groupId: groupId,
+        userRole: "leader" 
+      },
+      include: {
+        user: true
+      }
+    })
+    if (!group)
+      return response.status(404).json({ message: "No group found" });
+    response.status(200).json(group.user);
+
+  } catch (error) {
+    console.error(error);
+    response.status(500).json({ message: 'Error getting group leader' });
+  }
+});
 
 //Get the number of members in the group
 router.get('/total-mem/:groupId', async (request: Request, response: Response) => {
@@ -379,3 +405,4 @@ router.get('/:groupId', async (request: Request, response: Response) => {
 });
 
 export default router
+
