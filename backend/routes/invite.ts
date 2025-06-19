@@ -1,8 +1,8 @@
 import express, { Request, Response, Router } from 'express';
-import dotenv from 'dotenv';
+// import dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
 
-dotenv.config();
+// dotenv.config();
 
 const router: Router = express.Router();
 const prisma = new PrismaClient();

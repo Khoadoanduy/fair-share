@@ -14,6 +14,7 @@ import axios from "axios";
 import { Ionicons } from "@expo/vector-icons";
 import CustomButton from "@/components/CustomButton";
 import { formatPaymentDate, getDaysRemaining } from "@/utils/dateUtils";
+import VirtualCardDisplay from "@/components/VirtualCardDisplay";
 import { useUserState } from "@/hooks/useUserState";
 
 // Define the Group type
@@ -45,6 +46,19 @@ type Group = {
   members: GroupMember[];
   daysUntilNextPayment: number;
   nextPaymentDate: string;
+  virtualCardId?: string;
+};
+
+type VirtualCard = {
+  id: string;
+  last4: string;
+  expMonth: number;
+  expYear: number;
+  brand: string;
+  cardholderName: string;
+  status: string;
+  type: string;
+  currency: string;
 };
 
 export default function GroupDetailsScreen() {
@@ -52,10 +66,12 @@ export default function GroupDetailsScreen() {
   const router = useRouter();
   const { groupId } = useLocalSearchParams();
   const [group, setGroup] = useState<Group | null>(null);
+  const [virtualCard, setVirtualCard] = useState<VirtualCard | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [leader, setIsLeader] = useState<boolean>(false);
   const { userId } = useUserState();
+
   useEffect(() => {
     const fetchGroupDetails = async () => {
       try {
@@ -68,6 +84,19 @@ export default function GroupDetailsScreen() {
         setGroup(groupResponse.data);
         setIsLeader(roleResponse.data.isLeader);
         setError(null);
+
+        // If the group has a virtual card ID, fetch the card details
+        if (groupResponse.data.virtualCardId) {
+          try {
+            const cardResponse = await axios.get(
+              `${API_URL}/api/virtualCard/group/${groupId}`
+            );
+            setVirtualCard(cardResponse.data);
+          } catch (cardErr) {
+            console.error("Error fetching virtual card details:", cardErr);
+            // Don't set an error, just log it - virtual card is optional
+          }
+        }
       } catch (err) {
         console.error("Error fetching group details:", err);
         setError("Failed to load group details");
@@ -84,6 +113,14 @@ export default function GroupDetailsScreen() {
   const handleInviteMembers = () => {
     router.push({
       pathname: "/(group)/inviteMember",
+      params: { groupId },
+    });
+  };
+
+  // Add this near the other handler functions, before the return statement
+  const handleSubscriptionDetails = () => {
+    router.push({
+      pathname: "/(group)/SubscriptionDetails",
       params: { groupId },
     });
   };
@@ -149,7 +186,7 @@ export default function GroupDetailsScreen() {
           <View style={styles.infoCardsContainer}>
             <InfoCard
               label="Your share"
-              value={`$${group.amountEach}`}
+              value={`$${group.amountEach.toFixed(2)}`}
               icon="pie-chart-outline"
             />
             <InfoCard
@@ -177,7 +214,10 @@ export default function GroupDetailsScreen() {
             </View>
           </View>
 
-          <TouchableOpacity style={styles.detailsRow}>
+          <TouchableOpacity
+            style={styles.detailsRow}
+            onPress={handleSubscriptionDetails}
+          >
             <View style={styles.detailsLeft}>
               <Ionicons name="person-outline" size={24} color="#000" />
               <Text style={styles.detailsText}>Subscription details</Text>
@@ -227,18 +267,59 @@ export default function GroupDetailsScreen() {
                   {member.user.username}
                 </Text>
               </View>
-              <Text style={styles.memberAmount}>${group.amountEach}</Text>
+              <Text style={styles.memberAmount}>${group.amountEach.toFixed(2)}</Text>
             </View>
           ))}
         </View>
 
-        {/* Payment Method - Only show if user is leader */}
-        {leader && (
-          <TouchableOpacity style={styles.paymentMethodRow}>
-            <Text style={styles.paymentMethodTitle}>Payment method</Text>
-            <Ionicons name="chevron-forward" size={20} color="#C7C7CC" />
-          </TouchableOpacity>
+        {/* Virtual Card Section */}
+        {virtualCard ? (
+          <View style={styles.virtualCardSection}>
+            <Text style={styles.sectionTitle}>Virtual Card</Text>
+            <VirtualCardDisplay
+              cardBrand={virtualCard.brand}
+              last4={virtualCard.last4}
+              expMonth={virtualCard.expMonth}
+              expYear={virtualCard.expYear}
+              cardholderName={virtualCard.cardholderName}
+            />
+          </View>
+        ) : (
+          leader && (
+            <TouchableOpacity
+              style={styles.createVirtualCardButton}
+              onPress={async () => {
+                try {
+                  const response = await axios.post(
+                    `${API_URL}/api/virtualCard/create-for-group`,
+                    {
+                      groupId,
+                      leaderId: userId,
+                    }
+                  );
+
+                  if (response.data.success) {
+                    // Refresh the page to show the new virtual card
+                    const cardResponse = await axios.get(
+                      `${API_URL}/api/virtualCard/group/${groupId}`
+                    );
+                    setVirtualCard(cardResponse.data);
+                    Alert.alert("Success", "Virtual card created successfully");
+                  }
+                } catch (error) {
+                  console.error("Error creating virtual card:", error);
+                  Alert.alert("Error", "Failed to create virtual card");
+                }
+              }}
+            >
+              <Ionicons name="card-outline" size={24} color="#4A3DE3" />
+              <Text style={styles.createVirtualCardText}>
+                Create Virtual Card
+              </Text>
+            </TouchableOpacity>
+          )
         )}
+
       </ScrollView>
     </SafeAreaView>
   );
@@ -279,6 +360,40 @@ const styles = StyleSheet.create({
     color: "#666",
     textAlign: "center",
     marginBottom: 20,
+  },
+  virtualCardSection: {
+    backgroundColor: "white",
+    marginHorizontal: 16,
+    marginBottom: 16,
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#000",
+    marginBottom: 12,
+  },
+  createVirtualCardButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#F8F9FA",
+    marginHorizontal: 16,
+    marginBottom: 16,
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    borderStyle: "dashed",
+  },
+  createVirtualCardText: {
+    fontSize: 16,
+    fontWeight: "500",
+    color: "#4A3DE3",
+    marginLeft: 8,
   },
   header: {
     flexDirection: "row",
