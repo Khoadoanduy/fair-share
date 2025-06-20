@@ -80,8 +80,8 @@ export default function GroupDetailsScreen() {
         const [groupResponse, roleResponse, requestSent, shareConfirmed] = await Promise.all([
           axios.get(`${API_URL}/api/group/${groupId}`),
           axios.get(`${API_URL}/api/groupMember/${groupId}/${userId}`),
-          axios.get(`${API_URL}/api/cfshare/${groupId}`),
-          axios.get(`${API_URL}/api/cfshare/${groupId}/${userId}`)
+          axios.get(`${API_URL}/api/cfshare/leader-sent/${groupId}`),
+          axios.get(`${API_URL}/api/cfshare/check-status/${groupId}/${userId}`)
         ]);
         setGroup(groupResponse.data);
         setIsLeader(roleResponse.data.isLeader);
@@ -162,6 +162,7 @@ export default function GroupDetailsScreen() {
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
       >
+        {/* Propmt member to confirm share request */}
         {confirmRequestSent && !leader && !confirmShare && (
           <View style={styles.viewShareContainer}>
             <Image source={require('../../assets/money-square.png')}/>
@@ -177,6 +178,24 @@ export default function GroupDetailsScreen() {
           </View>
           )
         }
+
+        {/* Prompt leader to charge members and start subscription */}
+        {confirmRequestSent && leader && !confirmShare && (
+          <View style={styles.viewShareContainer}>
+            <Image source={require('../../assets/money-square.png')}/>
+            <View style={styles.viewShareContent}>
+              <Text style={{ color: 'black', fontWeight: '600' }}>Confirm your share</Text>
+              <Text style={{color: '#6D717F'}}>
+                Your group leader has finalized the members. Confirm your share to proceed with payment.
+              </Text>
+              <TouchableOpacity onPress={togglePaymentModal}>
+                <Text style={{ color: '#4A3DE3', fontWeight: '600' }}>View Payment Here</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+          )
+        }
+
         {/* Top Info Card */}
         <GroupHeader
           groupName={group.groupName}

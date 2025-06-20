@@ -81,7 +81,7 @@ const GroupMembers: React.FC<Props> = ({ groupId, userId, showAmountEach, showEs
           try {
             const confirmations = await Promise.all(
               groupRes.data.members.map(async (member: GroupMember) => {
-                const res = await axios.get(`${API_URL}/api/cfshare/${groupId}/${member.userId}`);
+                const res = await axios.get(`${API_URL}/api/cfshare/check-status/${groupId}/${member.userId}`);
                 console.log(res.data);
                 return { userId: member.userId, status: res.data}; 
               })

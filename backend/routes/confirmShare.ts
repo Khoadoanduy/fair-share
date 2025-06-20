@@ -46,7 +46,7 @@ router.post('/:groupId', async (request: Request, response: Response) => {
 });
 
 //Check if user has accepted the confirm request 
-router.get('/:groupId/:userId', async (request: Request, response: Response) => {
+router.get('/check-status/:groupId/:userId', async (request: Request, response: Response) => {
     try {
         const { groupId, userId } = request.params;
         if (!groupId) {
@@ -67,12 +67,12 @@ router.get('/:groupId/:userId', async (request: Request, response: Response) => 
 
     } catch (error) {
         console.error(error);
-        response.status(500).json({ message: 'Error creating confirm shares' });
+        response.status(500).json({ message: 'Error checking user confirm shares' });
     }
 });
 
 //Check if the leader has sent the confirm request
-router.get('/:groupId', async (request: Request, response: Response) => {
+router.get('/leader-sent/:groupId', async (request: Request, response: Response) => {
     try {
         const { groupId } = request.params;
         if (!groupId) {
@@ -124,6 +124,32 @@ router.put('/:groupId/:userId', async (request: Request, response: Response) => 
     } catch (error) {
         console.error(error);
         response.status(500).json({ message: 'Error updating confirm shares' });
+    }
+});
+
+//Check if all members have confirmed request
+router.get('/all-confirmed/:groupId', async (request: Request, response: Response) => {
+    try {
+        const { groupId } = request.params;
+        if (!groupId) {
+            return response.status(400).json({ message: 'groupId is required' });
+        }
+        //Find the member of the group
+        const notConfirmed = await prisma.confirmShare.findFirst({
+            where: { 
+                groupId: groupId,
+                status: false
+            },
+        });
+
+        if (notConfirmed) {
+            return response.status(200).json(false);
+        }
+        response.status(200).json(true);
+
+    } catch (error) {
+        console.error(error);
+        response.status(500).json({ message: 'Error checking all members confirm shares' });
     }
 });
 
