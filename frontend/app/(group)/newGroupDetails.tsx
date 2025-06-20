@@ -355,7 +355,7 @@ export default function GroupDetailsScreen() {
                 </View>
 
                 <View style={styles.stepItem}>
-                  <Ionicons name="checkbox-outline" size={24} color="#C7C7CC" style={styles.stepIcon} />
+                  <Ionicons name="checkmark-done-outline" size={24} color="#C7C7CC" style={styles.stepIcon} />
                   <View style={styles.stepTextContainer}>
                     <Text style={styles.stepTitle}>Start cycle</Text>
                     <Text style={styles.stepSub}>Confirm the subscription and notify members</Text>
@@ -363,7 +363,7 @@ export default function GroupDetailsScreen() {
                 </View>
 
                 <View style={styles.stepItem}>
-                  <Ionicons name="create-outline" size={24} color="#C7C7CC" style={styles.stepIcon} />
+                  <Ionicons name="key-outline" size={24} color="#C7C7CC" style={styles.stepIcon} />
                   <View style={styles.stepTextContainer}>
                     <Text style={styles.stepTitle}>Update account credentials</Text>
                     <Text style={styles.stepSub}>Enter the login details for the shared subscription</Text>
