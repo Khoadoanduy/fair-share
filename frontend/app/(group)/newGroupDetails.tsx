@@ -71,22 +71,25 @@ export default function GroupDetailsScreen() {
   const [isPaymentModalVisible, setPaymentModalVisible] = useState(false);
   const [showMembers, setShowMembers] = useState(false);
   const [confirmShare, setConfirmShare] = useState(false);
+  const [allConfirmed, setAllConfirmed] = useState(false);
 
 
   useEffect(() => {
     const fetchGroupDetails = async () => {
       try {
         setLoading(true);
-        const [groupResponse, roleResponse, requestSent, shareConfirmed] = await Promise.all([
+        const [groupResponse, roleResponse, requestSent, shareConfirmed, checkAllConfirmed] = await Promise.all([
           axios.get(`${API_URL}/api/group/${groupId}`),
           axios.get(`${API_URL}/api/groupMember/${groupId}/${userId}`),
           axios.get(`${API_URL}/api/cfshare/leader-sent/${groupId}`),
-          axios.get(`${API_URL}/api/cfshare/check-status/${groupId}/${userId}`)
+          axios.get(`${API_URL}/api/cfshare/check-status/${groupId}/${userId}`),
+          axios.get(`${API_URL}/api/cfshare/all-confirmed/${groupId}`)
         ]);
         setGroup(groupResponse.data);
         setIsLeader(roleResponse.data.isLeader);
         setConfirmRequestSent(requestSent.data);
         setConfirmShare(shareConfirmed.data);
+        setAllConfirmed(checkAllConfirmed.data);
         setError(null);
       } catch (err) {
         console.error("Error fetching group details:", err);
@@ -180,16 +183,16 @@ export default function GroupDetailsScreen() {
         }
 
         {/* Prompt leader to charge members and start subscription */}
-        {confirmRequestSent && leader && !confirmShare && (
+        {confirmRequestSent && leader && allConfirmed && (
           <View style={styles.viewShareContainer}>
-            <Image source={require('../../assets/money-square.png')}/>
+            <Image source={require('../../assets/Vector.png')}/>
             <View style={styles.viewShareContent}>
-              <Text style={{ color: 'black', fontWeight: '600' }}>Confirm your share</Text>
+              <Text style={{ color: 'black', fontWeight: '600' }}>Subscribe with virtual card</Text>
               <Text style={{color: '#6D717F'}}>
-                Your group leader has finalized the members. Confirm your share to proceed with payment.
+                All members have confirmed their shares. You can now pull funds, generate a virtual card, and subscribe to the service!
               </Text>
               <TouchableOpacity onPress={togglePaymentModal}>
-                <Text style={{ color: '#4A3DE3', fontWeight: '600' }}>View Payment Here</Text>
+                <Text style={{ color: '#4A3DE3', fontWeight: '600' }}>Get started</Text>
               </TouchableOpacity>
             </View>
           </View>
