@@ -15,6 +15,8 @@ import { usePushNotifications } from "@/utils/notificationUtils";
 import GroupCard from "@/components/GroupCard";
 import axios from "axios";
 import { sub } from "date-fns";
+import { formatRelativeDate, getDaysRemaining } from "@/utils/dateUtils";
+import Feather from "@expo/vector-icons/Feather";
 
 type GroupData = {
   subscription: {
@@ -25,6 +27,7 @@ type GroupData = {
     cycle: string;
     category: string;
     logo: string;
+    nextPaymentDate: string; // Add this field
   };
 };
 
@@ -61,10 +64,22 @@ export default function HomeScreen() {
     );
   }, [subscriptions]);
 
+  // Add a function to calculate upcoming renewals
+  const getUpcomingRenewals = () => {
+    const today = new Date();
+    const oneWeekFromNow = new Date();
+    oneWeekFromNow.setDate(today.getDate() + 7);
+
+    return subscriptions.filter((subscription) => {
+      const renewalDate = new Date(subscription.endDate);
+      return renewalDate >= today && renewalDate <= oneWeekFromNow;
+    }).length;
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView>
-        <View style={styles.content}>
+        <Pressable style={styles.content}>
           <Text style={styles.welcomeText}>Welcome, {name}</Text>
 
           {/* Add Summary Box */}
@@ -79,26 +94,28 @@ export default function HomeScreen() {
             <View style={styles.statsContainer}>
               <View style={styles.statBox}>
                 <Text style={styles.statTitle}>Active subscriptions</Text>
+                <View style={styles.iconContainer}>
+                  <Feather name="check-circle" size={24} color="black" />
+                </View>
                 <View style={styles.statValueContainer}>
                   <Text style={styles.statValue}>{subscriptions.length}</Text>
-                  <View style={styles.iconContainer}>
-                    <Text style={styles.checkIcon}>✓</Text>
-                  </View>
                 </View>
               </View>
 
               <View style={styles.statBox}>
-                <Text style={styles.statTitle}>Upcoming renewals</Text>
+                <Text style={styles.statTitle}>Upcoming Renewals</Text>
+                <View style={styles.iconContainer}>
+                  <Feather name="clock" size={24} color="black" />
+                </View>
                 <View style={styles.statValueContainer}>
-                  <Text style={styles.statValue}>3</Text>
-                  <View style={styles.iconContainer}>
-                    <Text style={styles.clockIcon}>⏱</Text>
-                  </View>
+                  <Text style={styles.statValue}>
+                    {getUpcomingRenewals(subscriptions)}
+                  </Text>
                 </View>
               </View>
             </View>
           </View>
-        </View>
+        </Pressable>
 
         {loading ? (
           <View style={styles.loadingContainer}>
@@ -208,20 +225,21 @@ const styles = StyleSheet.create({
   },
   statsContainer: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    gap: 16,
+    gap: 10,
     marginTop: 8,
   },
   statBox: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#FCFBFF",
     borderRadius: 12,
-    padding: 12,
+    padding: 8,
   },
   statTitle: {
     fontSize: 14,
-    color: "#6B7280",
+    fontWeight: "600",
+    color: "black",
     marginBottom: 4,
+    paddingRight: 32, // Add padding to prevent text overlap with icon
   },
   statValueContainer: {
     flexDirection: "row",
@@ -234,12 +252,12 @@ const styles = StyleSheet.create({
     color: "#4A3DE3",
   },
   iconContainer: {
+    position: "absolute",
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: "#4A3DE3",
-    justifyContent: "center",
-    alignItems: "center",
+    right: 8,
+    top: 8,
   },
   checkIcon: {
     color: "#FFFFFF",
