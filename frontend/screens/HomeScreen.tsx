@@ -1,76 +1,133 @@
 import {
   View,
   Text,
-  Image,
   StyleSheet,
   SafeAreaView,
   ScrollView,
-  Alert,
+  ActivityIndicator,
+  Pressable,
 } from "react-native";
-import { router } from "expo-router";
 import { useUser } from "@clerk/clerk-expo";
-import PaymentMethod from "@/components/PaymentMethod";
 import { useUserState } from "@/hooks/useUserState";
-import { useEffect } from "react";
-import CustomButton from "@/components/CustomButton";
-import { Redirect } from "expo-router";
+import { useEffect, useState, useMemo } from "react";
 import { useAppDispatch } from "@/redux/hooks";
-import { fetchUserData } from "@/redux/slices/userSlice";
 import { usePushNotifications } from "@/utils/notificationUtils";
+import GroupCard from "@/components/GroupCard";
+import axios from "axios";
+import { sub } from "date-fns";
 
-// Set to true to show the Redux debugger, false to hide it
-const SHOW_REDUX_DEBUGGER = true;
+type GroupData = {
+  subscription: {
+    id: string;
+    groupName: string;
+    subscriptionName: string;
+    amountEach: number;
+    cycle: string;
+    category: string;
+    logo: string;
+  };
+};
 
 export default function HomeScreen() {
-  const { user } = useUser();
-  const dispatch = useAppDispatch();
-  const { name, hasPayment, userId, stripeCustomerId, isSignedIn } =
-    useUserState();
+  const API_URL = process.env.EXPO_PUBLIC_API_URL;
+  const { name, userId } = useUserState();
+  const [subscriptions, setSubscriptions] = useState<GroupData[]>([]);
+  const [loading, setLoading] = useState(true);
 
   usePushNotifications();
 
-  const handleForceRefresh = async () => {
-    if (user?.id) {
+  useEffect(() => {
+    const fetchGroups = async () => {
+      if (!userId) return;
       try {
-        await dispatch(fetchUserData(user.id)).unwrap();
-        Alert.alert("Success", "Data refreshed successfully!");
+        setLoading(true);
+        const response = await axios.get(
+          `${API_URL}/api/user/groups/${userId}`
+        );
+        setSubscriptions(response.data);
       } catch (error) {
-        Alert.alert("Error", "Failed to refresh data");
+        console.error("Error fetching groups:", error);
+      } finally {
+        setLoading(false);
       }
-    }
-  };
+    };
+    fetchGroups();
+  }, [userId]);
 
-  const handleNext = () => {
-    router.push("/(collectpayment)/CollectPayment");
-  };
+  const totalAmount = useMemo(() => {
+    return subscriptions.reduce(
+      (sum, subscription) => sum + subscription.amountEach,
+      0
+    );
+  }, [subscriptions]);
 
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView>
         <View style={styles.content}>
-          {isSignedIn ? (
-            <>
-              <Image
-                source={{ uri: user?.imageUrl }}
-                style={styles.profileImage}
-              />
-              <Text style={styles.welcomeText}>Welcome, {name}</Text>
-              <Text style={styles.subtitle}>
-                What would you like to do today?
-              </Text>
-            </>
-          ) : (
-            <>
-              <Text style={styles.welcomeText}>Hi, {name}</Text>
-              <Text style={styles.welcomeText}>Welcome to Fair Share</Text>
-              <Text style={styles.subtitle}>
-                The easiest way to split expenses with friends and family
-              </Text>
-            </>
-          )}
+          <Text style={styles.welcomeText}>Welcome, {name}</Text>
+
+          {/* Add Summary Box */}
+          <View style={styles.summaryBox}>
+            <Pressable style={styles.cycleSelector}>
+              <Text style={styles.cycleText}>Monthly</Text>
+              <Text style={styles.cycleArrow}>›</Text>
+            </Pressable>
+
+            <Text style={styles.totalAmount}>${totalAmount.toFixed(2)}</Text>
+
+            <View style={styles.statsContainer}>
+              <View style={styles.statBox}>
+                <Text style={styles.statTitle}>Active subscriptions</Text>
+                <View style={styles.statValueContainer}>
+                  <Text style={styles.statValue}>{subscriptions.length}</Text>
+                  <View style={styles.iconContainer}>
+                    <Text style={styles.checkIcon}>✓</Text>
+                  </View>
+                </View>
+              </View>
+
+              <View style={styles.statBox}>
+                <Text style={styles.statTitle}>Upcoming renewals</Text>
+                <View style={styles.statValueContainer}>
+                  <Text style={styles.statValue}>3</Text>
+                  <View style={styles.iconContainer}>
+                    <Text style={styles.clockIcon}>⏱</Text>
+                  </View>
+                </View>
+              </View>
+            </View>
+          </View>
         </View>
-        <CustomButton text="Refresh Data" onPress={handleForceRefresh} />
-        <CustomButton text="Next - Create personal card" onPress={handleNext} />
+
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#4A3DE3" />
+            <Text style={styles.loadingText}>Loading subscriptions...</Text>
+          </View>
+        ) : subscriptions.length > 0 ? (
+          <View style={styles.subscriptionsList}>
+            {subscriptions.map((subscription, index) => (
+              <Text key={index}>
+                <GroupCard
+                  logo={{ uri: subscription.logo }}
+                  subscriptionName={subscription.groupName}
+                  cycle={subscription.cycle}
+                  amountEach={subscription.amountEach}
+                  isShared={true}
+                  category={subscription.category}
+                />
+              </Text>
+            ))}
+          </View>
+        ) : (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyText}>No subscriptions found</Text>
+            <Text style={styles.emptySubtext}>
+              Join or create a group to get started!
+            </Text>
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -82,25 +139,114 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
   },
   content: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
     padding: 20,
-    gap: 15,
-  },
-  profileImage: {
-    height: 100,
-    aspectRatio: 1,
-    borderRadius: 100,
+    gap: 8,
   },
   welcomeText: {
     fontSize: 24,
-    fontWeight: "bold",
-    textAlign: "center",
+    fontWeight: "700",
+    color: "#111827",
   },
   subtitle: {
     fontSize: 16,
-    color: "#666",
+    color: "#6B7280",
+    marginBottom: 8,
+  },
+  loadingContainer: {
+    padding: 20,
+    alignItems: "center",
+  },
+  loadingText: {
+    marginTop: 12,
+    color: "#6B7280",
+    fontSize: 14,
+  },
+  subscriptionsList: {
+    paddingHorizontal: 20,
+  },
+  emptyState: {
+    padding: 20,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  emptyText: {
+    fontSize: 16,
+    fontWeight: "500",
+    color: "#374151",
+    marginBottom: 4,
+  },
+  emptySubtext: {
+    fontSize: 14,
+    color: "#6B7280",
     textAlign: "center",
+  },
+  summaryBox: {
+    backgroundColor: "#F4F3FF",
+    borderRadius: 16,
+    padding: 16,
+    marginVertical: 16,
+  },
+  cycleSelector: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  cycleText: {
+    color: "#4A3DE3",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  cycleArrow: {
+    color: "#4A3DE3",
+    fontSize: 20,
+    marginLeft: 4,
+  },
+  totalAmount: {
+    fontSize: 32,
+    fontWeight: "700",
+    color: "#111827",
+    marginVertical: 8,
+  },
+  statsContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: 16,
+    marginTop: 8,
+  },
+  statBox: {
+    flex: 1,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    padding: 12,
+  },
+  statTitle: {
+    fontSize: 14,
+    color: "#6B7280",
+    marginBottom: 4,
+  },
+  statValueContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  statValue: {
+    fontSize: 24,
+    fontWeight: "600",
+    color: "#4A3DE3",
+  },
+  iconContainer: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: "#4A3DE3",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  checkIcon: {
+    color: "#FFFFFF",
+    fontSize: 14,
+  },
+  clockIcon: {
+    color: "#FFFFFF",
+    fontSize: 14,
   },
 });

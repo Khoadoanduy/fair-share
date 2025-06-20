@@ -17,6 +17,7 @@ import { Ionicons } from "@expo/vector-icons";
 import BackButton from "@/components/BackButton";
 import { formatRelativeDate, getDaysRemaining } from "@/utils/dateUtils";
 import GroupCard from '@/components/GroupCard';
+import { useUserState } from "@/hooks/useUserState";
 
 interface Group {
   id: string;
@@ -36,7 +37,8 @@ export default function GroupsScreen() {
   const router = useRouter();
   const API_URL = process.env.EXPO_PUBLIC_API_URL;
   const { user } = useUser();
-  const [userId, setUserId] = useState<string | null>(null);
+  const {userId} = useUserState()
+  // const [userId, setUserId] = useState<string | null>(null);
   const [groups, setGroups] = useState<Group[]>([]);
   const [selectedFilter, setSelectedFilter] = useState("All");
   const clerkId = user?.id;
@@ -53,43 +55,14 @@ export default function GroupsScreen() {
     router.push('/(group)/userGroups')
   }
 
-  useEffect(() => {
-    const fetchUserId = async () => {
-      try {
-        const response = await axios.get(`${API_URL}/api/user/`, {
-          params: { clerkID: clerkId },
-        });
-        setUserId(response.data.id);
-      } catch (error) {
-        console.error("Error fetching user data:", error);
-      }
-    };
-
-    if (clerkId) {
-      fetchUserId();
-    }
-  }, [clerkId]);
 
   const fetchGroups = async () => {
     if (!userId) return;
     try {
-      const response = await axios.get(`${API_URL}/api/user/groups/${userId}`);
-      // The groups are nested in the response as group property
-      const transformedGroups = response.data.map((item: any) => ({
-        id: item.group.id,
-        groupName: item.group.groupName,
-        subscriptionName: item.group.subscriptionName,
-        subscriptionId: item.group.subscriptionId,
-        planName: item.group.planName,
-        amountEach: item.group.amountEach,
-        cycle: item.group.cycle,
-        category: item.group.category,
-        logo: item.group.logo,
-        startDate: item.group.startDate,
-        endDate: item.group.endDate,
-        totalMem: item.group.totalMem,
-      }));
-      setGroups(transformedGroups);
+      const response = await axios.get(
+        `${API_URL}/api/user/groups/${userId}`
+      );
+      setGroups(response.data);
     } catch (error) {
       console.error("Error fetching groups:", error);
     }
