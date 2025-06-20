@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   Alert,
   TouchableOpacity,
+  Image
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import axios from "axios";
@@ -16,6 +17,7 @@ import { useUserState } from "@/hooks/useUserState";
 import SubscriptionCard from "@/components/SubscriptionCard";
 import GroupMembers from "@/components/GroupMember";
 import GroupHeader from "@/components/GroupHeader";
+import { Modal } from "react-native";
 
 // Define the Group type
 type GroupMember = {
@@ -66,19 +68,25 @@ export default function GroupDetailsScreen() {
   const [leader, setIsLeader] = useState<boolean>(false);
   const [confirmRequestSent, setConfirmRequestSent] = useState<boolean>(false);
   const { userId } = useUserState();
+  const [isPaymentModalVisible, setPaymentModalVisible] = useState(false);
+  const [showMembers, setShowMembers] = useState(false);
+  const [confirmShare, setConfirmShare] = useState(false);
+
 
   useEffect(() => {
     const fetchGroupDetails = async () => {
       try {
         setLoading(true);
-        const [groupResponse, roleResponse, requestSent] = await Promise.all([
+        const [groupResponse, roleResponse, requestSent, shareConfirmed] = await Promise.all([
           axios.get(`${API_URL}/api/group/${groupId}`),
           axios.get(`${API_URL}/api/groupMember/${groupId}/${userId}`),
-          axios.get(`${API_URL}/api/cfshare/${groupId}`)
+          axios.get(`${API_URL}/api/cfshare/${groupId}`),
+          axios.get(`${API_URL}/api/cfshare/${groupId}/${userId}`)
         ]);
         setGroup(groupResponse.data);
         setIsLeader(roleResponse.data.isLeader);
         setConfirmRequestSent(requestSent.data);
+        setConfirmShare(shareConfirmed.data);
         setError(null);
       } catch (err) {
         console.error("Error fetching group details:", err);
@@ -129,7 +137,24 @@ export default function GroupDetailsScreen() {
       </SafeAreaView>
     );
   }
+  const togglePaymentModal = () => {
+    setPaymentModalVisible(!isPaymentModalVisible);
+  };
 
+  const handleConfirmShare = async () => {
+    try {
+      const response = await axios.put(`${API_URL}/api/cfshare/${groupId}/${userId}`);
+
+      if (response.status === 200) {
+        console.log("Success", "Your share has been confirmed!");
+      }
+
+    } catch (error) {
+      console.error("Error confirming share:", error);
+    } finally {
+      togglePaymentModal(); // Close the modal after confirming
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -137,6 +162,21 @@ export default function GroupDetailsScreen() {
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
       >
+        {confirmRequestSent && !leader && !confirmShare && (
+          <View style={styles.viewShareContainer}>
+            <Image source={require('../../assets/money-square.png')}/>
+            <View style={styles.viewShareContent}>
+              <Text style={{ color: 'black', fontWeight: '600' }}>Confirm your share</Text>
+              <Text style={{color: '#6D717F'}}>
+                Your group leader has finalized the members. Confirm your share to proceed with payment.
+              </Text>
+              <TouchableOpacity onPress={togglePaymentModal}>
+                <Text style={{ color: '#4A3DE3', fontWeight: '600' }}>View Payment Here</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+          )
+        }
         {/* Top Info Card */}
         <GroupHeader
           groupName={group.groupName}
@@ -190,7 +230,58 @@ export default function GroupDetailsScreen() {
             />
         )}
       </ScrollView>
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={isPaymentModalVisible}
+        onRequestClose={togglePaymentModal}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.bottomModal}>
+            <Text style={styles.modalTitle}>Confirm your share</Text>
+            <Text style={styles.modalMessage}>
+              The leader has finalized the member list.{'\n'}Your share is
+            </Text>
+            <Text style={styles.modalAmount}>${group?.amountEach.toFixed(2)}/month</Text>
+            <Text style={styles.modalInfo}>
+              You won’t be charged until everyone confirms and{'\n'}the leader creates the subscription.
+            </Text>
+            <TouchableOpacity style={styles.seeSharesRow} onPress={() => setShowMembers(!showMembers)}>
+              <Text style={styles.seeSharesText}>See all members’ shares</Text>
+              <Ionicons name="chevron-down" size={16} color="#4A3DE3" />
+            </TouchableOpacity>
+            {showMembers && (
+              <GroupMembers 
+                groupId={groupId as string} 
+                userId={userId} 
+                showAmountEach={true}
+                showEstimatedText={false}
+                showInvitations={false}
+                showHeader={false}
+                requestConfirmSent={false}
+              />
+            )}
+            <View style={styles.buttonsRow}>
+              <TouchableOpacity
+                style={[styles.button, styles.declineButton]}
+                onPress={togglePaymentModal}
+              >
+                <Text style={[styles.buttonText, styles.declineText]}>Decline</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.button, styles.confirmButton]}
+                onPress={() => {
+                  handleConfirmShare();
+                }}
+              >
+                <Text style={[styles.buttonText, styles.confirmText]}>Confirm</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
+    
   );
 }
 
@@ -234,6 +325,24 @@ const styles = StyleSheet.create({
   },
   backButton: {
     padding: 4,
+  },
+  viewShareContainer: {
+    flexDirection: 'row',
+    borderColor: '#4A3DE3',
+    borderWidth: 1.5,
+    borderRadius: 16,
+    backgroundColor: '#4A3DE30D',
+    marginHorizontal: 16,
+    marginVertical: 16,
+    padding: 15,
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  viewShareContent: {
+    flex: 1,
+    flexDirection: 'column',
+    flexShrink: 1,
+    gap: 5
   },
   topCard: {
     backgroundColor: "#4A3DE31A",
@@ -340,6 +449,107 @@ const styles = StyleSheet.create({
     height: 30,
     backgroundColor: "#E5E7EB",
     borderRadius: 6,
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+  },
+
+  bottomModal: {
+    width: '100%',
+    backgroundColor: 'white',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingVertical: 30,
+    paddingHorizontal: 30,
+    shadowColor: '#000',
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 15,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#4A3DE3',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+
+  modalMessage: {
+    fontSize: 14,
+    color: '#6D717F',
+    textAlign: 'center',
+    marginBottom: 10,
+    lineHeight: 20,
+  },
+
+  modalAmount: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#000',
+    marginBottom: 12,
+    textAlign: 'center'
+  },
+
+  modalInfo: {
+    fontSize: 13,
+    color: '#6D717F',
+    textAlign: 'center',
+    marginBottom: 24,
+    lineHeight: 18,
+  },
+
+  seeSharesRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 24,
+    textAlign: 'center',
+    alignSelf: 'center'
+  },
+
+  seeSharesText: {
+    color: '#4A3DE3',
+    fontWeight: '600',
+    fontSize: 14,
+    marginRight: 6,
+    textAlign: 'center'
+  },
+
+  buttonsRow: {
+    flexDirection: 'row',
+    width: '100%',
+    justifyContent: 'space-between',
+    gap: 16,
+  },
+
+  button: {
+    flex: 1,
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+
+  declineButton: {
+    backgroundColor: '#4A3DE31A',
+  },
+
+  confirmButton: {
+    backgroundColor: '#4A3DE3',
+  },
+
+  buttonText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+
+  declineText: {
+    color: '#4A3DE3',
+  },
+
+  confirmText: {
+    color: 'white',
   },
 
 });
