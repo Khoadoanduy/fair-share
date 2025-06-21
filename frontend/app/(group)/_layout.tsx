@@ -84,6 +84,20 @@ export default function AuthLayout() {
             headerTitle: () => null,
           }}
       />
+      <Stack.Screen
+          name="createGroupVirtualCard"
+          options={{
+            title: "",
+            headerTitle: () => null,
+          }}
+      />
+      <Stack.Screen
+          name="subscribeInstruction"
+          options={{
+            title: "",
+            headerTitle: () => null,
+          }}
+      />
     </Stack>
 
   );
