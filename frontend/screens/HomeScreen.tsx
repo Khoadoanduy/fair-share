@@ -27,7 +27,7 @@ type GroupData = {
     cycle: string;
     category: string;
     logo: string;
-    nextPaymentDate: string; // Add this field
+    nextPaymentDate: string;
   };
 };
 
@@ -64,7 +64,7 @@ export default function HomeScreen() {
     );
   }, [subscriptions]);
 
-  // Add a function to calculate upcoming renewals
+  // First, modify the getUpcomingRenewals function to return the filtered subscriptions instead of just the length
   const getUpcomingRenewals = () => {
     const today = new Date();
     const oneWeekFromNow = new Date();
@@ -73,8 +73,14 @@ export default function HomeScreen() {
     return subscriptions.filter((subscription) => {
       const renewalDate = new Date(subscription.endDate);
       return renewalDate >= today && renewalDate <= oneWeekFromNow;
-    }).length;
+    });
   };
+  const totalAmountOfUpcomingRenewals = useMemo(() => {
+    return getUpcomingRenewals().reduce(
+      (sum, subscription) => sum + subscription.amountEach,
+      0
+    );
+  }, [subscriptions]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -82,7 +88,6 @@ export default function HomeScreen() {
         <Pressable style={styles.content}>
           <Text style={styles.welcomeText}>Welcome, {name}</Text>
 
-          {/* Add Summary Box */}
           <View style={styles.summaryBox}>
             <Pressable style={styles.cycleSelector}>
               <Text style={styles.cycleText}>Monthly</Text>
@@ -109,7 +114,7 @@ export default function HomeScreen() {
                 </View>
                 <View style={styles.statValueContainer}>
                   <Text style={styles.statValue}>
-                    {getUpcomingRenewals(subscriptions)}
+                    {getUpcomingRenewals().length}
                   </Text>
                 </View>
               </View>
@@ -122,20 +127,30 @@ export default function HomeScreen() {
             <ActivityIndicator size="large" color="#4A3DE3" />
             <Text style={styles.loadingText}>Loading subscriptions...</Text>
           </View>
-        ) : subscriptions.length > 0 ? (
-          <View style={styles.subscriptionsList}>
-            {subscriptions.map((subscription, index) => (
-              <Text key={index}>
+        ) : getUpcomingRenewals().length > 0 ? (
+          <View style={styles.upcomingRenewalsSection}>
+            <View style={styles.headerContainer}>
+              <View style={styles.titleGroup}>
+                <Text style={styles.sectionTitle}>Upcoming Renewals</Text>
+                <View style={styles.verticalSeparator} />
+              </View>
+              <Text style={styles.upcomingAmount}>
+                ${totalAmountOfUpcomingRenewals.toFixed(2)}
+              </Text>
+            </View>
+            <View style={styles.upcomingRenewalsList}>
+              {getUpcomingRenewals().map((subscription, index) => (
                 <GroupCard
+                  key={`renewal-${index}`}
                   logo={{ uri: subscription.logo }}
                   subscriptionName={subscription.groupName}
                   cycle={subscription.cycle}
                   amountEach={subscription.amountEach}
-                  isShared={true}
+                  isShared
                   category={subscription.category}
                 />
-              </Text>
-            ))}
+              ))}
+            </View>
           </View>
         ) : (
           <View style={styles.emptyState}>
@@ -157,7 +172,8 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 20,
-    gap: 8,
+    marginBottom: 0,
+    gap: 10,
   },
   welcomeText: {
     fontSize: 24,
@@ -266,5 +282,34 @@ const styles = StyleSheet.create({
   clockIcon: {
     color: "#FFFFFF",
     fontSize: 14,
+  },
+  upcomingRenewalsSection: {
+    paddingHorizontal: 20,
+  },
+  headerContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  titleGroup: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#111827",
+  },
+  verticalSeparator: {
+    width: 1,
+    height: 24, // Fixed height to match text
+    backgroundColor: "#ccc",
+    marginLeft: 12,
+  },
+  upcomingAmount: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#111827",
   },
 });
