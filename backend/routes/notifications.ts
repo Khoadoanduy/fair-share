@@ -1,7 +1,6 @@
 // import dotenv from 'dotenv';
 import express, { Request, Response, Router } from 'express';
 import prisma from '../prisma/client';
-import { User } from '@prisma/client';
 import { Expo } from 'expo-server-sdk';
 
 const router: Router = express.Router();
@@ -37,10 +36,10 @@ router.post('/register', async (req, res) => {
 });
 
   router.post('/send', async (req, res) => {
-    const { clerkIds, clerkId, title, body, data } = req.body;
+    const { mongoIds, mongoId, title, body, data } = req.body;
 
-    // Support both single user (clerkId) and multiple users (clerkIds)
-    const userIds = clerkIds || (clerkId ? [clerkId] : null);
+    // Support both single user (mongoId) and multiple users (mongoIds)
+    const userIds = mongoIds || (mongoId ? [mongoId] : null);
 
     if (!userIds || userIds.length === 0 || !title || !body) {
         return res.status(400).json({ 
@@ -52,10 +51,10 @@ router.post('/register', async (req, res) => {
         // Fetch all users with their push tokens
         const users = await prisma.user.findMany({
             where: { 
-                clerkId: { in: userIds }
+                id: { in: userIds }
             },
             select: { 
-                clerkId: true,
+                id: true,
                 pushToken: true 
             }
         });
@@ -73,7 +72,7 @@ router.post('/register', async (req, res) => {
         if (usersWithTokens.length === 0) {
             return res.status(404).json({ 
                 error: 'None of the specified users have push tokens',
-                usersWithoutTokens: usersWithoutTokens.map(u => u.clerkId)
+                usersWithoutTokens: usersWithoutTokens.map(u => u.id)
             });
         }
 
@@ -85,7 +84,6 @@ router.post('/register', async (req, res) => {
             body,
             data: {
                 ...data,
-                userId: user.clerkId // Include userId in notification data
             },
         }));
 
