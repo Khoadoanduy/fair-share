@@ -98,6 +98,13 @@ export default function AuthLayout() {
             headerTitle: () => null,
           }}
       />
+      <Stack.Screen
+          name="addGroupCredentials"
+          options={{
+            title: "",
+            headerTitle: () => null,
+          }}
+      />
     </Stack>
 
   );

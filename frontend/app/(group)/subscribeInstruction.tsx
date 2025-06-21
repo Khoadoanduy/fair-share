@@ -56,7 +56,7 @@ export default function CreateVirtualCardScreen() {
   const router = useRouter();
   const { groupId } = useLocalSearchParams();
   const [virtualCard, setVirtualCard] = useState<VirtualCard | null>(null);
-  const [group, setGroup] = useState<Group>(null);
+  const [group, setGroup] = useState<Group | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -99,6 +99,19 @@ export default function CreateVirtualCardScreen() {
       Alert.alert('Copied', 'Card number copied to clipboard');
     }
   };
+
+  const handleStartCycle = async () => {
+    try {
+        console.log(groupId);
+        await axios.put(`${API_URL}/api/group/start-cycle/${groupId}`);
+        router.push({
+            pathname: '/(group)/addGroupCredentials', 
+            params: {groupId: groupId}
+        })
+    } catch (error) {
+        console.error('Fail to start cycle', error);
+    }
+  }
 
   const handleCopySecurityCode = () => {
     Alert.alert('Copied', 'Security code copied to clipboard');
@@ -209,7 +222,7 @@ export default function CreateVirtualCardScreen() {
       <View style={styles.bottomContainer}>
         <CustomButton
           text="Begin subscription cycle"
-          //onPress={handleNext}
+          onPress={handleStartCycle}
           size="large"
           fullWidth
           style={styles.nextButton}

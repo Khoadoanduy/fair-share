@@ -152,7 +152,7 @@ export default function GroupsScreen() {
             style={styles.subscriptionCard}
             onPress={() =>
               router.push({
-                pathname: item.endDate === null ? "/(group)/newGroupDetails" : "/(group)/groupDetails",
+                pathname: item.endDate === null ? "/(group)/newGroupDetails" : "/(group)/newGroupDetails",
                 params: { groupId: item.id },
               })
             }
