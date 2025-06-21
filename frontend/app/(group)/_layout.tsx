@@ -39,7 +39,7 @@ export default function AuthLayout() {
           }}
       />
       <Stack.Screen
-          name="customSubscription"
+          name="CustomSubscription"
           options={{
             title: "",
             headerTitle: () => null,
@@ -52,12 +52,19 @@ export default function AuthLayout() {
             headerTitle: () => null,
           }}
       />
-      <Stack.Screen
-          name = "showAllInvitations"
+      {/* <Stack.Screen
+          name = "ShowAllInvitations"
           options={{ title: ""}}
+      /> */}
+      <Stack.Screen
+          name="SubscriptionDetails"
+          options={{
+            title: "",
+            headerTitle: () => null,
+          }}
       />
       <Stack.Screen
-          name="subscriptionDetails"
+          name="newGroupDetails"
           options={{
             title: "",
             headerTitle: () => null,
