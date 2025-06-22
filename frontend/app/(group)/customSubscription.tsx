@@ -91,19 +91,15 @@ export default function CustomSubscriptionScreen() {
   const calculateTotalDays = (dayValue: string, cycle: string): number => {
     // Parse the day value - handle decimal numbers
     const parsedDay = parseFloat(dayValue) || 1;
-
     // Base days for each cycle
     const cycleDaysMap: { [key: string]: number } = {
       'weekly': 7,
       'monthly': 30,
       'yearly': 365,
     };
-
     const baseDays = cycleDaysMap[cycle.toLowerCase()] || 30;
-
     // Calculate total days by multiplying base cycle days with the day value
     const totalDays = Math.round(parsedDay * baseDays);
-
     return totalDays;
   };
   const getCurrentCalculatedDays = (): number => {
