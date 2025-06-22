@@ -71,7 +71,13 @@ router.get('/invitation/:userId', async (request: Request, response: Response) =
         //Check if the user has already been invited to this group
         const invitation = await prisma.groupInvitation.findMany({
           where: { userId, status: "pending" },
-          include: { group: true }
+          include: { 
+            group: {
+                include: {
+                    subscription: true
+                }
+            }
+           }
         })
         if (invitation.length == 0) {
           return response.json({ message: 'No invitation sent' });

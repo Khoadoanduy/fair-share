@@ -150,8 +150,10 @@ export default function SubscriptionScreen() {
 
     try {
       const cycleDays = calculateTotalDays(info.day, info.cycle);
+      
       const response = await axios.post(`${API_URL}/api/group/create`, {
         groupName,
+        userId: leaderId,
         subscriptionId: info.subscriptionId,
         subscriptionName: info.subscriptionName,
         planName: info.planName,
@@ -164,7 +166,9 @@ export default function SubscriptionScreen() {
         userId: userId, 
         visibility: visibility || 'friends', 
       });
-
+      
+      const groupId = response.data.groupId;
+      
       router.push({
         pathname: '/(group)/inviteMember',
         params: { groupId: response.data.groupId },

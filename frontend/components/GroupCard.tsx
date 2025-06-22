@@ -38,7 +38,7 @@ const GroupCard: React.FC<GroupCardProps> = ({
       </View>
       {(amountEach !== undefined || cycle) && (
         <View style={styles.subscriptionRight}>
-          {amountEach !== undefined && <Text style={styles.price}>${amountEach}</Text>}
+          {amountEach !== undefined && <Text style={styles.price}>${amountEach.toFixed(2)}</Text>}
           {cycle && (
             <View style={styles.cycleContainer}>
               <Image source={require('../assets/refresh-cw.png')} style={styles.refreshIcon} />

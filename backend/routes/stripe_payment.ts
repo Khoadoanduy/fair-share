@@ -1,9 +1,9 @@
-import dotenv from 'dotenv';
+// import dotenv from 'dotenv';
 import express, { Request, Response, Router } from 'express';
 
 
 // Initialize environment variables
-dotenv.config();
+// dotenv.config();
 
 // Initialize Stripe with secret key
 const stripe = require('stripe')(
@@ -53,5 +53,27 @@ router.post('/charge-user', async function (request, response) {
         response.status(500).json({err});
       }
   });
+
+router.get('/transactions', async function (request, response) {
+  try {
+      const customerStripeID = request.query.customerStripeID;
+      if (!customerStripeID) {
+          return response.status(400).json({ error: 'Customer Stripe ID is required' });
+      }
+
+      const transactions = await stripe.paymentIntents.list({
+          limit: 20,
+          customer: customerStripeID,
+      });
+
+      response.json(transactions.data);
+  } catch (err) {
+      // Log for debugging
+      console.error('Error fetching Stripe transactions:', err);
+
+      // Send back the Stripe (or other) error message
+      response.status(500).json({ err });
+  }
+});
     
 export default router;
