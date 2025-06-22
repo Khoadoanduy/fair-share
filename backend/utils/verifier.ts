@@ -65,7 +65,7 @@ class SubscriptionVerifier {
   
       try {
         const response = await this.openai.chat.completions.create({
-          model: 'gpt-4',
+          model: 'gpt-4.1-nano',
           messages: [{ role: 'user', content: prompt }],
           temperature: 0.1,
         });
@@ -74,6 +74,8 @@ class SubscriptionVerifier {
         if (!content) {
           throw new Error('No response content from OpenAI');
         }
+
+        console.log('GPT Response:', content);
   
         return JSON.parse(content) as VerificationResult;
       } catch (error) {
@@ -82,3 +84,5 @@ class SubscriptionVerifier {
       }
     }
 }
+
+export { SubscriptionVerifier, MerchantData, SubscriptionDetails, VerificationResult };

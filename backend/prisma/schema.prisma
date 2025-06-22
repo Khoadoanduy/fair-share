@@ -53,7 +53,7 @@ model Group {
   subscriptionId     String?           @db.ObjectId
   planName           String?
   amount             Float
-  virtualCardId      String?
+  virtualCardId      String? @unique
   cycle              String?
   cycleDays          Int?
   members            GroupMember[]
