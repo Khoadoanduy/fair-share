@@ -15,12 +15,10 @@ const router: Router = express.Router();
 
 router.post('/create', async function (request, response) {
     try {
-        const { groupId, leaderId } = request.body;
-        const customerId = request.query.stripeId as string;
+        const { groupId, leaderId, customerId } = request.body;
         
         // Determine if this is a group card creation or individual card creation
         const isGroupCard = groupId && leaderId;
-        
         // Get user information (either customer or leader)
         const user = await prisma.user.findUnique({
             where: {
@@ -139,7 +137,7 @@ router.post('/create', async function (request, response) {
 
         response.json({
             success: true,
-            card: card.id,
+            card: card,
             cardholder: cardholderId
         });
 
@@ -265,7 +263,7 @@ router.post('/create-for-group', async function (request, response) {
 
         response.json({
             success: true,
-            card: card.id,
+            card: card,
             cardholder: cardholderId
         });
     } catch (err) {
@@ -279,11 +277,11 @@ router.post('/create-for-group', async function (request, response) {
 
 router.get('/get', async function (request, response) {
 try {
-    const customerId = request.query.stripeId as string;
+    const userId = request.query.userId as string;
 
     const customer = await prisma.user.findUnique({
         where: {
-            customerId: customerId,
+            id: userId,
         }
     });
 
@@ -353,7 +351,9 @@ router.get('/group/:groupId', async function (request, response) {
             cardholderName: cardholder.name,
             status: card.status,
             type: card.type,
-            currency: card.currency
+            currency: card.currency,
+            cvc: card.cvc,
+            number: card.number
         };
 
         response.json(cardDetails);
