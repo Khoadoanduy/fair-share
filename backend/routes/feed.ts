@@ -53,7 +53,6 @@ router.get('/subscriptions/:userId', async (req: Request, res: Response) => {
                     notIn: userGroupIds,
                     in: existingGroupIds
                 }
-                // REMOVED: group: { visibility: 'friends' }
             },
             include: {
                 user: {

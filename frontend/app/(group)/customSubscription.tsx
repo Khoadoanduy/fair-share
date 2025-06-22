@@ -9,7 +9,8 @@ import ProgressDots from '@/components/ProgressDots';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import CustomDropdown, { DropdownOption } from '@/components/CustomDropdown';
-import { useUser } from '@clerk/clerk-expo';
+import { useUserState } from '@/hooks/useUserState';
+
 
 type FormatData = {
   subscriptionName: string;
@@ -24,8 +25,8 @@ type FormatData = {
 export default function CustomSubscriptionScreen() {
   const API_URL = process.env.EXPO_PUBLIC_API_URL;
   const router = useRouter();
-  const { user } = useUser();
-  const clerkId = user?.id;
+  const { userId } = useUserState();
+
 
   // Add visibility to the destructured params
   const { groupName, visibility } = useLocalSearchParams();
@@ -40,19 +41,7 @@ export default function CustomSubscriptionScreen() {
   });
   const dayValue = watch('day');
   const cycleValue = watch('cycle');
-  const userFromMongo = async () => {
-    try {
-      const response = await axios.get(`${API_URL}/api/user/`, {
-        params: {
-          clerkID: clerkId
-        }
-      })
-      return response.data.id
-    }
-    catch (error) {
-      console.error("Error fetching user data:", error);
-    }
-  }
+
   const [subscriptionImage, setSubscriptionImage] = useState<string | null>(null);
   const [showCycleDropdown, setShowCycleDropdown] = useState(false);
   const [showCurrencyDropdown, setShowCurrencyDropdown] = useState(false);
@@ -127,7 +116,6 @@ export default function CustomSubscriptionScreen() {
     }
 
     try {
-      const leaderId = await userFromMongo();
       const cycleDays = calculateTotalDays(info.day, info.cycle);
       const response = await axios.post(`${API_URL}/api/group/create`, {
         groupName,
@@ -138,11 +126,11 @@ export default function CustomSubscriptionScreen() {
         cycleDays: cycleDays,
         paymentFrequency: parseFloat(info.day),
         category: info.category,
-        userId: leaderId, // Add this line to match SubscriptionInfo.tsx
-        visibility: visibility || 'friends', // Add this line to match SubscriptionInfo.tsx
+        userId: userId, 
+        visibility: visibility || 'friends', 
       });
       const groupId = response.data.groupId;
-      await axios.post(`${API_URL}/api/groupMember/${groupId}/${leaderId}`, { userRole: "leader" });
+      await axios.post(`${API_URL}/api/groupMember/${groupId}/${userId}`, { userRole: "leader" });
       router.push({
         pathname: '/(group)/inviteMember',
         params: { groupId: response.data.groupId },

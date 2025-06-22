@@ -8,7 +8,7 @@ import CustomInput from '@/components/CustomInput';
 import ProgressDots from '@/components/ProgressDots';
 import { Ionicons } from '@expo/vector-icons';
 import CustomDropdown, { DropdownOption } from '@/components/CustomDropdown';
-import { useUser } from '@clerk/clerk-expo';
+import { useUserState } from '@/hooks/useUserState';
 
 type FormatData = {
   subscriptionId?: string;
@@ -32,8 +32,7 @@ type Subscription = {
 export default function SubscriptionScreen() {
   const API_URL = process.env.EXPO_PUBLIC_API_URL;
   const router = useRouter();
-  const { user } = useUser();
-  const clerkId = user?.id;
+  const { userId } = useUserState();
 
   // Add visibility to the destructured params
   const { groupName, visibility } = useLocalSearchParams();
@@ -48,19 +47,6 @@ export default function SubscriptionScreen() {
   // Watch the day and cycle values to calculate total days
   const dayValue = watch('day');
   const cycleValue = watch('cycle');
-  const userFromMongo = async () => {
-    try {
-      const response = await axios.get(`${API_URL}/api/user/`, {
-        params: {
-          clerkID: clerkId
-        }
-      })
-      return response.data.id
-    }
-    catch (error) {
-      console.error("Error fetching user data:", error);
-    }
-  }
 
   // Dropdown states
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
@@ -163,7 +149,6 @@ export default function SubscriptionScreen() {
     }
 
     try {
-      const leaderId = await userFromMongo();
       const cycleDays = calculateTotalDays(info.day, info.cycle);
       const response = await axios.post(`${API_URL}/api/group/create`, {
         groupName,
@@ -176,8 +161,8 @@ export default function SubscriptionScreen() {
         paymentFrequency: parseFloat(info.day),
         category: info.category,
         logo: info.logo,
-        userId: leaderId, // Add this line
-        visibility: visibility || 'friends', // Add this line
+        userId: userId, 
+        visibility: visibility || 'friends', 
       });
 
       router.push({
