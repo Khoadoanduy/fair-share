@@ -202,30 +202,17 @@ export default function FriendsScreen() {
   const handleDeletePosting = async (groupId: string, groupName: string) => {
     if (!mongoUserId) return;
 
-    try {
-      // Add API call to delete the group/posting
-      await axios.delete(`${API_URL}/api/group/${groupId}/${mongoUserId}`);
+    // Remove the posting from local state immediately
+    setUserGroups(prevGroups => prevGroups.filter(group => group.group.id !== groupId));
 
-      Alert.alert(
-        'Posting Deleted',
-        `"${groupName}" has been deleted successfully.`,
-        [{ text: 'OK' }]
-      );
+    Alert.alert(
+      'Posting Removed',
+      `"${groupName}" has been removed from your postings. The group still exists and other members are not affected.`,
+      [{ text: 'OK' }]
+    );
 
-      // Refresh the postings to update the list
-      fetchData(mongoUserId, false);
-    } catch (err: any) {
-      console.error('Error deleting posting:', err);
-
-      let errorMessage = 'Failed to delete posting. Please try again.';
-      if (err.response?.status === 403) {
-        errorMessage = 'You do not have permission to delete this posting.';
-      } else if (err.response?.status === 404) {
-        errorMessage = 'Posting not found.';
-      }
-
-      Alert.alert('Error', errorMessage, [{ text: 'OK' }]);
-    }
+    // TODO: If persistence is needed, add a backend endpoint to hide/delete the user's group notification
+    // For now, this only removes it from the local view
   };
 
   const renderActivityItem = ({ item }: { item: FriendActivity }) => (
@@ -255,7 +242,7 @@ export default function FriendsScreen() {
     if (feedLoading) {
       return (
         <View style={styles.feedLoadingContainer}>
-          <ActivityIndicator color="#4353FD" />
+          <ActivityIndicator color="#4A3DE3" />
           <Text style={styles.loadingText}>Loading friend activities...</Text>
         </View>
       );
@@ -289,8 +276,8 @@ export default function FriendsScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={handleManualRefresh}
-            colors={['#4353FD']}
-            tintColor="#4353FD"
+            colors={['#4A3DE3']}
+            tintColor="#4A3DE3"
           />
         }
         style={styles.feedList}
@@ -303,7 +290,7 @@ export default function FriendsScreen() {
     if (groupsLoading) {
       return (
         <View style={styles.feedLoadingContainer}>
-          <ActivityIndicator color="#4353FD" />
+          <ActivityIndicator color="#4A3DE3" />
           <Text style={styles.loadingText}>Loading your groups...</Text>
         </View>
       );
@@ -337,8 +324,8 @@ export default function FriendsScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={handleManualRefresh}
-            colors={['#4353FD']}
-            tintColor="#4353FD"
+            colors={['#4A3DE3']}
+            tintColor="#4A3DE3"
           />
         }
         style={styles.feedList}
@@ -355,7 +342,7 @@ export default function FriendsScreen() {
           <View style={styles.headerPlaceholder} />
           <Text style={styles.headerTitle}>Feed</Text>
           <TouchableOpacity onPress={() => router.push('/(friends)/friend-list')}>
-            <FontAwesome5 name="user-friends" size={24} color="#4353FD" />
+            <FontAwesome5 name="user-friends" size={24} color="#4A3DE3" />
           </TouchableOpacity>
         </View>
 
@@ -382,7 +369,7 @@ export default function FriendsScreen() {
         {/* Content */}
         {loading ? (
           <View style={styles.feedLoadingContainer}>
-            <ActivityIndicator color="#4353FD" />
+            <ActivityIndicator color="#4A3DE3" />
             <Text style={styles.loadingText}>Loading user data...</Text>
           </View>
         ) : mongoUserId ? (
@@ -416,7 +403,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#4353FD',
+    color: '#4A3DE3',
   },
   tabContainer: {
     flexDirection: 'row',
@@ -433,7 +420,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   activeTab: {
-    backgroundColor: '#4353FD',
+    backgroundColor: '#4A3DE3',
   },
   tabText: {
     fontSize: 14,

@@ -90,7 +90,7 @@ export default function SubscriptionCard({
                 {mode === 'postings' && (
                     <>
                         {userRole && (
-                            <View style={[styles.roleBadge, { backgroundColor: userRole === 'leader' ? '#4353FD' : '#666' }]}>
+                            <View style={[styles.roleBadge, { backgroundColor: userRole === 'leader' ? '#4A3DE3' : '#666' }]}>
                                 <Text style={styles.roleBadgeText}>
                                     {userRole === 'leader' ? '👑 Leader' : '👤 Member'}
                                 </Text>
@@ -271,7 +271,7 @@ const styles = StyleSheet.create({
     dropdownText: {
         marginLeft: 8,
         fontSize: 14,
-        color: '#ff4444',
+        color: '#000',
     },
     subscriptionCard: {
         backgroundColor: '#f8f9fa',
@@ -298,7 +298,7 @@ const styles = StyleSheet.create({
     subscriptionName: {
         fontSize: 14,
         fontWeight: '600',
-        color: '#4353FD',
+        color: '#4A3DE3',
         marginBottom: 4,
     },
     subscriptionCycle: {
@@ -321,7 +321,7 @@ const styles = StyleSheet.create({
     },
     savingText: {
         fontSize: 10,
-        color: '#4353FD',
+        color: '#4A3DE3',
         marginTop: 2,
     },
     slotsInfo: {
@@ -334,7 +334,7 @@ const styles = StyleSheet.create({
         color: '#666',
     },
     joinButton: {
-        backgroundColor: '#4353FD',
+        backgroundColor: '#4A3DE3',
         paddingVertical: 10,
         paddingHorizontal: 16,
         borderRadius: 8,

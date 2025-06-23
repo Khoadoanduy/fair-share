@@ -53,10 +53,10 @@ const styles = StyleSheet.create({
     },
     modalContainer: {
         backgroundColor: 'white',
-        borderRadius: 16,
+        borderRadius: 12,
         padding: 24,
         width: '100%',
-        maxWidth: 300,
+        maxWidth: 320,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.25,
@@ -65,15 +65,13 @@ const styles = StyleSheet.create({
     },
     title: {
         fontSize: 18,
-        fontWeight: 'bold',
+        fontWeight: '600',
         color: '#000',
-        textAlign: 'center',
-        marginBottom: 16,
+        marginBottom: 8,
     },
     message: {
         fontSize: 14,
         color: '#666',
-        textAlign: 'center',
         lineHeight: 20,
         marginBottom: 24,
     },
@@ -91,12 +89,10 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     cancelButton: {
-        backgroundColor: '#f5f5f5',
-        borderWidth: 1,
-        borderColor: '#ddd',
+        backgroundColor: '#f0f0f0',
     },
     deleteButton: {
-        backgroundColor: '#ff4444',
+        backgroundColor: '#4A3DE3',
     },
     cancelText: {
         fontSize: 14,
