@@ -1,10 +1,13 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ActivityIndicator, FlatList, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ActivityIndicator, FlatList, RefreshControl, Alert } from 'react-native';
 import { useAuth } from '@clerk/clerk-expo';
 import axios from 'axios';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from "expo-router";
 import { useFocusEffect } from '@react-navigation/native';
+import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
+import SubscriptionCard from '../components/SubscriptionCard';
+
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
@@ -23,40 +26,69 @@ interface FriendActivity {
     amount: number;
     cycleDays: number;
     category: string;
+    totalMem: number;
+    amountEach: number;
+    subscription?: {
+      id: string;
+      name: string;
+      logo: string;
+      category: string;
+    };
+    timeAgo: string;
   };
   message: string;
+  hasRequested: boolean;
+  requestStatus: string | null;
 }
 
-// Get initials from name
-const getInitials = (firstName: string, lastName: string) => {
-  return `${firstName[0]}${lastName[0]}`.toUpperCase();
-};
-
-// Generate avatar color based on user ID
-const getAvatarColor = (userId: string) => {
-  const colors = ['#FF5733', '#33A8FF', '#9333FF', '#33FF57', '#FF33F5', '#33FFF5'];
-  const index = userId.charCodeAt(0) % colors.length;
-  return colors[index];
-};
-
-// Convert cycle days to readable format
-const formatCycle = (cycleDays: number) => {
-  if (cycleDays === 30 || cycleDays === 31) return 'monthly';
-  if (cycleDays === 365) return 'yearly';
-  if (cycleDays === 7) return 'weekly';
-  return `${cycleDays} days`;
-};
+interface UserGroup {
+  id: string;
+  friend: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    username: string;
+  };
+  group: {
+    id: string;
+    groupName: string;
+    subscriptionName: string;
+    amount: number;
+    cycleDays: number;
+    category: string;
+    totalMem: number;
+    amountEach: number;
+    subscription?: {
+      id: string;
+      name: string;
+      logo: string;
+      category: string;
+    };
+    timeAgo: string;
+  };
+  message: string;
+  userRole: string;
+}
 
 export default function FriendsScreen() {
   const { userId: clerkId } = useAuth();
   const [mongoUserId, setMongoUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  
-  // Friend activity states
+  const [activeTab, setActiveTab] = useState<'feed' | 'postings'>('feed');
+
+  // Friend activity states (My feed tab)
   const [activities, setActivities] = useState<FriendActivity[]>([]);
   const [feedLoading, setFeedLoading] = useState(true);
   const [feedError, setFeedError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+
+  // User groups states (My postings tab)
+  const [userGroups, setUserGroups] = useState<UserGroup[]>([]);
+  const [groupsLoading, setGroupsLoading] = useState(false);
+  const [groupsError, setGroupsError] = useState<string | null>(null);
+
+  // Join request loading states
+  const [joiningGroups, setJoiningGroups] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (clerkId) {
@@ -64,8 +96,8 @@ export default function FriendsScreen() {
       axios.get(`${API_URL}/api/user?clerkID=${clerkId}`)
         .then(res => {
           setMongoUserId(res.data.id);
-          // Start fetching activities once we have the mongoUserId
-          fetchFriendActivities(res.data.id);
+          // Start fetching data for both tabs
+          fetchData(res.data.id);
         })
         .catch(err => console.error(err))
         .finally(() => setLoading(false));
@@ -77,110 +109,146 @@ export default function FriendsScreen() {
     if (!mongoUserId) return;
 
     const interval = setInterval(() => {
-      fetchFriendActivitiesQuietly(mongoUserId);
+      fetchData(mongoUserId, false);
     }, 30000);
 
     return () => clearInterval(interval);
-  }, [mongoUserId]);
+  }, [mongoUserId, activeTab]);
 
   // Refresh when screen comes into focus
   useFocusEffect(
     useCallback(() => {
       if (mongoUserId) {
-        fetchFriendActivitiesQuietly(mongoUserId);
+        fetchData(mongoUserId, false);
       }
-    }, [mongoUserId])
+    }, [mongoUserId, activeTab])
   );
 
-  const fetchFriendActivities = async (userId: string) => {
-    try {
-      setFeedLoading(true);
-      setFeedError(null);
-      const response = await axios.get(`${API_URL}/api/feed/subscriptions/${userId}`);
-
-      if (Array.isArray(response.data)) {
-        setActivities(response.data);
-      } else {
+  const fetchData = async (userId: string, showLoading = true) => {
+    if (activeTab === 'feed') {
+      try {
+        if (showLoading) {
+          setFeedLoading(true);
+          setFeedError(null);
+        }
+        const response = await axios.get(`${API_URL}/api/feed/subscriptions/${userId}`);
+        setActivities(Array.isArray(response.data) ? response.data : []);
+      } catch (err) {
+        console.error('Error fetching friend activities:', err);
+        if (showLoading) setFeedError('Failed to load friend activities');
         setActivities([]);
+      } finally {
+        if (showLoading) setFeedLoading(false);
       }
-    } catch (err) {
-      console.error('Error fetching friend activities:', err);
-      setFeedError('Failed to load friend activities');
-      setActivities([]);
-    } finally {
-      setFeedLoading(false);
+    } else {
+      try {
+        if (showLoading) {
+          setGroupsLoading(true);
+          setGroupsError(null);
+        }
+        const response = await axios.get(`${API_URL}/api/user/groups/${userId}`);
+        setUserGroups(Array.isArray(response.data) ? response.data : []);
+      } catch (err) {
+        console.error('Error fetching user groups:', err);
+        if (showLoading) setGroupsError('Failed to load your groups');
+        setUserGroups([]);
+      } finally {
+        if (showLoading) setGroupsLoading(false);
+      }
     }
   };
 
-  // Quiet refresh without showing loading spinner
-  const fetchFriendActivitiesQuietly = async (userId: string) => {
-    try {
-      const response = await axios.get(`${API_URL}/api/feed/subscriptions/${userId}`);
-
-      if (Array.isArray(response.data)) {
-        setActivities(response.data);
-      }
-    } catch (err) {
-      console.error('Error quietly fetching activities:', err);
-    }
-  };
-
-  // Manual refresh for pull-to-refresh
   const handleManualRefresh = async () => {
     if (!mongoUserId) return;
-    
     setRefreshing(true);
-    try {
-      const response = await axios.get(`${API_URL}/api/feed/subscriptions/${mongoUserId}`);
+    await fetchData(mongoUserId, false);
+    setRefreshing(false);
+  };
 
-      if (Array.isArray(response.data)) {
-        setActivities(response.data);
+  const handleJoinRequest = async (groupId: string, groupName: string) => {
+    if (!mongoUserId) return;
+
+    setJoiningGroups(prev => new Set(prev).add(groupId));
+
+    try {
+      // Use the new join request endpoint
+      await axios.post(`${API_URL}/api/invite/request/${groupId}/${mongoUserId}`);
+      Alert.alert(
+        'Request Sent!',
+        `Your request to join "${groupName}" has been sent to the group leader.`,
+        [{ text: 'OK' }]
+      );
+
+      // Refresh the feed to update status
+      fetchData(mongoUserId, false);
+    } catch (err: any) {
+      console.error('Error sending join request:', err);
+
+      let errorMessage = 'Failed to send join request. Please try again.';
+      if (err.response?.status === 409) {
+        errorMessage = 'You have already requested to join this group or are already a member.';
       }
-    } catch (err) {
-      console.error('Error refreshing activities:', err);
+
+      Alert.alert('Error', errorMessage, [{ text: 'OK' }]);
     } finally {
-      setRefreshing(false);
+      setJoiningGroups(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(groupId);
+        return newSet;
+      });
+    }
+  };
+
+  const handleDeletePosting = async (groupId: string, groupName: string) => {
+    if (!mongoUserId) return;
+
+    try {
+      // Add API call to delete the group/posting
+      await axios.delete(`${API_URL}/api/group/${groupId}/${mongoUserId}`);
+
+      Alert.alert(
+        'Posting Deleted',
+        `"${groupName}" has been deleted successfully.`,
+        [{ text: 'OK' }]
+      );
+
+      // Refresh the postings to update the list
+      fetchData(mongoUserId, false);
+    } catch (err: any) {
+      console.error('Error deleting posting:', err);
+
+      let errorMessage = 'Failed to delete posting. Please try again.';
+      if (err.response?.status === 403) {
+        errorMessage = 'You do not have permission to delete this posting.';
+      } else if (err.response?.status === 404) {
+        errorMessage = 'Posting not found.';
+      }
+
+      Alert.alert('Error', errorMessage, [{ text: 'OK' }]);
     }
   };
 
   const renderActivityItem = ({ item }: { item: FriendActivity }) => (
-    <View style={styles.card}>
-      <View style={styles.header}>
-        <View style={[styles.avatar, { backgroundColor: getAvatarColor(item.friend.id) }]}>
-          <Text style={styles.initials}>
-            {getInitials(item.friend.firstName, item.friend.lastName)}
-          </Text>
-        </View>
-        <View style={styles.headerText}>
-          <Text style={styles.name}>
-            {item.friend.firstName} {item.friend.lastName}
-          </Text>
-          <Text style={styles.username}>
-            @{item.friend.username || item.friend.firstName.toLowerCase()}
-          </Text>
-        </View>
-      </View>
+    <SubscriptionCard
+      mode="feed"
+      friend={item.friend}
+      group={item.group}
+      message={item.message}
+      hasRequested={item.hasRequested}
+      onJoinRequest={handleJoinRequest}
+      isJoining={joiningGroups.has(item.group.id)}
+    />
+  );
 
-      <Text style={styles.activity}>
-        joined <Text style={styles.highlight}>{item.group.subscriptionName}</Text> in group{' '}
-        <Text style={styles.highlight}>{item.group.groupName}</Text>
-      </Text>
-
-      <View style={styles.footer}>
-        <View style={styles.subscriptionInfo}>
-          <Ionicons name="calendar-outline" size={14} color="#666" />
-          <Text style={styles.infoText}>{formatCycle(item.group.cycleDays)}</Text>
-        </View>
-        <View style={styles.subscriptionInfo}>
-          <Ionicons name="cash-outline" size={14} color="#666" />
-          <Text style={styles.infoText}>${item.group.amount.toFixed(2)}</Text>
-        </View>
-        <View style={styles.subscriptionInfo}>
-          <Ionicons name="pricetag-outline" size={14} color="#666" />
-          <Text style={styles.infoText}>{item.group.category}</Text>
-        </View>
-      </View>
-    </View>
+  const renderUserGroupItem = ({ item }: { item: UserGroup }) => (
+    <SubscriptionCard
+      mode="postings"
+      friend={item.friend}
+      group={item.group}
+      message={item.message}
+      userRole={item.userRole}
+      onDeletePosting={handleDeletePosting}
+    />
   );
 
   const renderFeedContent = () => {
@@ -203,7 +271,11 @@ export default function FriendsScreen() {
 
     if (activities.length === 0) {
       return (
-        <Text style={styles.emptyText}>No friend activity yet</Text>
+        <View style={styles.emptyContainer}>
+          <Ionicons name="people-outline" size={48} color="#ccc" />
+          <Text style={styles.emptyText}>No friend activity yet</Text>
+          <Text style={styles.emptySubtext}>When your friends join new groups, you'll see them here</Text>
+        </View>
       );
     }
 
@@ -222,6 +294,55 @@ export default function FriendsScreen() {
           />
         }
         style={styles.feedList}
+        contentContainerStyle={{ paddingBottom: 20 }}
+      />
+    );
+  };
+
+  const renderPostingsContent = () => {
+    if (groupsLoading) {
+      return (
+        <View style={styles.feedLoadingContainer}>
+          <ActivityIndicator color="#4353FD" />
+          <Text style={styles.loadingText}>Loading your groups...</Text>
+        </View>
+      );
+    }
+
+    if (groupsError) {
+      return (
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>{groupsError}</Text>
+        </View>
+      );
+    }
+
+    if (userGroups.length === 0) {
+      return (
+        <View style={styles.emptyContainer}>
+          <Ionicons name="add-circle-outline" size={48} color="#ccc" />
+          <Text style={styles.emptyText}>No groups yet</Text>
+          <Text style={styles.emptySubtext}>Create your first group to start sharing subscriptions</Text>
+        </View>
+      );
+    }
+
+    return (
+      <FlatList
+        data={userGroups}
+        keyExtractor={item => item.id}
+        renderItem={renderUserGroupItem}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleManualRefresh}
+            colors={['#4353FD']}
+            tintColor="#4353FD"
+          />
+        }
+        style={styles.feedList}
+        contentContainerStyle={{ paddingBottom: 20 }}
       />
     );
   };
@@ -229,24 +350,43 @@ export default function FriendsScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
-        <TouchableOpacity
-          style={styles.friendsButton}
-          onPress={() => router.push('/(friends)/friend-list')}
-        >
-          <Ionicons name="people" size={20} color="#4353FD" />
-          <Text style={styles.buttonText}>View My Friends</Text>
-          <Ionicons name="chevron-forward" size={20} color="#999" />
-        </TouchableOpacity>
+        {/* Header */}
+        <View style={styles.header}>
+          <View style={styles.headerPlaceholder} />
+          <Text style={styles.headerTitle}>Feed</Text>
+          <TouchableOpacity onPress={() => router.push('/(friends)/friend-list')}>
+            <FontAwesome5 name="user-friends" size={24} color="#4353FD" />
+          </TouchableOpacity>
+        </View>
 
-        <Text style={styles.heading}>Friend Activity</Text>
-        
+        {/* Tab Navigation */}
+        <View style={styles.tabContainer}>
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'feed' && styles.activeTab]}
+            onPress={() => setActiveTab('feed')}
+          >
+            <Text style={[styles.tabText, activeTab === 'feed' && styles.activeTabText]}>
+              My feed
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'postings' && styles.activeTab]}
+            onPress={() => setActiveTab('postings')}
+          >
+            <Text style={[styles.tabText, activeTab === 'postings' && styles.activeTabText]}>
+              My postings
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Content */}
         {loading ? (
           <View style={styles.feedLoadingContainer}>
             <ActivityIndicator color="#4353FD" />
             <Text style={styles.loadingText}>Loading user data...</Text>
           </View>
         ) : mongoUserId ? (
-          renderFeedContent()
+          activeTab === 'feed' ? renderFeedContent() : renderPostingsContent()
         ) : (
           <Text style={styles.emptyText}>Failed to load user data</Text>
         )}
@@ -264,6 +404,45 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 15
   },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  headerPlaceholder: {
+    width: 24, // Same width as the icon to balance the layout
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#4353FD',
+  },
+  tabContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#f0f0f0',
+    borderRadius: 8,
+    padding: 4,
+    marginBottom: 20,
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 6,
+    alignItems: 'center',
+  },
+  activeTab: {
+    backgroundColor: '#4353FD',
+  },
+  tabText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#666',
+  },
+  activeTabText: {
+    color: '#fff',
+  },
   feedLoadingContainer: {
     padding: 20,
     alignItems: 'center',
@@ -280,101 +459,26 @@ const styles = StyleSheet.create({
     color: '#ff4444',
     textAlign: 'center',
   },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 40,
+  },
   emptyText: {
     textAlign: 'center',
     color: '#666',
-    padding: 20,
-  },
-  friendsButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: 'white',
-    padding: 15,
-    borderRadius: 10,
-    marginBottom: 20,
-    shadowOpacity: 0.1,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  buttonText: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#4353FD',
-    flex: 1,
-    marginLeft: 10
+    marginTop: 16,
   },
-  heading: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 15
+  emptySubtext: {
+    textAlign: 'center',
+    color: '#999',
+    fontSize: 14,
+    marginTop: 8,
   },
   feedList: {
     flex: 1,
-  },
-  card: {
-    backgroundColor: 'white',
-    borderRadius: 12,
-    padding: 15,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 10,
-  },
-  initials: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  headerText: {
-    flex: 1,
-  },
-  name: {
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
-  username: {
-    color: '#666',
-    fontSize: 13,
-  },
-  activity: {
-    fontSize: 14,
-    lineHeight: 20,
-    marginBottom: 10,
-  },
-  highlight: {
-    fontWeight: '600',
-    color: '#4353FD',
-  },
-  footer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 5,
-  },
-  subscriptionInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginRight: 15,
-  },
-  infoText: {
-    fontSize: 13,
-    color: '#666',
-    marginLeft: 4,
   },
 });
