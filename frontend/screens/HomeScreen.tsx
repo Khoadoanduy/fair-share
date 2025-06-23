@@ -17,6 +17,7 @@ import axios from "axios";
 import { sub } from "date-fns";
 import { formatRelativeDate, getDaysRemaining } from "@/utils/dateUtils";
 import Feather from "@expo/vector-icons/Feather";
+import { useRouter } from "expo-router";
 
 type GroupData = {
   subscription: {
@@ -36,6 +37,7 @@ export default function HomeScreen() {
   const { name, userId } = useUserState();
   const [subscriptions, setSubscriptions] = useState<GroupData[]>([]);
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
   usePushNotifications();
 
@@ -87,11 +89,20 @@ export default function HomeScreen() {
       0
     );
   }, [subscriptions]);
+  const handleSummry = () => {
+    console.log("summary pressed");
+    router.push({
+      pathname: "/(summary)/visualization",
+      params: {
+        subscriptions: JSON.stringify(subscriptions)
+      }
+    });
+  };
 
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView>
-        <Pressable style={styles.content}>
+        <View style={styles.content}>
           <Text style={styles.welcomeText}>Welcome, {name}</Text>
 
           {loading ? (
@@ -111,7 +122,10 @@ export default function HomeScreen() {
             </View>
           ) : (
             <>
-              <Pressable style={styles.summaryBox}>
+              <Pressable
+                onPress={() => handleSummry()}
+                style={styles.summaryBox}
+              >
                 <Pressable style={styles.cycleSelector}>
                   <Text style={styles.cycleText}>Monthly</Text>
                   <Text style={styles.cycleArrow}>›</Text>
@@ -176,7 +190,7 @@ export default function HomeScreen() {
               )}
             </>
           )}
-        </Pressable>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
