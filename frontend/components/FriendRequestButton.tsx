@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { StyleSheet, ActivityIndicator, View, Text, TouchableOpacity } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import CustomButton from './CustomButton';
 
@@ -14,20 +15,20 @@ type FriendRequestButtonProps = {
   handleSendInvitation?: (id: string) => void; // Add handleSendInvitation prop
 };
 
-const FriendRequestButton = ({ 
-  senderId, 
-  recipientId, 
-  onRequestSent, 
-  item, 
-  actionLoadingIds, 
-  handleSendInvitation 
+const FriendRequestButton = ({
+  senderId,
+  recipientId,
+  onRequestSent,
+  item,
+  actionLoadingIds,
+  handleSendInvitation
 }: FriendRequestButtonProps) => {
   const [requested, setRequested] = useState(false);
   const [isLoading, setIsLoading] = useState(false); // Add loading state
-  
+
   const handleRequest = async () => {
     if (requested || isLoading) return;
-    
+
     setIsLoading(true); // Show loading state immediately
     try {
       const response = await axios.post(`${API_URL}/api/friend/invitation`, {
@@ -36,7 +37,7 @@ const FriendRequestButton = ({
       });
       console.log('Friend request sent:', response.data);
       setRequested(true);
-      
+
       // Call parent callback to refresh data
       if (onRequestSent) {
         onRequestSent();
@@ -69,7 +70,11 @@ const FriendRequestButton = ({
       {actionLoadingIds && actionLoadingIds[item.id] ? (
         <ActivityIndicator size="small" color="white" />
       ) : (
-        <Text style={styles.inviteText}>{requested ? "Requested" : "Invite"}</Text>
+        <Ionicons
+          name="person-add"
+          size={18}
+          color="white"
+        />
       )}
     </TouchableOpacity>
   );
@@ -85,10 +90,10 @@ const styles = StyleSheet.create({
     minWidth: 100,
   },
   buttonActive: {
-    backgroundColor: '#4353FD', 
+    backgroundColor: '#4A3DE3',
   },
   buttonRequested: {
-    backgroundColor: '#E2E8F0', 
+    backgroundColor: '#E2E8F0',
   },
   textRequested: {
     color: '#9EA2AE',
@@ -106,13 +111,14 @@ const styles = StyleSheet.create({
     color: '#9EA2AE',
   },
   inviteButton: {
-    backgroundColor: '#4353FD',
+    backgroundColor: '#4A3DE3',
     borderRadius: 8,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    minWidth: 100,
+    minWidth: 44,
+    minHeight: 36,
   },
   inviteText: {
     color: 'white',
