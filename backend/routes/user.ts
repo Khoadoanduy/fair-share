@@ -1,4 +1,3 @@
-
 import express, { Request, Response, Router, response } from 'express';
 import { User } from '@prisma/client';
 import prisma from '../prisma/client';
@@ -69,7 +68,7 @@ router.get('/invitation/:userId', async (request: Request, response: Response) =
         if (!userId) {
             return response.status(400).json({ message: 'userId are required' });
         }
-        //Check if the user has already been invited to this group
+        //Get all pending invitations for this user
         const invitation = await prisma.groupInvitation.findMany({
             where: { userId, status: "pending" },
             include: {
@@ -98,7 +97,6 @@ router.get('/groups/:userId', async (request: Request, response: Response) => {
         if (!userId) {
             return response.status(400).json({ message: 'userId are required' });
         }
-
         // Get user's groups with subscription info
         const allGroups = await prisma.groupMember.findMany({
             where: { userId },
@@ -159,5 +157,4 @@ router.get('/groups/:userId', async (request: Request, response: Response) => {
         response.status(500).json({ message: 'Error getting groups' });
     }
 });
-
 export default router;
