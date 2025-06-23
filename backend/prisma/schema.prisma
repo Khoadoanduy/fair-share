@@ -84,6 +84,7 @@ model GroupInvitation {
   group     Group    @relation(fields: [groupId], references: [id])
   groupId   String   @db.ObjectId
   status    String   @default("pending") //pending, accepted, rejected
+  type      String   @default("invitation") //invitation (leader invites user), join_request (user requests to join)
   createdAt DateTime @default(now())
 }
 

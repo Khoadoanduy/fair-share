@@ -1,5 +1,6 @@
 import express, { Request, Response, Router } from 'express';
 import prisma from '../prisma/client';
+import { getTimeAgoFromObjectId } from '../utils/timeUtils';
 
 const router: Router = express.Router();
 
@@ -72,7 +73,12 @@ router.get('/subscriptions/:userId', async (req: Request, res: Response) => {
                         cycleDays: true,
                         category: true,
                         totalMem: true,
-                        amountEach: true
+                        amountEach: true,
+                        subscription: {
+                            select: {
+                                logo: true
+                            }
+                        }
                     }
                 }
             },
@@ -81,12 +87,28 @@ router.get('/subscriptions/:userId', async (req: Request, res: Response) => {
             }
         });
 
-        // Format for feed display (no need to filter for null since we pre-filtered)
-        const feed = friendGroups.map(item => ({
-            id: item.id,
-            friend: item.user,
-            group: item.group,
-            message: `${item.user.firstName} has subscribed to ${item.group.subscriptionName}. Want to join?`
+        // Format for feed display
+        const feed = await Promise.all(friendGroups.map(async (item) => {
+            // Check if current user has already requested to join this group
+            const existingRequest = await prisma.groupInvitation.findFirst({
+                where: {
+                    userId: userId,
+                    groupId: item.group.id,
+                    type: 'join_request'
+                }
+            });
+
+            return {
+                id: item.id,
+                friend: item.user,
+                group: {
+                    ...item.group,
+                    timeAgo: getTimeAgoFromObjectId(item.id)
+                },
+                message: `${item.user.firstName} has subscribed to ${item.group.subscriptionName}. Want to join?`,
+                hasRequested: !!existingRequest,
+                requestStatus: existingRequest?.status || null
+            };
         }));
 
         res.json(feed);
