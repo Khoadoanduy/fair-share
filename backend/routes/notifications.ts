@@ -8,10 +8,10 @@ const router: Router = express.Router();
 const expo = new Expo();
 
 router.post('/register', async (req, res) => {
-    const { clerkId, token } = req.body;
+    const { id, token } = req.body;
 
-    if (!clerkId || !token) {
-      return res.status(400).json({ error: 'clerkId and token are required' });
+    if (!id || !token) {
+      return res.status(400).json({ error: 'userId and token are required' });
     }
 
     if (!Expo.isExpoPushToken(token)) {
@@ -20,7 +20,7 @@ router.post('/register', async (req, res) => {
 
     try {
         const user = await prisma.user.update({
-        where: { clerkId: clerkId },
+        where: { id: id },
         data: { 
           pushToken: token,
         } 
@@ -37,10 +37,10 @@ router.post('/register', async (req, res) => {
 });
 
   router.post('/send', async (req, res) => {
-    const { clerkIds, clerkId, title, body, data } = req.body;
+    const { id, ids, title, body, data } = req.body;
 
-    // Support both single user (clerkId) and multiple users (clerkIds)
-    const userIds = clerkIds || (clerkId ? [clerkId] : null);
+    // Support both single user and multiple users 
+    const userIds = id || (id ? [id] : null);
 
     if (!userIds || userIds.length === 0 || !title || !body) {
         return res.status(400).json({ 
@@ -52,10 +52,10 @@ router.post('/register', async (req, res) => {
         // Fetch all users with their push tokens
         const users = await prisma.user.findMany({
             where: { 
-                clerkId: { in: userIds }
+                id: { in: ids }
             },
             select: { 
-                clerkId: true,
+                id: true,
                 pushToken: true 
             }
         });
@@ -73,7 +73,7 @@ router.post('/register', async (req, res) => {
         if (usersWithTokens.length === 0) {
             return res.status(404).json({ 
                 error: 'None of the specified users have push tokens',
-                usersWithoutTokens: usersWithoutTokens.map(u => u.clerkId)
+                usersWithoutTokens: usersWithoutTokens.map(u => u.id)
             });
         }
 
@@ -85,7 +85,6 @@ router.post('/register', async (req, res) => {
             body,
             data: {
                 ...data,
-                userId: user.clerkId // Include userId in notification data
             },
         }));
 

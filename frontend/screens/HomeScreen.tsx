@@ -27,7 +27,9 @@ export default function HomeScreen() {
   const { name, hasPayment, userId, stripeCustomerId, isSignedIn } =
     useUserState();
 
-  usePushNotifications();
+  if (userId) {
+    usePushNotifications(userId);
+  }
 
   const handleForceRefresh = async () => {
     if (user?.id) {
