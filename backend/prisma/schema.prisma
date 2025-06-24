@@ -65,6 +65,7 @@ model Group {
   credentialPassword String?
   amountEach         Float?
   totalMem           Int
+  visibility         String   @default("friends")
 }
 
 //junction table between User and Group
