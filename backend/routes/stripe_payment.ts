@@ -1,3 +1,4 @@
+import { group } from 'console';
 import express, { Request, Response, Router } from 'express';
 
 // Initialize Stripe with secret key
@@ -13,7 +14,8 @@ router.post('/charge-user', async function (request, response) {
       const customerStripeID = request.body.customerStripeID;
       const groupId = request.body.groupId;
       const personalSubId = request.body.personalSubId;
-      const description = JSON.stringify({groupId, personalSubId});
+      const description = JSON.stringify({personalSubId, groupId});
+      const parsed = JSON.parse(description);
       if (!customerStripeID) {
           return response.status(400).json({ error: 'Customer Stripe ID is required' });
       }
@@ -27,7 +29,6 @@ router.post('/charge-user', async function (request, response) {
       const amount = Math.round((preAmount + stripeFixedFee) / (1 - stripeFeePercentage));
       const paymentMethods = await stripe.customers.listPaymentMethods(customerStripeID);
       const paymentMethod = paymentMethods.data[0];
-      const subscription = request.body.subscription;
 
       const paymentIntent = await stripe.paymentIntents.create({
           amount: amount,
@@ -39,7 +40,7 @@ router.post('/charge-user', async function (request, response) {
           payment_method: paymentMethod.id,
           off_session: true,
           confirm: true,
-          description: description
+          metadata: parsed
         });
 
       response.json({
