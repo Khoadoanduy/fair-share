@@ -1,9 +1,4 @@
-// import dotenv from 'dotenv';
 import express, { Request, Response, Router } from 'express';
-
-
-// Initialize environment variables
-// dotenv.config();
 
 // Initialize Stripe with secret key
 const stripe = require('stripe')(
