@@ -3,10 +3,10 @@ import { Webhook } from 'svix';
 import { WebhookEvent } from '@clerk/clerk-sdk-node';
 import { createUser, deleteUser } from '../../lib/user';
 import prisma from '../../../prisma/client';
-// import dotenv from 'dotenv';
+import dotenv from 'dotenv';
 import { CreateUserInput } from '../../types/user'; 
 
-// dotenv.config();
+dotenv.config();
 
 const webhookRouter = express.Router();
 
