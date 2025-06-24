@@ -14,7 +14,6 @@ import axios from "axios";
 import { Ionicons } from "@expo/vector-icons";
 import CustomButton from "@/components/CustomButton";
 import { formatPaymentDate, getDaysRemaining } from "@/utils/dateUtils";
-import BankCardDisplay from "@/components/bankCardDisplay";
 import VirtualCardDisplay from "@/components/VirtualCardDisplay";
 import { useUserState } from "@/hooks/useUserState";
 

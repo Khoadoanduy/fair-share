@@ -63,13 +63,6 @@ export default function AuthLayout() {
             headerTitle: () => null,
           }}
       />
-      <Stack.Screen
-          name="newGroupDetails"
-          options={{
-            title: "",
-            headerTitle: () => null,
-          }}
-      />
       <Stack.Screen 
           name="userGroups" 
           options={{ 

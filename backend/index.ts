@@ -1,5 +1,5 @@
 import express from 'express';
-// import dotenv from 'dotenv';
+import dotenv from 'dotenv';
 import webhookRouter from './src/webhooks/clerk/route';
 import { authMiddleware, authErrorHandler } from './src/middleware';
 import paymentRoutes from './routes/stripe_payment';
@@ -15,7 +15,7 @@ import virtualCardRoute from './routes/virtualCard';
 import notificationsRoute from './routes/notifications';
 import cors from 'cors';  // Add this
 
-// dotenv.config();
+dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;

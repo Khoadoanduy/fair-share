@@ -16,7 +16,7 @@ router.get('/', async function (request, response) {
         if (!user) {
             return response.status(430).send("User not found");
         }
-        response.json(user);
+        return response.json(user);
     } catch (error) {
         console.error("Error retrieving user:", error);
         response.status(500).send("Internal Server Error");
