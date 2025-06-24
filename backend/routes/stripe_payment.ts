@@ -16,6 +16,9 @@ const router: Router = express.Router();
 router.post('/charge-user', async function (request, response) {
   try {
       const customerStripeID = request.body.customerStripeID;
+      const groupId = request.body.groupId;
+      const personalSubId = request.body.personalSubId;
+      const description = JSON.stringify({groupId, personalSubId});
       if (!customerStripeID) {
           return response.status(400).json({ error: 'Customer Stripe ID is required' });
       }
@@ -41,7 +44,7 @@ router.post('/charge-user', async function (request, response) {
           payment_method: paymentMethod.id,
           off_session: true,
           confirm: true,
-          description: subscription
+          description: description
         });
 
       response.json({
