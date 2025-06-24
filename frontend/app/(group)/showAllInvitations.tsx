@@ -8,7 +8,7 @@ import BackButton from '@/components/BackButton';
 import { Ionicons } from '@expo/vector-icons';
 import AcceptInvitationButton from '@/components/AcceptInvitationButton';
 import DeclineInvitationButton from '@/components/DeclineInvitationButton';
-import GroupCard from '@/components/GroupCard';
+import SubscriptionCard from '@/components/SubscriptionCard';
 
 export default function AllInvitations() {
   const API_URL = process.env.EXPO_PUBLIC_API_URL;
@@ -144,7 +144,7 @@ export default function AllInvitations() {
               <Text style={styles.text}>
                 {groupLeader} has invited you to join {invite.groupName}!
               </Text>
-              <GroupCard
+              <SubscriptionCard
                 logo={{ uri: invite.group.subscription.logo }}
                 subscriptionName={invite.group.subscriptionName}
                 cycle={invite.group.cycle}

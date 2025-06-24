@@ -102,7 +102,7 @@ export default function InviteMemberScreen() {
         ) :<Text style={styles.emptyText}>No users found.</Text> }
       </View>
       <ProgressDots totalSteps={3} currentStep={3}/>      
-      <CustomButton text="Back to homepage" onPress={() => router.push('/(tabs)/groups')} style={styles.button} />
+      <CustomButton text="Next" onPress={() => router.push({pathname: '/(group)/newGroupDetails', params: { groupId: groupId }})} style={styles.button} />
     </SafeAreaView>
   );
 }

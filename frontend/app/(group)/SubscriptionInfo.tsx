@@ -136,7 +136,6 @@ export default function SubscriptionScreen() {
       Alert.alert('Missing Info', 'Please fill in all fields');
       return;
     }
-
     // Validate day input
     const parsedDay = parseFloat(info.day);
     if (isNaN(parsedDay) || parsedDay <= 0) {
@@ -160,6 +159,7 @@ export default function SubscriptionScreen() {
         category: info.category,
         logo: info.logo,
         visibility: visibility || 'friends', 
+        userId: leaderId
       });
       
       const groupId = response.data.groupId;

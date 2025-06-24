@@ -6,8 +6,6 @@
 import express, { Request, Response, Router } from 'express';
 import Stripe from 'stripe';
 import prisma from '../prisma/client';
-// import axios from "axios";
-// const API_URL = 'http://localhost:3000';
 
 // Define customer request interface
 interface CreateCustomerRequest {
