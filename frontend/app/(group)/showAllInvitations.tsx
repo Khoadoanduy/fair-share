@@ -145,7 +145,7 @@ export default function AllInvitations() {
                 {groupLeader} has invited you to join {invite.groupName}!
               </Text>
               <GroupCard
-                logo={{ uri: invite.group.subscription.logo }}
+                logo={{ uri: invite.group.subscription?.logo }}
                 subscriptionName={invite.group.subscriptionName}
                 cycle={invite.group.cycle}
                 isShared={true}
