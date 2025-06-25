@@ -7,11 +7,13 @@ import {
   TouchableOpacity,
   SafeAreaView,
   ActivityIndicator,
-  Image,
+  Modal,
 } from 'react-native';
 import axios from 'axios';
 import { useAuth } from '@clerk/clerk-expo';
 import { useRouter } from 'expo-router';
+import { useUserState } from '@/hooks/useUserState';
+import GroupCard from '@/components/GroupCard';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
@@ -20,22 +22,50 @@ interface Transaction {
   amount: number;
   created: number;
   status: string;
-  currency?: string;
-  description?: string;
+  metadata?: {
+    groupId?: string;
+  };
+}
+
+interface Group {
+  id: string;
+  groupName: string;
+  subscriptionName: string;
+  subscriptionId?: string;
+  category: string;
+  subscription?: {
+    logo?: string;
+    category?: string;
+  };
+  totalMem: number;
+}
+
+interface EnrichedTransaction extends Transaction {
+  groupData?: Group;
+  subscriptionName?: string;
+  category?: string;
+  logo?: string | null;
+  isShared?: boolean;
 }
 
 interface GroupedTransactions {
-  [date: string]: Transaction[];
+  [date: string]: EnrichedTransaction[];
 }
+
+type FilterType = 'all' | 'personal' | 'shared';
 
 const HistoryScreen = () => {
   const router = useRouter();
   const { userId: clerkId } = useAuth();
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [transactions, setTransactions] = useState<EnrichedTransaction[]>([]);
   const [loading, setLoading] = useState(true);
-  const [logos, setLogos] = useState<{ [key: string]: string | null }>({});
+  const [showFilters, setShowFilters] = useState(false);
+  const [filterType, setFilterType] = useState<FilterType>('all');
+  const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [categories, setCategories] = useState<string[]>([]);
+  const user = useUserState();
 
-  const groupTransactionsByDate = (transactions: Transaction[]): GroupedTransactions => {
+  const groupTransactionsByDate = (transactions: EnrichedTransaction[]): GroupedTransactions => {
     const grouped: GroupedTransactions = {};
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -77,20 +107,55 @@ const HistoryScreen = () => {
 
   const fetchTransactions = async () => {
     try {
-      const user = await axios.get(`${API_URL}/api/user`, {
-        params: { clerkID: clerkId },
-      });
-
-      if (!user.data.customerId) {
-        setLoading(false);
-        return;
-      }
-
       const transactionsResponse = await axios.get(`${API_URL}/api/stripe-payment/transactions`, {
-        params: { customerStripeID: user.data.customerId },
+        params: { customerStripeID: user.stripeCustomerId },
       });
 
-      setTransactions(transactionsResponse.data);
+      // Enrich transactions with group data
+      const enrichedTransactions = await Promise.all(
+        transactionsResponse.data.map(async (transaction: Transaction) => {
+          try {
+            if (transaction.metadata?.groupId) {
+              // Fetch group data including subscription relation
+              console.log(transaction.metadata.groupId)
+              const res = await axios.get(`${API_URL}/api/group/${transaction.metadata.groupId}`);
+              const group: Group = res.data;
+
+              // console.log(group);
+
+              // console.log(group.subscriptionId)
+              
+              return {
+                ...transaction,
+                groupData: group,
+                subscriptionName: group.subscriptionName,
+                category: group.subscription?.category || group.category,
+                logo: group.subscription?.logo || null,
+                isShared: group.totalMem > 1,
+              };
+            }
+          } catch (err) {
+            console.error(`Failed to fetch group data for transaction ${transaction.id}`, err);
+          }
+          
+          // Return transaction without enrichment if no groupId or if fetch failed
+          return {
+            ...transaction,
+            subscriptionName: 'Unknown Subscription',
+            category: 'Other',
+            logo: null,
+            isShared: false,
+          };
+        })
+      );
+      
+      // Extract unique categories from enriched transactions
+      const uniqueCategories = [...new Set(enrichedTransactions
+        .map((t) => t.category)
+        .filter(Boolean))] as string[];
+      setCategories(uniqueCategories);
+      
+      setTransactions(enrichedTransactions);
     } catch (err) {
       console.error('Error fetching transactions:', err);
     } finally {
@@ -98,84 +163,148 @@ const HistoryScreen = () => {
     }
   };
 
-  const fetchLogosForTransactions = async () => {
-    const logoMap: { [key: string]: string | null } = {};
-
-    for (const transaction of transactions) {
-      const name = transaction.description;
-      if (name && !logos[name]) {
-        try {
-          const res = await axios.get(`${API_URL}/api/subscriptions`, {
-            params: { search: name },
-          });
-          const match = res.data[0]
-          console.log(`Fetched logo for ${name}:`, match.logo);
-          logoMap[name] = match.logo || null;
-        } catch (err) {
-          console.error(`Failed to fetch logo for ${name}`, err);
-          logoMap[name] = null;
-        }
-      }
-    }
-
-    setLogos((prev) => ({ ...prev, ...logoMap }));
-  };
-
   useEffect(() => {
-    if (clerkId) {
+    if (clerkId && user?.stripeCustomerId) {
       fetchTransactions();
     }
-  }, [clerkId]);
+  }, [clerkId, user?.stripeCustomerId]);
 
-  useEffect(() => {
-    if (transactions.length > 0) {
-      fetchLogosForTransactions();
-    }
-  }, [transactions]);
+  const getFilteredTransactions = () => {
+    return transactions.filter(transaction => {
+      // Filter by type (personal/shared)
+      if (filterType !== 'all') {
+        if (filterType === 'shared' && !transaction.isShared) return false;
+        if (filterType === 'personal' && transaction.isShared) return false;
+      }
 
-  const getStatusColor = (status: string) => {
-    return status === 'succeeded' ? '#4CAF50' : '#FFA500';
+      // Filter by category
+      if (categoryFilter !== 'all' && transaction.category !== categoryFilter) return false;
+
+      return true;
+    });
   };
 
-  const renderTransaction = (transaction: Transaction) => {
-    const amount = (transaction.amount / 100).toFixed(2);
-    const status = transaction.status === 'succeeded' ? 'Succeed' : 'Pending';
-    const name = transaction.description || 'Subscription';
-    const logo = logos[name];
+  const renderTransaction = (transaction: EnrichedTransaction) => {
+    const amount = transaction.amount / 100;
+    const name = transaction.subscriptionName || 'Subscription';
     const createdAt = new Date(transaction.created * 1000);
     const formattedDateTime = createdAt.toLocaleString('en-US', {
-      dateStyle: 'medium',
       timeStyle: 'short',
     });
 
-    const icon = logo ? (
-      <View style={styles.iconContainer}>
-        <Image source={{ uri: logo }} style={styles.logoImage} />
-      </View>
-    ) : (
-      <View style={[styles.iconContainer, { backgroundColor: '#6B7280' }]}>
-        <Text style={styles.iconText}>{name.charAt(0).toUpperCase()}</Text>
-      </View>
-    );
-
     return (
-      <View key={transaction.id} style={styles.transactionCard}>
-        <View style={styles.transactionContent}>
-          {icon}
-          <View style={styles.transactionDetails}>
-            <Text style={styles.transactionName}>{name}</Text>
-            <Text style={styles.transactionTimestamp}>{formattedDateTime}</Text>
-          </View>
-          <View style={styles.rightSection}>
-            <Text style={styles.amount}>-${amount}</Text>
-            <Text style={[styles.status, { color: getStatusColor(transaction.status) }]}>
-              {status}
-            </Text>
-          </View>
-        </View>
+      <View key={transaction.id}>
+        <GroupCard
+          logo={transaction.logo ? { uri: transaction.logo } : null}
+          subscriptionName={name}
+          amountEach={amount}
+          isShared={transaction.isShared}
+          category={transaction.category}
+          showNegativeAmount={true}
+          timestamp={formattedDateTime}
+        />
       </View>
     );
   };
+
+  const renderFilters = () => (
+    <Modal
+      visible={showFilters}
+      transparent
+      animationType="slide"
+      onRequestClose={() => setShowFilters(false)}
+    >
+      <TouchableOpacity 
+        style={styles.modalOverlay} 
+        activeOpacity={1} 
+        onPress={() => setShowFilters(false)}
+      >
+        <View style={styles.filterModal}>
+          <View style={styles.filterHandle} />
+          <Text style={styles.filterTitle}>Filters</Text>
+
+          {/* Type Filter */}
+          <View style={styles.filterSection}>
+            <Text style={styles.filterSectionTitle}>Type</Text>
+            <View style={styles.filterOptions}>
+              {(['all', 'personal', 'shared'] as FilterType[]).map((type) => (
+                <TouchableOpacity
+                  key={type}
+                  style={[
+                    styles.filterOption,
+                    filterType === type && styles.filterOptionActive,
+                  ]}
+                  onPress={() => setFilterType(type)}
+                >
+                  <Text
+                    style={[
+                      styles.filterOptionText,
+                      filterType === type && styles.filterOptionTextActive,
+                    ]}
+                  >
+                    {type.charAt(0).toUpperCase() + type.slice(1)}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          {/* Category Filter */}
+          {categories.length > 0 && (
+            <View style={styles.filterSection}>
+              <Text style={styles.filterSectionTitle}>Category</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                <View style={styles.filterOptions}>
+                  <TouchableOpacity
+                    style={[
+                      styles.filterOption,
+                      categoryFilter === 'all' && styles.filterOptionActive,
+                    ]}
+                    onPress={() => setCategoryFilter('all')}
+                  >
+                    <Text
+                      style={[
+                        styles.filterOptionText,
+                        categoryFilter === 'all' && styles.filterOptionTextActive,
+                      ]}
+                    >
+                      All
+                    </Text>
+                  </TouchableOpacity>
+                  {categories.map((category) => (
+                    <TouchableOpacity
+                      key={category}
+                      style={[
+                        styles.filterOption,
+                        categoryFilter === category && styles.filterOptionActive,
+                      ]}
+                      onPress={() => setCategoryFilter(category)}
+                    >
+                      <Text
+                        style={[
+                          styles.filterOptionText,
+                          categoryFilter === category && styles.filterOptionTextActive,
+                        ]}
+                      >
+                        {category}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </ScrollView>
+            </View>
+          )}
+
+          <TouchableOpacity
+            style={styles.applyButton}
+            onPress={() => setShowFilters(false)}
+          >
+            <Text style={styles.applyButtonText}>Apply Filters</Text>
+          </TouchableOpacity>
+        </View>
+      </TouchableOpacity>
+    </Modal>
+  );
 
   if (loading) {
     return (
@@ -187,7 +316,9 @@ const HistoryScreen = () => {
     );
   }
 
-  const groupedTransactions = groupTransactionsByDate(transactions);
+  const filteredTransactions = getFilteredTransactions();
+  const groupedTransactions = groupTransactionsByDate(filteredTransactions);
+  const hasActiveFilters = filterType !== 'all'  || categoryFilter !== 'all';
 
   return (
     <SafeAreaView style={styles.container}>
@@ -196,13 +327,20 @@ const HistoryScreen = () => {
           <Text style={styles.backButtonText}>‹</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>History</Text>
-        <View style={styles.placeholder} />
+        <TouchableOpacity 
+          style={[styles.filterButton, hasActiveFilters && styles.filterButtonActive]}
+          onPress={() => setShowFilters(true)}
+        >
+          <Text style={styles.filterButtonText}>⚙</Text>
+        </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {transactions.length === 0 ? (
+        {filteredTransactions.length === 0 ? (
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>No transactions found</Text>
+            <Text style={styles.emptyText}>
+              {hasActiveFilters ? 'No transactions match your filters' : 'No transactions found'}
+            </Text>
           </View>
         ) : (
           Object.entries(groupedTransactions).map(([date, dateTransactions]) => (
@@ -213,6 +351,8 @@ const HistoryScreen = () => {
           ))
         )}
       </ScrollView>
+
+      {renderFilters()}
     </SafeAreaView>
   );
 };
@@ -229,45 +369,92 @@ const styles = StyleSheet.create({
   backButton: { width: 40, height: 40, justifyContent: 'center', alignItems: 'center' },
   backButtonText: { fontSize: 35, color: '#000000', fontWeight: '300' },
   headerTitle: { fontSize: 24, fontWeight: '600', color: '#5B5FFF' },
-  placeholder: { width: 40 },
+  filterButton: { 
+    width: 40, 
+    height: 40, 
+    justifyContent: 'center', 
+    alignItems: 'center',
+    borderRadius: 20,
+    backgroundColor: '#F0F0F0',
+  },
+  filterButtonActive: {
+    backgroundColor: '#5B5FFF',
+  },
+  filterButtonText: { fontSize: 20, color: '#000000' },
   scrollView: { flex: 1, paddingHorizontal: 20 },
   dateGroup: { marginTop: 25 },
   dateHeader: { fontSize: 20, fontWeight: '600', color: '#000000', marginBottom: 15 },
-  transactionCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 15,
-    padding: 20,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 2,
-  },
-  transactionContent: { flexDirection: 'row', alignItems: 'center' },
-  iconContainer: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: '#E50914',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 15,
-  },
-  iconText: { color: '#FFFFFF', fontSize: 24, fontWeight: 'bold' },
-  logoImage: { width: 50, height: 50, borderRadius: 25, resizeMode: 'cover' },
-  transactionDetails: { flex: 1 },
-  transactionName: { fontSize: 18, fontWeight: '600', color: '#000000', marginBottom: 5 },
-  rightSection: { alignItems: 'flex-end' },
-  amount: { fontSize: 20, fontWeight: '600', color: '#000000', marginBottom: 5 },
-  status: { fontSize: 16, fontWeight: '500' },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingTop: 100 },
   emptyText: { fontSize: 16, color: '#666' },
-  transactionTimestamp: {
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  filterModal: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+    paddingBottom: 40,
+  },
+  filterHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: '#E0E0E0',
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginBottom: 20,
+  },
+  filterTitle: {
+    fontSize: 24,
+    fontWeight: '600',
+    marginBottom: 20,
+    color: '#000000',
+  },
+  filterSection: {
+    marginBottom: 25,
+  },
+  filterSectionTitle: {
+    fontSize: 16,
+    fontWeight: '500',
+    marginBottom: 10,
+    color: '#333',
+  },
+  filterOptions: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  filterOption: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: '#F0F0F0',
+  },
+  filterOptionActive: {
+    backgroundColor: '#5B5FFF',
+  },
+  filterOptionText: {
     fontSize: 14,
-    color: '#555',
-  }
+    color: '#666',
+  },
+  filterOptionTextActive: {
+    color: '#FFFFFF',
+    fontWeight: '500',
+  },
+  applyButton: {
+    backgroundColor: '#5B5FFF',
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginTop: 20,
+  },
+  applyButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
 });
 
 export default HistoryScreen;

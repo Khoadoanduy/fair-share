@@ -8,6 +8,8 @@ interface GroupCardProps {
   cycle?: string;
   isShared?: boolean;
   category?: string;
+  showNegativeAmount?: boolean;
+  timestamp?: string;
 }
 
 const GroupCard: React.FC<GroupCardProps> = ({
@@ -17,6 +19,8 @@ const GroupCard: React.FC<GroupCardProps> = ({
   cycle,
   isShared,
   category,
+  showNegativeAmount,
+  timestamp
 }) => {
   return (
     <View style={styles.subscriptionCard}>
@@ -38,7 +42,10 @@ const GroupCard: React.FC<GroupCardProps> = ({
       </View>
       {(amountEach !== undefined || cycle) && (
         <View style={styles.subscriptionRight}>
-          {amountEach !== undefined && <Text style={styles.price}>${amountEach.toFixed(2)}</Text>}
+          {amountEach !== undefined && <Text style={styles.price}>
+            {showNegativeAmount ? '-' : ''}${amountEach.toFixed(2)}
+            </Text>}
+          {timestamp && <Text style={styles.timestamp}>{timestamp}</Text>}
           {cycle && (
             <View style={styles.cycleContainer}>
               <Image source={require('../assets/refresh-cw.png')} style={styles.refreshIcon} />
@@ -116,6 +123,11 @@ const styles = StyleSheet.create({
   billingCycle: {
     fontSize: 12,
     color: '#6B7280',
+  },
+  timestamp: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginBottom: 4,
   },
 });
 

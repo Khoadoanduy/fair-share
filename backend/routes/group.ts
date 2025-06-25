@@ -114,7 +114,8 @@ router.get('/:groupId', async (request: Request, response: Response) => {
           include: {
             user: true
           }
-        }
+        },
+        subscription: true
       }
     });
     
