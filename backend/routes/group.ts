@@ -45,7 +45,7 @@ router.post('/create', async (request: Request, response: Response) => {
           totalMem: 1,
           amountEach: parseFloat(parseFloat(amount).toFixed(2)),
           startDate,
-          endDate: nextPaymentDate
+          endDate: nextPaymentDate,
           visibility: visibility || 'friends' // Add this line with default fallback
         }
       });
