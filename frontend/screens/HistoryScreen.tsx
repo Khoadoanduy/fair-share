@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   SafeAreaView,
   ActivityIndicator,
-  Modal,
 } from 'react-native';
 import axios from 'axios';
 import { useAuth } from '@clerk/clerk-expo';
@@ -33,6 +32,7 @@ interface Group {
   subscriptionName: string;
   subscriptionId?: string;
   category: string;
+  logo?: string;
   subscription?: {
     logo?: string;
     category?: string;
@@ -59,8 +59,8 @@ const HistoryScreen = () => {
   const { userId: clerkId } = useAuth();
   const [transactions, setTransactions] = useState<EnrichedTransaction[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showFilters, setShowFilters] = useState(false);
   const [filterType, setFilterType] = useState<FilterType>('all');
+  const [showCategoryFilters, setShowCategoryFilters] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [categories, setCategories] = useState<string[]>([]);
   const user = useUserState();
@@ -79,7 +79,7 @@ const HistoryScreen = () => {
         dateKey = 'Today';
       } else {
         const day = transactionDate.getDate();
-        const month = transactionDate.toLocaleDateString('en-US', { month: 'short' });
+        const month = transactionDate.toLocaleDateString('en-US', { month: 'long' });
         dateKey = `${day} ${month}`;
       }
 
@@ -112,42 +112,36 @@ const HistoryScreen = () => {
       });
 
       // Enrich transactions with group data
-      const enrichedTransactions = await Promise.all(
-        transactionsResponse.data.map(async (transaction: Transaction) => {
-          try {
-            if (transaction.metadata?.groupId) {
-              // Fetch group data including subscription relation
-              console.log(transaction.metadata.groupId)
-              const res = await axios.get(`${API_URL}/api/group/${transaction.metadata.groupId}`);
-              const group: Group = res.data;
-
-              // console.log(group);
-
-              // console.log(group.subscriptionId)
-              
-              return {
-                ...transaction,
-                groupData: group,
-                subscriptionName: group.subscriptionName,
-                category: group.subscription?.category || group.category,
-                logo: group.subscription?.logo || null,
-                isShared: group.totalMem > 1,
-              };
-            }
-          } catch (err) {
-            console.error(`Failed to fetch group data for transaction ${transaction.id}`, err);
+      const enrichmentPromises = transactionsResponse.data.map(async (transaction: Transaction) => {
+        try {
+          if (transaction.metadata?.groupId) {
+            // Fetch group data including subscription relation
+            const res = await axios.get(`${API_URL}/api/group/${transaction.metadata.groupId}`);
+            const group: Group = res.data;
+            
+            return {
+              ...transaction,
+              groupData: group,
+              subscriptionName: group.subscriptionName,
+              category: group.subscription?.category || group.category,
+              logo: group.subscription?.logo || group.logo || null,
+              isShared: group.totalMem > 1,
+            };
           }
-          
-          // Return transaction without enrichment if no groupId or if fetch failed
-          return {
-            ...transaction,
-            subscriptionName: 'Unknown Subscription',
-            category: 'Other',
-            logo: null,
-            isShared: false,
-          };
-        })
-      );
+        } catch (err) {
+          console.error(`Failed to fetch group data for transaction ${transaction.id}`, err);
+          // Return null to filter out later
+          return null;
+        }
+        
+        // Return null for transactions without groupId
+        return null;
+      });
+
+      const results = await Promise.all(enrichmentPromises);
+      
+      // Filter out failed fetches and transactions without group data
+      const enrichedTransactions = results.filter(t => t !== null) as EnrichedTransaction[];
       
       // Extract unique categories from enriched transactions
       const uniqueCategories = [...new Set(enrichedTransactions
@@ -188,8 +182,10 @@ const HistoryScreen = () => {
     const amount = transaction.amount / 100;
     const name = transaction.subscriptionName || 'Subscription';
     const createdAt = new Date(transaction.created * 1000);
-    const formattedDateTime = createdAt.toLocaleString('en-US', {
-      timeStyle: 'short',
+    const formattedTime = createdAt.toLocaleString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
     });
 
     return (
@@ -201,109 +197,21 @@ const HistoryScreen = () => {
           isShared={transaction.isShared}
           category={transaction.category}
           showNegativeAmount={true}
-          timestamp={formattedDateTime}
+          timestamp={formattedTime}
         />
       </View>
     );
   };
 
-  const renderFilters = () => (
-    <Modal
-      visible={showFilters}
-      transparent
-      animationType="slide"
-      onRequestClose={() => setShowFilters(false)}
+  const FilterPill = ({ label, isActive, onPress }: { label: string; isActive: boolean; onPress: () => void }) => (
+    <TouchableOpacity
+      style={[styles.filterPill, isActive && styles.filterPillActive]}
+      onPress={onPress}
     >
-      <TouchableOpacity 
-        style={styles.modalOverlay} 
-        activeOpacity={1} 
-        onPress={() => setShowFilters(false)}
-      >
-        <View style={styles.filterModal}>
-          <View style={styles.filterHandle} />
-          <Text style={styles.filterTitle}>Filters</Text>
-
-          {/* Type Filter */}
-          <View style={styles.filterSection}>
-            <Text style={styles.filterSectionTitle}>Type</Text>
-            <View style={styles.filterOptions}>
-              {(['all', 'personal', 'shared'] as FilterType[]).map((type) => (
-                <TouchableOpacity
-                  key={type}
-                  style={[
-                    styles.filterOption,
-                    filterType === type && styles.filterOptionActive,
-                  ]}
-                  onPress={() => setFilterType(type)}
-                >
-                  <Text
-                    style={[
-                      styles.filterOptionText,
-                      filterType === type && styles.filterOptionTextActive,
-                    ]}
-                  >
-                    {type.charAt(0).toUpperCase() + type.slice(1)}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-
-          {/* Category Filter */}
-          {categories.length > 0 && (
-            <View style={styles.filterSection}>
-              <Text style={styles.filterSectionTitle}>Category</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                <View style={styles.filterOptions}>
-                  <TouchableOpacity
-                    style={[
-                      styles.filterOption,
-                      categoryFilter === 'all' && styles.filterOptionActive,
-                    ]}
-                    onPress={() => setCategoryFilter('all')}
-                  >
-                    <Text
-                      style={[
-                        styles.filterOptionText,
-                        categoryFilter === 'all' && styles.filterOptionTextActive,
-                      ]}
-                    >
-                      All
-                    </Text>
-                  </TouchableOpacity>
-                  {categories.map((category) => (
-                    <TouchableOpacity
-                      key={category}
-                      style={[
-                        styles.filterOption,
-                        categoryFilter === category && styles.filterOptionActive,
-                      ]}
-                      onPress={() => setCategoryFilter(category)}
-                    >
-                      <Text
-                        style={[
-                          styles.filterOptionText,
-                          categoryFilter === category && styles.filterOptionTextActive,
-                        ]}
-                      >
-                        {category}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </ScrollView>
-            </View>
-          )}
-
-          <TouchableOpacity
-            style={styles.applyButton}
-            onPress={() => setShowFilters(false)}
-          >
-            <Text style={styles.applyButtonText}>Apply Filters</Text>
-          </TouchableOpacity>
-        </View>
-      </TouchableOpacity>
-    </Modal>
+      <Text style={[styles.filterPillText, isActive && styles.filterPillTextActive]}>
+        {label}
+      </Text>
+    </TouchableOpacity>
   );
 
   if (loading) {
@@ -318,7 +226,6 @@ const HistoryScreen = () => {
 
   const filteredTransactions = getFilteredTransactions();
   const groupedTransactions = groupTransactionsByDate(filteredTransactions);
-  const hasActiveFilters = filterType !== 'all'  || categoryFilter !== 'all';
 
   return (
     <SafeAreaView style={styles.container}>
@@ -327,20 +234,66 @@ const HistoryScreen = () => {
           <Text style={styles.backButtonText}>‹</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>History</Text>
-        <TouchableOpacity 
-          style={[styles.filterButton, hasActiveFilters && styles.filterButtonActive]}
-          onPress={() => setShowFilters(true)}
-        >
-          <Text style={styles.filterButtonText}>⚙</Text>
-        </TouchableOpacity>
+        <View style={styles.placeholder} />
       </View>
+
+      <View style={styles.filterContainer}>
+        <FilterPill
+          label="All"
+          isActive={filterType === 'all'}
+          onPress={() => setFilterType('all')}
+        />
+        <FilterPill
+          label="Personal"
+          isActive={filterType === 'personal'}
+          onPress={() => setFilterType('personal')}
+        />
+        <FilterPill
+          label="Shared"
+          isActive={filterType === 'shared'}
+          onPress={() => setFilterType('shared')}
+        />
+        <FilterPill
+          label="Filters"
+          isActive={showCategoryFilters}
+          onPress={() => setShowCategoryFilters(!showCategoryFilters)}
+        />
+      </View>
+
+      {showCategoryFilters && categories.length > 0 && (
+        <View style={styles.categoryFilterContainer}>
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.categoryFilterContent}
+          >
+            <TouchableOpacity
+              style={[styles.categoryPill, categoryFilter === 'all' && styles.categoryPillActive]}
+              onPress={() => setCategoryFilter('all')}
+            >
+              <Text style={[styles.categoryPillText, categoryFilter === 'all' && styles.categoryPillTextActive]}>
+                All Categories
+              </Text>
+            </TouchableOpacity>
+            {categories.map((category) => (
+              <TouchableOpacity
+                key={category}
+                style={[styles.categoryPill, categoryFilter === category && styles.categoryPillActive]}
+                onPress={() => setCategoryFilter(category)}
+              >
+                <Text style={[styles.categoryPillText, categoryFilter === category && styles.categoryPillTextActive]}>
+                  {category.charAt(0).toUpperCase() + category.slice(1)}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+      )}
 
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {filteredTransactions.length === 0 ? (
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>
-              {hasActiveFilters ? 'No transactions match your filters' : 'No transactions found'}
-            </Text>
+            <Text style={styles.emptyText}>No transactions found</Text>
           </View>
         ) : (
           Object.entries(groupedTransactions).map(([date, dateTransactions]) => (
@@ -351,14 +304,15 @@ const HistoryScreen = () => {
           ))
         )}
       </ScrollView>
-
-      {renderFilters()}
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F5F5F5' },
+  container: { 
+    flex: 1, 
+    backgroundColor: '#F8F9FA' 
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -366,94 +320,102 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 15,
   },
-  backButton: { width: 40, height: 40, justifyContent: 'center', alignItems: 'center' },
-  backButtonText: { fontSize: 35, color: '#000000', fontWeight: '300' },
-  headerTitle: { fontSize: 24, fontWeight: '600', color: '#5B5FFF' },
-  filterButton: { 
+  backButton: { 
     width: 40, 
     height: 40, 
     justifyContent: 'center', 
-    alignItems: 'center',
-    borderRadius: 20,
-    backgroundColor: '#F0F0F0',
+    alignItems: 'center' 
   },
-  filterButtonActive: {
-    backgroundColor: '#5B5FFF',
+  backButtonText: { 
+    fontSize: 35, 
+    color: '#000000', 
+    fontWeight: '300' 
   },
-  filterButtonText: { fontSize: 20, color: '#000000' },
-  scrollView: { flex: 1, paddingHorizontal: 20 },
-  dateGroup: { marginTop: 25 },
-  dateHeader: { fontSize: 20, fontWeight: '600', color: '#000000', marginBottom: 15 },
-  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingTop: 100 },
-  emptyText: { fontSize: 16, color: '#666' },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
+  headerTitle: { 
+    fontSize: 24, 
+    fontWeight: '600', 
+    color: '#5B5FFF' 
   },
-  filterModal: {
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 20,
-    paddingBottom: 40,
+  placeholder: { 
+    width: 40 
   },
-  filterHandle: {
-    width: 40,
-    height: 4,
-    backgroundColor: '#E0E0E0',
-    borderRadius: 2,
-    alignSelf: 'center',
-    marginBottom: 20,
-  },
-  filterTitle: {
-    fontSize: 24,
-    fontWeight: '600',
-    marginBottom: 20,
-    color: '#000000',
-  },
-  filterSection: {
-    marginBottom: 25,
-  },
-  filterSectionTitle: {
-    fontSize: 16,
-    fontWeight: '500',
-    marginBottom: 10,
-    color: '#333',
-  },
-  filterOptions: {
+  filterContainer: {
     flexDirection: 'row',
+    paddingHorizontal: 20,
+    marginBottom: 10,
     gap: 10,
   },
-  filterOption: {
+  categoryFilterContainer: {
+    marginHorizontal: 20,
+    marginBottom: 10,
+    marginTop: -5,
+  },
+  categoryFilterContent: {
+    gap: 8,
+    paddingRight: 20,
+  },
+  categoryPill: {
     paddingHorizontal: 16,
     paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: '#F0F0F0',
+    borderRadius: 16,
+    backgroundColor: '#E8E9F3',
   },
-  filterOptionActive: {
+  categoryPillActive: {
     backgroundColor: '#5B5FFF',
   },
-  filterOptionText: {
-    fontSize: 14,
-    color: '#666',
-  },
-  filterOptionTextActive: {
-    color: '#FFFFFF',
+  categoryPillText: {
+    fontSize: 13,
     fontWeight: '500',
+    color: '#5B5FFF',
   },
-  applyButton: {
-    backgroundColor: '#5B5FFF',
-    padding: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginTop: 20,
-  },
-  applyButtonText: {
+  categoryPillTextActive: {
     color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
+  },
+  filterPill: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 20,
+    backgroundColor: '#E8E9F3',
+    alignItems: 'center',
+  },
+  filterPillActive: {
+    backgroundColor: '#5B5FFF',
+  },
+  filterPillText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#5B5FFF',
+  },
+  filterPillTextActive: {
+    color: '#FFFFFF',
+  },
+  scrollView: { 
+    flex: 1, 
+    paddingHorizontal: 20 
+  },
+  dateGroup: { 
+    marginTop: 25 
+  },
+  dateHeader: { 
+    fontSize: 20, 
+    fontWeight: '600', 
+    color: '#000000', 
+    marginBottom: 15 
+  },
+  loadingContainer: { 
+    flex: 1, 
+    justifyContent: 'center', 
+    alignItems: 'center' 
+  },
+  emptyContainer: { 
+    flex: 1, 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    paddingTop: 100 
+  },
+  emptyText: { 
+    fontSize: 16, 
+    color: '#666' 
   },
 });
 
