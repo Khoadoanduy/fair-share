@@ -1,4 +1,3 @@
-// import dotenv from 'dotenv';
 import express, { Request, Response, Router } from 'express';
 import prisma from '../prisma/client';
 
