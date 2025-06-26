@@ -107,7 +107,7 @@ router.get('/:groupId', async (request: Request, response: Response) => {
     if (!groupId) {
       return response.status(400).json({ message: 'groupId is required' });
     }
-    
+
     const group = await prisma.group.findUnique({
       where: { id: groupId },
       include: {
@@ -119,33 +119,33 @@ router.get('/:groupId', async (request: Request, response: Response) => {
         subscription: true
       }
     });
-    
+
     if (!group) {
       return response.status(404).json({ message: 'Group not found' });
     }
-    
+
     const today = new Date();
     let nextPaymentDate = group.endDate;
     let daysUntilNextPayment = 0;
 
     if (group.startDate && group.cycleDays) {
       nextPaymentDate = calculateNextPaymentDate(group.cycleDays, group.startDate);
-      
+
       if (nextPaymentDate < today) {
         const daysSinceStart = calculateDaysBetween(group.startDate, today);
         const cyclesPassed = Math.floor(daysSinceStart / group.cycleDays);
         nextPaymentDate = new Date(group.startDate);
         nextPaymentDate.setDate(group.startDate.getDate() + (cyclesPassed + 1) * group.cycleDays);
       }
-      
+
       daysUntilNextPayment = calculateDaysBetween(today, nextPaymentDate);
-      
+
       await prisma.group.update({
         where: { id: groupId },
         data: { endDate: nextPaymentDate }
       });
     }
-    
+
     response.status(200).json({
       ...group,
       daysUntilNextPayment,
@@ -210,14 +210,17 @@ router.get('/invitation/:groupId', async (request: Request, response: Response) 
     if (!groupId) {
       return response.status(400).json({ message: 'groupId are required' });
     }
-    //Check if the user has already been invited to this group
+    //Get all pending invitations for this group
     const invitation = await prisma.groupInvitation.findMany({
-      where: { groupId, status: "pending" },
+      where: {
+        groupId,
+        status: "pending",
+        type: "invitation"
+      },
       include: { user: true }
     })
-    if (invitation.length == 0) {
-      return response.status(409).json({ message: 'No invitation sent' });
-    }
+
+    // Always return the array, even if empty
     response.status(200).json(invitation);
 
   } catch (error) {
@@ -347,6 +350,32 @@ router.get('/total-mem/:groupId', async (request: Request, response: Response) =
   } catch (error) {
     console.error(error);
     response.status(500).json({ message: 'Error getting total number of members' });
+  }
+});
+
+// Get join requests for a group
+router.get('/join-requests/:groupId', async (request: Request, response: Response) => {
+  try {
+    const { groupId } = request.params;
+    if (!groupId) {
+      return response.status(400).json({ message: 'groupId is required' });
+    }
+
+    // Fetch pending join requests for this group
+    const joinRequests = await prisma.groupInvitation.findMany({
+      where: {
+        groupId,
+        status: "pending",
+        type: "join_request"
+      },
+      include: { user: true }
+    });
+
+    response.status(200).json(joinRequests);
+
+  } catch (error) {
+    console.error('Error fetching join requests:', error);
+    response.status(500).json({ message: 'Error getting join requests' });
   }
 });
 

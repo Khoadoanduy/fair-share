@@ -30,7 +30,7 @@ router.put('/:clerkID', async function(request, response) {
     try {
         const updated = await prisma.user.update({
             where: { clerkId: clerkID },
-            data: { 
+            data: {
                 phoneNumber: phoneNumber || undefined,
                 dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : undefined,
                 customerId: customerId || undefined,
@@ -50,7 +50,7 @@ router.put('/:clerkID/:customerId', async function(request, response) {
     try {
         const updated = await prisma.user.update({
             where: { clerkId: clerkID },
-            data: { 
+            data: {
                 customerId: cusomter ? cusomter : undefined, // Set cusomterId only if it's provided in the request body
             },
         });
@@ -70,11 +70,17 @@ router.get('/invitation/:userId', async (request: Request, response: Response) =
         }
         //Check if the user has already been invited to this group
         const invitation = await prisma.groupInvitation.findMany({
-          where: { userId, status: "pending" },
-          include: { group: true }
+            where: { userId, status: "pending", type: "invitation" },
+            include: {
+                group: {
+                    include: {
+                        subscription: true
+                    }
+                }
+            }
         })
         if (invitation.length == 0) {
-          return response.json({ message: 'No invitation sent' });
+            return response.json({ message: 'No invitation sent' });
         }
         response.status(200).json(invitation);
 
@@ -93,12 +99,12 @@ router.get('/groups/:userId', async (request: Request, response: Response) => {
         }
         //Check if the user has already been invited to this group
         const allGroups = await prisma.groupMember.findMany({
-          where: { userId },
-          include: { group: true }
+            where: { userId },
+            include: { group: true }
         })
-        
+
         if (allGroups.length == 0) {
-          return response.json({ message: 'No group found' });
+            return response.json({ message: 'No group found' });
         }
         response.status(200).json(allGroups);
 
