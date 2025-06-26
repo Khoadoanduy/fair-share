@@ -99,7 +99,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
   },
   price: {
-    fontSize: 16,
+    fontSize: 20,
     fontWeight: '700',
     color: '#111827',
     marginBottom: 4,

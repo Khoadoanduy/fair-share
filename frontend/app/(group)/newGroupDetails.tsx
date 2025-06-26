@@ -289,7 +289,7 @@ export default function GroupDetailsScreen() {
           <SubscriptionCard
             logo={{ uri: group.subscription?.logo }}
             subscriptionName={group.subscriptionName}
-            amountEach={group.amountEach}
+            amountEach={Number(group.amountEach.toFixed(2))}
             cycle={group.cycle}
             isShared={true} // or item.isShared if available
             category={group.category}
@@ -350,7 +350,7 @@ export default function GroupDetailsScreen() {
             <Text style={styles.modalMessage}>
               The leader has finalized the member list.{'\n'}Your share is
             </Text>
-            <Text style={styles.modalAmount}>${group?.amountEach.toFixed(2)}/month</Text>
+            <Text style={styles.modalAmount}>${`${group.amountEach.toFixed(2)}`}/month</Text>
             <Text style={styles.modalInfo}>
               You won’t be charged until everyone confirms and{'\n'}the leader creates the subscription.
             </Text>

@@ -200,11 +200,11 @@ const GroupMembers: React.FC<Props> = ({
                 )}
               </View>
               {showEstimatedText && <Text style={styles.estimate}>Estimated</Text>}
-              {requestConfirmSent && group && <Text style={styles.price}>${group.amountEach}</Text>}
+              {requestConfirmSent && group && <Text style={styles.price}>${`${group.amountEach.toFixed(2)}`}</Text>}
             </View>
             <View style={styles.amountEach}>
               <Text style={styles.username}>{member.user.username}</Text>
-              {showAmountEach && group && <Text style={styles.price}>${group.amountEach}</Text>}
+              {showAmountEach && group && <Text style={styles.price}>${`${group.amountEach.toFixed(2)}`}</Text>}
               {requestConfirmSent && (
                 <Text
                   style={[
