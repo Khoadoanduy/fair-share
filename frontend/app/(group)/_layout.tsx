@@ -52,19 +52,8 @@ export default function AuthLayout() {
             headerTitle: () => null,
           }}
       />
-      {/* <Stack.Screen
-          name = "ShowAllInvitations"
-          options={{ title: ""}}
-      /> */}
       <Stack.Screen
           name="SubscriptionDetails"
-          options={{
-            title: "",
-            headerTitle: () => null,
-          }}
-      />
-      <Stack.Screen
-          name="newGroupDetails"
           options={{
             title: "",
             headerTitle: () => null,
@@ -77,17 +66,23 @@ export default function AuthLayout() {
             title: 'My Groups'
           }} 
       />
-      <Stack.Screen
-          name="newGroupDetails"
-          options={{
-            title: "",
-            headerTitle: () => null,
-          }}
-      />
+    <Stack.Screen
+        name = "showAllInvitations"
+        options={{ title: "", 
+                  headerTitle: () => null,
+                  headerLeft: () => null,}}
+    />
       <Stack.Screen
           name="setMemberShares"
           options={{
             title: "Set member shares",
+            headerTitle: () => null,
+          }}
+      />
+            <Stack.Screen
+          name="newGroupDetails"
+          options={{
+            title: "",
             headerTitle: () => null,
           }}
       />

@@ -100,7 +100,7 @@ export default function setMemberShares() {
             <SubscriptionCard
                 logo={{uri: group.subscription?.logo}}
                 subscriptionName={group.subscriptionName}
-                amountEach={group.amountEach.toFixed(2)}
+                amountEach={group.amountEach}
                 cycle={group.cycle}
                 isShared={false} 
                 category={group.category}

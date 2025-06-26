@@ -45,7 +45,8 @@ router.post('/create', async (request: Request, response: Response) => {
           totalMem: 1,
           amountEach: parseFloat(parseFloat(amount).toFixed(2)),
           startDate,
-          endDate: nextPaymentDate
+          endDate: nextPaymentDate,
+          visibility: visibility || 'friends' // Add this line with default fallback
         }
       });
 
@@ -109,7 +110,7 @@ router.get('/:groupId', async (request: Request, response: Response) => {
     }
     
     const group = await prisma.group.findUnique({
-      where: { id: groupId, status: "pending" },
+      where: { id: groupId },
       include: {
         members: {
           include: {
@@ -305,6 +306,84 @@ router.get('/amount-each/:groupId', async (request: Request, response: Response)
     response.status(500).json({ message: 'Error getting amount' });
   }
 });
+    
+//Get group leader
+router.get('/leader/:groupId', async (request: Request, response: Response) => {
+  try {
+    const { groupId } = request.params;
+    if (!groupId) {
+      return response.status(400).json({ message: 'groupId are required' });
+    }
+    const group = await prisma.groupMember.findFirst({
+      where: { 
+        groupId: groupId,
+        userRole: "leader" 
+      },
+      include: {
+        user: true
+      }
+    })
+    if (!group)
+      return response.status(404).json({ message: "No group found" });
+    response.status(200).json(group.user);
+
+  } catch (error) {
+    console.error(error);
+    response.status(500).json({ message: 'Error getting group leader' });
+  }
+});
+
+router.get('/search-group/:userId/:groupName', async (request, response) => {
+  try {
+    const { userId, groupName } = request.params;
+
+    const groups = await prisma.groupMember.findMany({
+      where: {
+        userId: userId,
+        group: {
+          is: {
+            groupName: {
+              contains: groupName,
+              mode: 'insensitive'
+            }
+          }
+        }
+      },
+      select: {
+        group: true
+      }
+    })
+
+    //If user doesn't exist, give an empty list
+    if (groups.length === 0) {
+      return response.status(404).json({ groups: [] });
+    }
+    response.status(200).json({ groups });
+  } catch (error) {
+    console.log(error);
+    response.status(500).json({ message: 'Error searching group' });
+  }
+});
+
+//Get amount each member has to pay
+router.get('/amount-each/:groupId', async (request: Request, response: Response) => {
+  try {
+    const { groupId } = request.params;
+    if (!groupId) {
+      return response.status(400).json({ message: 'groupId are required' });
+    }
+    const group = await prisma.group.findFirst({
+      where: { id: groupId },
+    });
+    if (!group)
+      return response.status(404).json({ message: "No group found" });
+    response.status(200).json(group.amountEach);
+
+  } catch (error) {
+    console.error(error);
+    response.status(500).json({ message: 'Error getting amount' });
+  }
+});
 
 //Get the number of members in the group
 router.get('/total-mem/:groupId', async (request: Request, response: Response) => {
@@ -370,6 +449,29 @@ router.get('/:groupId', async (request: Request, response: Response) => {
         console.error(error);
         response.status(500).json({ message: 'Error getting group details' });
     }
+});
+
+//Show all pending invitations for a group
+router.get('/invitation/:groupId', async (request: Request, response: Response) => {
+  try {
+    const { groupId } = request.params;
+    if (!groupId) {
+      return response.status(400).json({ message: 'groupId are required' });
+    }
+    //Check if the user has already been invited to this group
+    const invitation = await prisma.groupInvitation.findMany({
+      where: { groupId, status: "pending" },
+      include: { user: true }
+    })
+    if (invitation.length == 0) {
+      return response.status(409).json({ message: 'No invitation sent' });
+    }
+    response.status(200).json(invitation);
+
+  } catch (error) {
+    console.error(error);
+    response.status(500).json({ message: 'Error getting invitation' });
+  }
 });
 
 export default router
