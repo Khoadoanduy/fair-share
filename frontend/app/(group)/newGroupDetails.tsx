@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -8,9 +8,10 @@ import {
   ActivityIndicator,
   Alert,
   TouchableOpacity,
-  Image
+  Image,
+  RefreshControl
 } from "react-native";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
 import axios from "axios";
 import { Ionicons } from "@expo/vector-icons";
 import { useUserState } from "@/hooks/useUserState";
@@ -58,6 +59,31 @@ type Group = {
   };
 };
 
+type JoinRequest = {
+  id: string;
+  groupId: string;
+  userId: string;
+  status: string;
+  type: string;
+  createdAt: string;
+  user: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    username: string;
+  };
+};
+
+type Invitation = {
+  id: string;
+  user: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    username: string;
+  };
+};
+
 export default function GroupDetailsScreen() {
   const API_URL = process.env.EXPO_PUBLIC_API_URL;
   const router = useRouter();
@@ -73,38 +99,82 @@ export default function GroupDetailsScreen() {
   const [showMembers, setShowMembers] = useState(false);
   const [confirmShare, setConfirmShare] = useState(false);
   const [allConfirmed, setAllConfirmed] = useState(false);
+  const [joinRequests, setJoinRequests] = useState<JoinRequest[]>([]);
+  const [invitations, setInvitations] = useState<Invitation[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
+
+  // Create a refresh function that can be called from multiple places
+  const fetchGroupDetails = useCallback(async () => {
+    try {
+      setLoading(true);
+
+      // First, get the role to determine if we need to fetch join requests
+      const roleResponse = await axios.get(`${API_URL}/api/groupMember/${groupId}/${userId}`);
+      const isLeader = roleResponse.data.isLeader;
+
+      // Build the promises array - include the remaining requests
+      const promises = [
+        axios.get(`${API_URL}/api/group/${groupId}`),
+        axios.get(`${API_URL}/api/cfshare/leader-sent/${groupId}`),
+        axios.get(`${API_URL}/api/cfshare/check-status/${groupId}/${userId}`),
+        axios.get(`${API_URL}/api/cfshare/all-confirmed/${groupId}`)
+      ];
+
+      // Add invitations and join requests promises only if user is a leader
+      if (isLeader) {
+        promises.push(
+          axios.get(`${API_URL}/api/group/invitation/${groupId}`),
+          axios.get(`${API_URL}/api/group/join-requests/${groupId}`)
+        );
+      }
+
+      const responses = await Promise.all(promises);
+      const [groupResponse, requestSent, shareConfirmed, checkAllConfirmed, invitationsResponse, joinRequestsResponse] = responses;
+
+      setGroup(groupResponse.data);
+      setIsLeader(isLeader);
+      setConfirmRequestSent(requestSent.data);
+      setConfirmShare(shareConfirmed.data);
+      setAllConfirmed(checkAllConfirmed.data);
+      setInvitations(invitationsResponse?.data || []);
+      setJoinRequests(joinRequestsResponse?.data || []);
+      setError(null);
+    } catch (err) {
+      console.error("Error fetching group details:", err);
+      setError("Failed to load group details");
+      Alert.alert("Error", "Failed to load group details");
+      setJoinRequests([]);
+      setInvitations([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [groupId, userId, API_URL]);
+
+  // Pull-to-refresh function
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await fetchGroupDetails();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [fetchGroupDetails]);
 
 
   useEffect(() => {
-    const fetchGroupDetails = async () => {
-      try {
-        setLoading(true);
-        const [groupResponse, roleResponse, requestSent, shareConfirmed, checkAllConfirmed] = await Promise.all([
-          axios.get(`${API_URL}/api/group/${groupId}`),
-          axios.get(`${API_URL}/api/groupMember/${groupId}/${userId}`),
-          axios.get(`${API_URL}/api/cfshare/leader-sent/${groupId}`),
-          axios.get(`${API_URL}/api/cfshare/check-status/${groupId}/${userId}`),
-          axios.get(`${API_URL}/api/cfshare/all-confirmed/${groupId}`)
-        ]);
-        setGroup(groupResponse.data);
-        setIsLeader(roleResponse.data.isLeader);
-        setConfirmRequestSent(requestSent.data);
-        setConfirmShare(shareConfirmed.data);
-        setAllConfirmed(checkAllConfirmed.data);
-        setError(null);
-      } catch (err) {
-        console.error("Error fetching group details:", err);
-        setError("Failed to load group details");
-        Alert.alert("Error", "Failed to load group details");
-      } finally {
-        setLoading(false);
-      }
-    };
-
     if (groupId && userId) {
       fetchGroupDetails();
     }
-  }, [groupId, userId]);
+  }, [groupId, userId, fetchGroupDetails]);
+
+  // Refresh data when screen comes into focus (e.g., returning from invite member page)
+  useFocusEffect(
+    useCallback(() => {
+      if (groupId && userId) {
+        fetchGroupDetails();
+      }
+    }, [groupId, userId, fetchGroupDetails])
+  );
   const handleInviteMembers = () => {
     router.push({
       pathname: "/(group)/inviteMember",
@@ -115,7 +185,7 @@ export default function GroupDetailsScreen() {
   // Add this near the other handler functions, before the return statement
   const handleSubscriptionDetails = () => {
     router.push({
-      pathname: "/(group)/SubscriptionDetails",
+      pathname: "/(group)/subscriptionDetails",
       params: { groupId },
     });
   };
@@ -169,6 +239,9 @@ export default function GroupDetailsScreen() {
       <ScrollView
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
       >
         {/* Propmt member to confirm share request */}
         {confirmRequestSent && !leader && !confirmShare && (
@@ -184,7 +257,7 @@ export default function GroupDetailsScreen() {
               </TouchableOpacity>
             </View>
           </View>
-          )
+        )
         }
 
         {/* Prompt leader to charge members and start subscription */}
@@ -201,7 +274,7 @@ export default function GroupDetailsScreen() {
               </TouchableOpacity>
             </View>
           </View>
-          )
+        )
         }
 
         {/* Top Info Card */}
@@ -214,12 +287,12 @@ export default function GroupDetailsScreen() {
         {/* Service Card */}
         <View style={styles.serviceCard}>
           <SubscriptionCard
-              logo={{uri: group.subscription?.logo}}
-              subscriptionName={group.subscriptionName}
-              amountEach={group.amountEach}
-              cycle={group.cycle}
-              isShared={true} // or item.isShared if available
-              category={group.category}
+            logo={{ uri: group.subscription?.logo }}
+            subscriptionName={group.subscriptionName}
+            amountEach={group.amountEach}
+            cycle={group.cycle}
+            isShared={true} // or item.isShared if available
+            category={group.category}
           />
           <TouchableOpacity
             style={styles.detailsRow}
@@ -237,23 +310,29 @@ export default function GroupDetailsScreen() {
         {/* Members Section */}
         {groupId && userId && (
           confirmRequestSent ?
-            <GroupMembers 
-              groupId={groupId as string} 
-              userId={userId} 
+            <GroupMembers
+              groupId={groupId as string}
+              userId={userId!}
               showAmountEach={false}
               showEstimatedText={false}
-              showInvitations={false}
+              showInvitations={leader}
               showHeader={true}
               requestConfirmSent={true}
+              joinRequests={leader ? joinRequests : []}
+              invitations={leader ? invitations : []}
+              onJoinRequestResponse={fetchGroupDetails}
             /> :
-            <GroupMembers 
-              groupId={groupId as string} 
-              userId={userId} 
+            <GroupMembers
+              groupId={groupId as string}
+              userId={userId!}
               showAmountEach={true}
               showEstimatedText={true}
-              showInvitations={true}
+              showInvitations={leader}
               showHeader={true}
               requestConfirmSent={false}
+              joinRequests={leader ? joinRequests : []}
+              invitations={leader ? invitations : []}
+              onJoinRequestResponse={fetchGroupDetails}
             />
         )}
       </ScrollView>
@@ -280,9 +359,9 @@ export default function GroupDetailsScreen() {
               <Ionicons name="chevron-down" size={16} color="#4A3DE3" />
             </TouchableOpacity>
             {showMembers && (
-              <GroupMembers 
-                groupId={groupId as string} 
-                userId={userId} 
+              <GroupMembers
+                groupId={groupId as string}
+                userId={userId!}
                 showAmountEach={true}
                 showEstimatedText={false}
                 showInvitations={false}
@@ -324,57 +403,57 @@ export default function GroupDetailsScreen() {
               <Text style={{ color: '#4A3DE3' }}>virtual card</Text>!
             </Text>
             <Text style={styles.modalMessage}>
-              All members have confirmed their shares. 
-              You can now pull funds, generate a virtual card, 
+              All members have confirmed their shares.
+              You can now pull funds, generate a virtual card,
               and use it to subscribe to the service.
             </Text>
             <View style={styles.stepContainer}>
-                <View style={styles.stepItem}>
-                  <Ionicons name="checkmark-circle" size={24} color="#34D399" style={styles.stepIcon} />
-                  <View style={styles.stepTextContainer}>
+              <View style={styles.stepItem}>
+                <Ionicons name="checkmark-circle" size={24} color="#34D399" style={styles.stepIcon} />
+                <View style={styles.stepTextContainer}>
                     <Text style={[styles.stepTitle, {color: 'black'}]}>Confirm member shares</Text>
                     <Text style={[styles.stepSub, {color: '#64748B'}]}>Review and confirm each member's share</Text>
-                  </View>
                 </View>
+              </View>
 
-                <TouchableOpacity style={styles.stepItem}>
-                  <Ionicons name="card" size={24} color="black" style={styles.stepIcon} />
-                  <View style={styles.stepTextContainer}>
+              <TouchableOpacity style={styles.stepItem}>
+                <Ionicons name="card" size={24} color="black" style={styles.stepIcon} />
+                <View style={styles.stepTextContainer}>
                     <Text style={[styles.stepTitle, {color: 'black'}]}>Pull funds & generate virtual card</Text>
                     <Text style={[styles.stepSub, {color: '#64748B'}]}>Pull funds from members and generate a virtual card</Text>
-                  </View>
-                  <Ionicons name="chevron-forward" size={20} color="#C7C7CC" />
-                </TouchableOpacity>
-
-                <View style={styles.stepItem}>
-                  <Ionicons name="wallet-outline" size={24} color="#C7C7CC" style={styles.stepIcon} />
-                  <View style={styles.stepTextContainer}>
-                    <Text style={styles.stepTitle}>Subscribe to Netflix</Text>
-                    <Text style={styles.stepSub}>Use the card to subscribe to the service</Text>
-                  </View>
                 </View>
+                <Ionicons name="chevron-forward" size={20} color="#C7C7CC" />
+              </TouchableOpacity>
 
-                <View style={styles.stepItem}>
-                  <Ionicons name="checkmark-done-outline" size={24} color="#C7C7CC" style={styles.stepIcon} />
-                  <View style={styles.stepTextContainer}>
-                    <Text style={styles.stepTitle}>Start cycle</Text>
-                    <Text style={styles.stepSub}>Confirm the subscription and notify members</Text>
-                  </View>
+              <View style={styles.stepItem}>
+                <Ionicons name="wallet-outline" size={24} color="#C7C7CC" style={styles.stepIcon} />
+                <View style={styles.stepTextContainer}>
+                  <Text style={styles.stepTitle}>Subscribe to Netflix</Text>
+                  <Text style={styles.stepSub}>Use the card to subscribe to the service</Text>
                 </View>
+              </View>
 
-                <View style={styles.stepItem}>
-                  <Ionicons name="key-outline" size={24} color="#C7C7CC" style={styles.stepIcon} />
-                  <View style={styles.stepTextContainer}>
-                    <Text style={styles.stepTitle}>Update account credentials</Text>
-                    <Text style={styles.stepSub}>Enter the login details for the shared subscription</Text>
-                  </View>
+              <View style={styles.stepItem}>
+                <Ionicons name="checkmark-done-outline" size={24} color="#C7C7CC" style={styles.stepIcon} />
+                <View style={styles.stepTextContainer}>
+                  <Text style={styles.stepTitle}>Start cycle</Text>
+                  <Text style={styles.stepSub}>Confirm the subscription and notify members</Text>
                 </View>
+              </View>
+
+              <View style={styles.stepItem}>
+                <Ionicons name="key-outline" size={24} color="#C7C7CC" style={styles.stepIcon} />
+                <View style={styles.stepTextContainer}>
+                  <Text style={styles.stepTitle}>Update account credentials</Text>
+                  <Text style={styles.stepSub}>Enter the login details for the shared subscription</Text>
+                </View>
+              </View>
             </View>
           </View>
         </View>
       </Modal>
     </SafeAreaView>
-    
+
   );
 }
 
@@ -461,7 +540,7 @@ const styles = StyleSheet.create({
   serviceCard: {
     backgroundColor: "white",
     marginHorizontal: 16,
-    marginBottom: 8,
+    marginBottom: 16,
     borderRadius: 16,
     padding: 16,
     borderWidth: 1,
@@ -674,6 +753,74 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#94A3B8',
     marginTop: 2,
+  },
+
+  // Join Requests Styles
+  membersSection: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 16,
+    margin: 16,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  membersSectionHeader: {
+    marginBottom: 16,
+  },
+  membersTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#000',
+  },
+  memberRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  memberAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  memberInitials: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: 'white',
+  },
+  memberInfo: {
+    flex: 1,
+  },
+  memberNameContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  memberName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#000',
+  },
+  memberUsername: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginTop: 2,
+  },
+  requestButtons: {
+    flexDirection: 'row',
+    gap: 8,
+    flexShrink: 0,
+    width: 160,
   },
 
 });
