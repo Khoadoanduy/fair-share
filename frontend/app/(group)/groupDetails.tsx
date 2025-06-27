@@ -18,6 +18,7 @@ import VirtualCardDisplay from "@/components/VirtualCardDisplay";
 import { useUserState } from "@/hooks/useUserState";
 import GroupMembers from "@/components/GroupMember";
 import SubscriptionCard from "@/components/SubscriptionCard";
+import GroupHeader from "@/components/GroupHeader";
 
 // Define the Group type
 type GroupMember = {
@@ -127,6 +128,8 @@ export default function GroupDetailsScreen() {
     });
   };
 
+  console.log(group);
+
   // Add this near the other handler functions, before the return statement
   const handleSubscriptionDetails = () => {
     router.push({
@@ -159,27 +162,6 @@ export default function GroupDetailsScreen() {
 
   const daysRemaining = getDaysRemaining(group.nextPaymentDate);
 
-  // Update the JSX for the info cards
-  const InfoCard = ({
-    label,
-    value,
-    icon,
-  }: {
-    label: string;
-    value: string;
-    icon: string;
-  }) => (
-    <View style={styles.infoCard}>
-      <View style={styles.labelContainer}>
-        <Text style={styles.infoLabel}>{label}</Text>
-        <Ionicons name={icon} size={24} color="#000" />
-      </View>
-      <View style={styles.infoValueContainer}>
-        <Text style={styles.infoValue}>{value}</Text>
-      </View>
-    </View>
-  );
-
     return (
     <SafeAreaView style={styles.container}>
       <ScrollView
@@ -187,25 +169,13 @@ export default function GroupDetailsScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* Top Info Card */}
-        <View style={styles.topCard}>
-          <View style={styles.lockContainer}>
-            <Ionicons name="lock-closed-outline" size={24} color="#4353ED" />
-            <Text style={styles.groupName}>{group.groupName}</Text>
-          </View>
-
-          <View style={styles.infoCardsContainer}>
-            <InfoCard
-              label="Your share"
-              value={`$${group.amountEach.toFixed(2)}`}
-              icon="pie-chart-outline"
-            />
-            <InfoCard
-              label="Payment in"
-              value={`${daysRemaining} days`}
-              icon="time-outline"
-            />
-          </View>
-        </View>
+        <GroupHeader
+          groupName={group.groupName}
+          amountEach={group.amountEach.toFixed(2)}
+          daysUntilNextPayment={group.daysUntilNextPayment}
+          showShare={true}
+          showPayment={true}
+        />
 
         {/* Service Card */}
         <View style={styles.serviceCard}>

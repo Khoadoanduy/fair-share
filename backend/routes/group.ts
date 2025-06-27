@@ -101,61 +101,6 @@ router.get('/search-user/:username', async (request: Request, response: Response
   }
 });
 
-// Get group details with members
-router.get('/:groupId', async (request: Request, response: Response) => {
-  try {
-    const { groupId } = request.params;
-    if (!groupId) {
-      return response.status(400).json({ message: 'groupId is required' });
-    }
-    
-    const group = await prisma.group.findUnique({
-      where: { id: groupId },
-      include: {
-        members: {
-          include: {
-            user: true
-          }
-        }
-      }
-    });
-    
-    if (!group) {
-      return response.status(404).json({ message: 'Group not found' });
-    }
-    
-    const today = new Date();
-    let nextPaymentDate = group.endDate;
-    let daysUntilNextPayment = 0;
-
-    if (group.startDate && group.cycleDays) {
-      nextPaymentDate = calculateNextPaymentDate(group.cycleDays, group.startDate);
-      
-      if (nextPaymentDate < today) {
-        const daysSinceStart = calculateDaysBetween(group.startDate, today);
-        const cyclesPassed = Math.floor(daysSinceStart / group.cycleDays);
-        nextPaymentDate = new Date(group.startDate);
-        nextPaymentDate.setDate(group.startDate.getDate() + (cyclesPassed + 1) * group.cycleDays);
-      }
-      
-      daysUntilNextPayment = calculateDaysBetween(today, nextPaymentDate);
-      
-      await prisma.group.update({
-        where: { id: groupId },
-        data: { endDate: nextPaymentDate }
-      });
-    }
-    
-    response.status(200).json({
-      ...group,
-      daysUntilNextPayment,
-      nextPaymentDate: nextPaymentDate?.toISOString().split('T')[0]
-    });
-  } catch (error) {
-    console.error(error);
-    response.status(500).json({ message: 'Error getting group details' });
-  }
-});
 
 // Update credentials (leader only)
 router.put('/:groupId/credentials', async (request: Request, response: Response) => {
@@ -412,7 +357,7 @@ router.get('/:groupId', async (request: Request, response: Response) => {
         if (!groupId) {
             return response.status(400).json({ message: 'groupId is required' });
         }
-        
+        console.log('here');
         const group = await prisma.group.findUnique({
             where: { id: groupId },
             include: {
