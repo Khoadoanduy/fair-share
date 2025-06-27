@@ -12,7 +12,7 @@ import axios from "axios";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import CustomButton from "./CustomButton";
-import InviteButton from "./InviteButton";
+import setMemberShares from "@/app/(group)/setMemberShares";
 
 // Types
 type GroupMember = {
@@ -30,6 +30,10 @@ type GroupMember = {
 type Props = {
   groupId: string;
   userId: string;
+  showAmountEach?: boolean;
+  showEstimatedText?: boolean;
+  showInvitations?: boolean;
+  showHeader?: boolean;
 };
 
 type Group = {
@@ -46,7 +50,7 @@ type Invitation = {
   };
 }
 
-const GroupMembers: React.FC<Props> = ({ groupId, userId }) => {
+const GroupMembers: React.FC<Props> = ({ groupId, userId, showAmountEach, showEstimatedText, showInvitations, showHeader }) => {
   const API_URL = process.env.EXPO_PUBLIC_API_URL;
   const router = useRouter();
   const [members, setMembers] = useState<GroupMember[]>([]);
@@ -113,14 +117,16 @@ const GroupMembers: React.FC<Props> = ({ groupId, userId }) => {
 
   return (
     <ScrollView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Members</Text>
-        {isLeader && (
-          <TouchableOpacity style={styles.addButton} onPress={handleInvite}>
-            <Ionicons name="add" size={20} color="black" />
-          </TouchableOpacity>
-        )}
-      </View>
+      {showHeader && 
+        <View style={styles.header}>
+          <Text style={styles.title}>Members</Text>
+          {isLeader && (
+            <TouchableOpacity style={styles.addButton} onPress={handleInvite}>
+              <Ionicons name="add" size={20} color="black" />
+            </TouchableOpacity>
+          )}
+        </View>
+      }
 
       {members.map((member, index) => (
         <View key={member.id} style={styles.memberRow}>
@@ -143,20 +149,25 @@ const GroupMembers: React.FC<Props> = ({ groupId, userId }) => {
                   </View>
                 )}
               </View>
-              <Text style={styles.estimate}>Estimated</Text>
+              {showEstimatedText && <Text style={styles.estimate}>Estimated</Text>}
             </View>
             <View style={styles.amountEach}>
               <Text style={styles.username}>{member.user.username}</Text>
-              <Text>${group?.amountEach.toFixed(2)}</Text>
+              {showAmountEach && group && <Text style={styles.price}>${group.amountEach.toFixed(2)}</Text>}
             </View>
           </View>
         </View>
       ))}
-      {isLeader && (
+      {isLeader && showInvitations && (
         <>
         <CustomButton
           text="Set shares & request confirmation"
-          //onPress={handleChargeMoney}
+          onPress={() => {
+                    router.push({
+                      pathname: "/(group)/setMemberShares",
+                      params: { groupId },
+                    });
+                  }}
           size="large"
           fullWidth
         />
@@ -301,7 +312,12 @@ const styles = StyleSheet.create({
   },
   amountEach: {
     flexDirection: 'row',
-    justifyContent: 'space-between'
+    justifyContent: 'space-between',
+  },
+  price: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#111827',
   },
   textInvitation: {
     color: "#64748B",

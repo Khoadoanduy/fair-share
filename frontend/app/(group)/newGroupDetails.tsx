@@ -12,7 +12,6 @@ import {
 import { useLocalSearchParams, useRouter } from "expo-router";
 import axios from "axios";
 import { Ionicons } from "@expo/vector-icons";
-import CustomButton from "@/components/CustomButton";
 import { useUserState } from "@/hooks/useUserState";
 import SubscriptionCard from "@/components/SubscriptionCard";
 import GroupMembers from "@/components/GroupMember";
@@ -175,7 +174,7 @@ export default function GroupDetailsScreen() {
           <SubscriptionCard
               logo={{uri: group.subscription?.logo}}
               subscriptionName={group.subscriptionName}
-              amountEach={group.amountEach.toFixed(2)}
+              amountEach={group.amountEach}
               cycle={group.cycle}
               isShared={true} // or item.isShared if available
               category={group.category}
@@ -195,7 +194,14 @@ export default function GroupDetailsScreen() {
 
         {/* Members Section */}
         {groupId && userId && (
-            <GroupMembers groupId={groupId as string} userId={userId} />
+            <GroupMembers 
+              groupId={groupId as string} 
+              userId={userId} 
+                showAmountEach={true}
+                showEstimatedText={true}
+                showInvitations={true}
+                showHeader={true}
+              />
         )}
       </ScrollView>
     </SafeAreaView>
@@ -370,139 +376,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#000",
     fontWeight: "500",
-  },
-  membersSection: {
-    backgroundColor: "white",
-    marginHorizontal: 16,
-    marginBottom: 8,
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-  },
-  membersSectionHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  membersTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#000",
-  },
-  addButton: {
-    width: 24,
-    height: 24,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  memberRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 12,
-  },
-  memberAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 12,
-  },
-  memberInitials: {
-    color: "#FFF",
-    fontWeight: "600",
-    fontSize: 14,
-  },
-  memberInfo: {
-    flex: 1,
-  },
-  memberNameContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  memberName: {
-    fontSize: 16,
-    fontWeight: "500",
-    color: "#000",
-  },
-  leaderBadge: {
-    backgroundColor: "#4A3DE3", // Using the primary purple color
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 12,
-    marginLeft: 8,
-  },
-  leaderText: {
-    color: "#FFF",
-    fontSize: 10,
-    fontWeight: "600",
-  },
-  memberUsername: {
-    fontSize: 14,
-    color: "#64748B", // Using the subtitle color
-    marginTop: 2,
-  },
-  memberAmount: {
-    fontSize: 16,
-    fontWeight: "500",
-    color: "#000",
-  },
-  paymentMethodRow: {
-    backgroundColor: "#FFF",
-    marginHorizontal: 16,
-    marginBottom: 16,
-    borderTopLeftRadius: 12,
-    borderTopRightRadius: 12,
-    padding: 16,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-  },
-  paymentMethodTitle: {
-    fontSize: 16,
-    fontWeight: "500",
-    color: "#000",
-  },
-  creditCard: {
-    backgroundColor: "#C4C4C4",
-    marginHorizontal: 16,
-    marginBottom: 20,
-    borderRadius: 12,
-    height: 200,
-    padding: 16,
-    position: "relative",
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-  },
-  cardLogoContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    position: "absolute",
-    bottom: 16,
-    right: 16,
-  },
-  discoverText: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#FFF",
-    marginRight: 8,
-  },
-  itLogo: {
-    backgroundColor: "#FF6600",
-    borderRadius: 12,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    width: 24,
-    height: 18,
-  },
-  itText: {
-    fontSize: 12,
-    fontWeight: "bold",
-    color: "#FFF",
   },
   nextButton: {
     backgroundColor: '#5E5AEF',

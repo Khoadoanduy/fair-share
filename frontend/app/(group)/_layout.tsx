@@ -20,7 +20,7 @@ export default function AuthLayout() {
         headerShown: true,
         headerShadowVisible: false,
         headerStyle: { backgroundColor: "#fff" },
-        headerTitleStyle: { fontWeight: "bold", color: '#4A3DE3' },
+        headerTitleStyle: { fontWeight: "bold", fontSize: 20, color: '#4A3DE3' },
         headerLeft: () => <BackButton />, // your custom back button
       }}
     >
@@ -72,6 +72,20 @@ export default function AuthLayout() {
                   headerTitle: () => null,
                   headerLeft: () => null,}}
     />
+      <Stack.Screen
+          name="setMemberShares"
+          options={{
+            title: "Set member shares",
+            headerTitle: () => null,
+          }}
+      />
+            <Stack.Screen
+          name="newGroupDetails"
+          options={{
+            title: "",
+            headerTitle: () => null,
+          }}
+      />
     </Stack>
 
   );
