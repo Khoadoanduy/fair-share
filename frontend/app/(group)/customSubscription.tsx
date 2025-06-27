@@ -36,7 +36,8 @@ export default function CustomSubscriptionScreen() {
     defaultValues: {
       currency: 'USD',
       cycle: 'monthly',
-      day: '1'
+      day: '1',
+      planName: 'standard'
     }
   });
   const dayValue = watch('day');
@@ -162,6 +163,13 @@ export default function CustomSubscriptionScreen() {
     { label: 'Cloud Storage', value: 'cloud_storage' },
     { label: 'Fitness', value: 'fitness' },
   ];
+  const planNameOptions: DropdownOption[] = [
+    { label: 'Standard Plan', value: 'standard' },
+    { label: 'Premium Plan', value: 'premium' },
+    { label: 'Family Plan', value: 'family' },
+    { label: 'Student Plan', value: 'student' },
+    { label: 'Other', value: 'other' },
+  ]
 
   // Close dropdown when clicking outside
   const handleOutsideClick = () => {
@@ -322,11 +330,28 @@ export default function CustomSubscriptionScreen() {
           </View>
 
           <Text style={styles.label}>Plan</Text>
-          <CustomInput
+          <Controller
             control={control}
             name="planName"
-            placeholder="Enter plan name"
-            style={styles.planInput}
+            rules={{ required: true }}
+            render={({ field: { value } }) => (
+              <CustomDropdown
+                options={planNameOptions}
+                value={value}
+                placeholder="Select plan name"
+                onChange={(val) => setValue('planName', val)}
+                isOpen={isDropdownOpen('planName')}
+                setIsOpen={() => toggleDropdown('planName')}
+                style={styles.dropdownInput}
+                menuStyle={{
+                  position: 'absolute',
+                  top: 170,
+                  left: 0,
+                  right: 0,
+                  zIndex: 100,
+                }}
+              />
+            )}
           />
         </View>
       </View>

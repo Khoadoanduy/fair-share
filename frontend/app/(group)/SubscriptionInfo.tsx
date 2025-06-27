@@ -20,6 +20,7 @@ type FormatData = {
   cycle: string;
   currency: string;
   logo: string;
+  userId: string;
 };
 
 type Subscription = {
@@ -40,7 +41,8 @@ export default function SubscriptionScreen() {
     defaultValues: {
       currency: 'USD',
       cycle: 'monthly',
-      day: '1'
+      day: '1',
+      planName: 'standard'
     }
   });
 
@@ -159,7 +161,6 @@ export default function SubscriptionScreen() {
         category: info.category,
         logo: info.logo,
         visibility: visibility || 'friends', 
-        userId: leaderId
       });
       
       const groupId = response.data.groupId;
@@ -195,6 +196,14 @@ export default function SubscriptionScreen() {
     { label: 'EUR (€)', value: 'EUR' },
     { label: 'JPY (¥)', value: 'JPY' },
   ];
+
+  const planNameOptions: DropdownOption[] = [
+    { label: 'Standard Plan', value: 'standard' },
+    { label: 'Premium Plan', value: 'premium' },
+    { label: 'Family Plan', value: 'family' },
+    { label: 'Student Plan', value: 'student' },
+    { label: 'Other', value: 'other' },
+  ]
 
   return (
     <SafeAreaView style={styles.container}>
@@ -394,11 +403,28 @@ export default function SubscriptionScreen() {
 
           {/* Plan */}
           <Text style={styles.label}>Plan</Text>
-          <CustomInput
+          <Controller
             control={control}
             name="planName"
-            placeholder="Enter plan name"
-            style={styles.planInput}
+            rules={{ required: true }}
+            render={({ field: { value } }) => (
+              <CustomDropdown
+                options={planNameOptions}
+                value={value}
+                placeholder="Select plan name"
+                onChange={(val) => setValue('planName', val)}
+                isOpen={isDropdownOpen('planName')}
+                setIsOpen={() => toggleDropdown('planName')}
+                style={styles.dropdownInput}
+                menuStyle={{
+                  position: 'absolute',
+                  top: 150,
+                  left: 0,
+                  right: 0,
+                  zIndex: 100,
+                }}
+              />
+            )}
           />
         </View>
       </View>
