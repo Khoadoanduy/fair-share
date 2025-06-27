@@ -39,7 +39,7 @@ export default function AuthLayout() {
           }}
       />
       <Stack.Screen
-          name="CustomSubscription"
+          name="customSubscription"
           options={{
             title: "",
             headerTitle: () => null,
