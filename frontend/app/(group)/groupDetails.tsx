@@ -116,7 +116,6 @@ export default function GroupDetailsScreen() {
         setLoading(false);
       }
     };
-
     if (groupId && userId) {
       fetchGroupDetails();
     }
