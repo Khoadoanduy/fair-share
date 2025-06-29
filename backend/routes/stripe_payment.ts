@@ -29,6 +29,7 @@ router.post('/charge-user', async function (request, response) {
       const amount = Math.round((preAmount + stripeFixedFee) / (1 - stripeFeePercentage));
       const paymentMethods = await stripe.customers.listPaymentMethods(customerStripeID);
       const paymentMethod = paymentMethods.data[0];
+      const subscription = request.body.subscription;
 
       const paymentIntent = await stripe.paymentIntents.create({
           amount: amount,
@@ -40,6 +41,7 @@ router.post('/charge-user', async function (request, response) {
           payment_method: paymentMethod.id,
           off_session: true,
           confirm: true,
+          description: subscription
         });
 
       response.json({
@@ -53,5 +55,27 @@ router.post('/charge-user', async function (request, response) {
         response.status(500).json({err});
       }
   });
+
+router.get('/transactions', async function (request, response) {
+  try {
+      const customerStripeID = request.query.customerStripeID;
+      if (!customerStripeID) {
+          return response.status(400).json({ error: 'Customer Stripe ID is required' });
+      }
+
+      const transactions = await stripe.paymentIntents.list({
+          limit: 20,
+          customer: customerStripeID,
+      });
+
+      response.json(transactions.data);
+  } catch (err) {
+      // Log for debugging
+      console.error('Error fetching Stripe transactions:', err);
+
+      // Send back the Stripe (or other) error message
+      response.status(500).json({ err });
+  }
+});
     
 export default router;

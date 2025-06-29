@@ -16,7 +16,7 @@ router.get('/', async function (request, response) {
         if (!user) {
             return response.status(430).send("User not found");
         }
-        response.json(user);
+        return response.json(user);
     } catch (error) {
         console.error("Error retrieving user:", error);
         response.status(500).send("Internal Server Error");
@@ -71,7 +71,13 @@ router.get('/invitation/:userId', async (request: Request, response: Response) =
         //Check if the user has already been invited to this group
         const invitation = await prisma.groupInvitation.findMany({
           where: { userId, status: "pending" },
-          include: { group: true }
+          include: { 
+            group: {
+                include: {
+                    subscription: true
+                }
+            }
+           }
         })
         if (invitation.length == 0) {
           return response.json({ message: 'No invitation sent' });
