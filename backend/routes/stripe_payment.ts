@@ -13,8 +13,7 @@ router.post('/charge-user', async function (request, response) {
   try {
       const customerStripeID = request.body.customerStripeID;
       const groupId = request.body.groupId;
-      const personalSubId = request.body.personalSubId;
-      const description = JSON.stringify({personalSubId, groupId});
+      const description = JSON.stringify({groupId});
       const parsed = JSON.parse(description);
       if (!customerStripeID) {
           return response.status(400).json({ error: 'Customer Stripe ID is required' });
