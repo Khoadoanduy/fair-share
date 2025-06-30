@@ -101,7 +101,7 @@ router.get('/search-user/:username', async (request: Request, response: Response
   }
 });
 
-// Get group details with members
+// Get group details 
 router.get('/:groupId', async (request: Request, response: Response) => {
   try {
     const { groupId } = request.params;
@@ -116,7 +116,8 @@ router.get('/:groupId', async (request: Request, response: Response) => {
           include: {
             user: true
           }
-        }
+        },
+        subscription: true
       }
     });
     
@@ -200,6 +201,29 @@ router.get('/:groupId/user-role/:userId', async (request: Request, response: Res
   } catch (error) {
     console.error('Error checking user role:', error);
     response.status(500).json({ message: 'Error checking user role' });
+  }
+});
+
+//Show all pending invitations for a group
+router.get('/invitation/:groupId', async (request: Request, response: Response) => {
+  try {
+    const { groupId } = request.params;
+    if (!groupId) {
+      return response.status(400).json({ message: 'groupId are required' });
+    }
+    //Check if the user has already been invited to this group
+    const invitation = await prisma.groupInvitation.findMany({
+      where: { groupId, status: "pending" },
+      include: { user: true }
+    })
+    if (invitation.length == 0) {
+      return response.status(409).json({ message: 'No invitation sent' });
+    }
+    response.status(200).json(invitation);
+
+  } catch (error) {
+    console.error(error);
+    response.status(500).json({ message: 'Error getting invitation' });
   }
 });
 
@@ -405,51 +429,6 @@ router.get('/total-mem/:groupId', async (request: Request, response: Response) =
   }
 });
 
-//Get group details
-router.get('/:groupId', async (request: Request, response: Response) => {
-    try {
-        const { groupId } = request.params;
-        if (!groupId) {
-            return response.status(400).json({ message: 'groupId is required' });
-        }
-        
-        const group = await prisma.group.findUnique({
-            where: { id: groupId },
-            include: {
-                members: {
-                    include: {
-                        user: true
-                    }
-                },
-                subscription: true
-            }
-        });
-        
-        if (!group) {
-            return response.status(404).json({ message: 'Group not found' });
-        }
-        
-        // Calculate days until next payment
-        let daysUntilNextPayment = 0;
-        let nextPaymentDate = null;
-        
-        if (group.endDate) {
-            nextPaymentDate = group.endDate;
-            const today = new Date();
-            const diffTime = Math.abs(nextPaymentDate.getTime() - today.getTime());
-            daysUntilNextPayment = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        }
-        
-        response.status(200).json({
-            ...group,
-            daysUntilNextPayment,
-            nextPaymentDate
-        });
-    } catch (error) {
-        console.error(error);
-        response.status(500).json({ message: 'Error getting group details' });
-    }
-});
 
 //Show all pending invitations for a group
 router.get('/invitation/:groupId', async (request: Request, response: Response) => {
