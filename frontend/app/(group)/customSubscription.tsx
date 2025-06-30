@@ -12,7 +12,8 @@ import CustomDropdown, { DropdownOption } from '@/components/CustomDropdown';
 import { useUser } from '@clerk/clerk-expo';
 import { useUserState } from '@/hooks/useUserState';
 import CustomCategoryModal from '@/components/CustomCategoryModal';
-import CategoryDropdown from '@/components/CategoryDropdown';
+import CustomDropdownModal from '@/components/CustomDropdownModal';
+import CustomInputModal from '@/components/CustomInputModal';
 
 type FormatData = {
   subscriptionName: string;
@@ -52,15 +53,15 @@ export default function CustomSubscriptionScreen() {
   const [customCategoryInput, setCustomCategoryInput] = useState('');
 
   const userFromMongo = async () => {
-    try{
-      const response = await axios.get(`${API_URL}/api/user/`,{
-        params:{
-          clerkID : clerkId
+    try {
+      const response = await axios.get(`${API_URL}/api/user/`, {
+        params: {
+          clerkID: clerkId
         }
       })
       return response.data.id
     }
-    catch(error){
+    catch (error) {
       console.error("Error fetching user data:", error);
     }
   }
@@ -98,7 +99,7 @@ export default function CustomSubscriptionScreen() {
 
   const calculateTotalDays = (dayValue: string, cycle: string): number => {
     const parsedDay = parseFloat(dayValue) || 1;
-    
+
     const cycleDaysMap: { [key: string]: number } = {
       'weekly': 7,
       'monthly': 30,
@@ -107,7 +108,7 @@ export default function CustomSubscriptionScreen() {
 
     const baseDays = cycleDaysMap[cycle.toLowerCase()] || 30;
     const totalDays = Math.round(parsedDay * baseDays);
-    
+
     return totalDays;
   };
 
@@ -120,7 +121,7 @@ export default function CustomSubscriptionScreen() {
     try {
       const leaderId = await userFromMongo();
       const cycleDays = calculateTotalDays(info.day, info.cycle);
-      
+
       // Create the group
       const response = await axios.post(`${API_URL}/api/group/create`, {
         groupName,
@@ -133,7 +134,7 @@ export default function CustomSubscriptionScreen() {
         category: info.category,
         userId: leaderId
       });
-      
+
       router.push({
         pathname: '/(group)/inviteMember',
         params: { groupId: response.data.groupId },
@@ -192,7 +193,7 @@ export default function CustomSubscriptionScreen() {
         />
       )}
 
-      <CustomCategoryModal
+      <CustomInputModal
         visible={showCustomCategoryModal}
         value={customCategoryInput}
         onChangeText={setCustomCategoryInput}
@@ -201,6 +202,11 @@ export default function CustomSubscriptionScreen() {
           setCustomCategoryInput('');
         }}
         onAdd={handleAddCustomCategory}
+        title="Add custom category"
+        subtitle="Customize category for your subscription"
+        placeholder="Enter category name"
+        addButtonLabel="Add"
+        cancelButtonLabel="Cancel"
       />
 
       <View style={styles.contentContainer}>
@@ -247,11 +253,18 @@ export default function CustomSubscriptionScreen() {
                   </Text>
                   <Ionicons name="chevron-down" size={20} color="#888" />
                 </Pressable>
-
-                <CategoryDropdown
+                <CustomDropdownModal
                   visible={activeDropdown === 'category'}
-                  selectedCategory={categoryValue}
-                  onSelectCategory={(category) => {
+                  selectedValue={categoryValue}
+                  options={[
+                    { value: 'streaming', label: 'Streaming', icon: 'play' },
+                    { value: 'education', label: 'Education', icon: 'school' },
+                    { value: 'music', label: 'Music', icon: 'musical-notes' },
+                    { value: 'news', label: 'News', icon: 'newspaper' },
+                    { value: 'home', label: 'Home', icon: 'home' },
+                    { value: 'fitness', label: 'Health/fitness', icon: 'fitness' },
+                  ]}
+                  onSelect={(category) => {
                     setValue('category', category);
                     setActiveDropdown(null);
                   }}
@@ -259,6 +272,9 @@ export default function CustomSubscriptionScreen() {
                     setActiveDropdown(null);
                     setShowCustomCategoryModal(true);
                   }}
+                  header="Suggested"
+                  customPrompt="Don't see what you're looking for?"
+                  customButtonLabel="Custom"
                 />
               </View>
             )}
@@ -354,18 +370,39 @@ export default function CustomSubscriptionScreen() {
             />
           </View>
 
-          {/* Plan */}
+          {/* Plan field (generalized dropdown example) */}
           <Text style={styles.label}>Plan</Text>
           <Controller
             control={control}
             name="planName"
-            render={({ field: { value, onChange } }) => (
-              <TextInput
-                style={[styles.planInput, styles.inputStyle]}
-                placeholder="Enter plan name"
-                value={value}
-                onChangeText={onChange}
-              />
+            render={({ field: { value } }) => (
+              <View style={styles.categoryContainer}>
+                <Pressable
+                  style={styles.categoryInput}
+                  onPress={() => toggleDropdown('planName')}
+                >
+                  <Text style={value ? styles.inputText : styles.placeholderText}>
+                    {value ? value : 'Select plan name'}
+                  </Text>
+                  <Ionicons name="chevron-down" size={20} color="#888" />
+                </Pressable>
+                <CustomDropdownModal
+                  visible={activeDropdown === 'planName'}
+                  selectedValue={value}
+                  options={[
+                    { value: 'basic', label: 'Basic' },
+                    { value: 'premium', label: 'Premium' },
+                    { value: 'family', label: 'Family' },
+                  ]}
+                  onSelect={(plan) => {
+                    setValue('planName', plan);
+                    setActiveDropdown(null);
+                  }}
+                  header="Plans"
+                  customPrompt="Don't see your plan?"
+                  customButtonLabel="Custom"
+                />
+              </View>
             )}
           />
         </View>

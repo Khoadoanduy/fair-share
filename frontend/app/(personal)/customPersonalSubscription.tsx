@@ -11,8 +11,8 @@ import { Ionicons } from '@expo/vector-icons';
 import CustomDropdown, { DropdownOption } from '@/components/CustomDropdown';
 import { useUser } from '@clerk/clerk-expo';
 import { useUserState } from '@/hooks/useUserState';
-import CategoryDropdown from '@/components/CategoryDropdown';
-import CustomCategoryModal from '@/components/CustomCategoryModal';
+import CustomDropdownModal from '@/components/CustomDropdownModal';
+import CustomInputModal from '@/components/CustomInputModal';
 
 type FormatData = {
   subscriptionName: string;
@@ -45,11 +45,11 @@ const CYCLE_DAYS_MAP = {
 export default function CustomPersonalSubscriptionScreen() {
   const API_URL = process.env.EXPO_PUBLIC_API_URL;
   const router = useRouter();
-  const { user } = useUser();
-  const { subscriptionType } = useLocalSearchParams();
+  const { userId } = useUserState();
+  const { personalType } = useLocalSearchParams();
 
-  // Calculate progress dots based on subscription type
-  const totalSteps = subscriptionType === 'virtual' ? 4 : 3;
+  // Calculate progress dots based on personalType
+  const totalSteps = personalType === 'virtual' ? 4 : 3;
   const currentStep = 2; // Always step 2 for both flows
 
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
@@ -80,18 +80,6 @@ export default function CustomPersonalSubscriptionScreen() {
     };
     requestPermissions();
   }, []);
-
-  const getUserMongoId = async (): Promise<string> => {
-    try {
-      const response = await axios.get(`${API_URL}/api/user/`, {
-        params: { clerkID: user?.id }
-      });
-      return response.data.id;
-    } catch (error) {
-      console.error("Error fetching user data:", error);
-      throw new Error("Failed to fetch user data");
-    }
-  };
 
   const pickImage = async () => {
     try {
@@ -126,11 +114,11 @@ export default function CustomPersonalSubscriptionScreen() {
     }
 
     try {
-      const userId = await getUserMongoId();
       const cycleDays = calculateTotalDays(data.day, cycle);
-
-      const response = await axios.post(`${API_URL}/api/personal-subscription/create`, {
+      // Use unified endpoint for group creation
+      const response = await axios.post(`${API_URL}/api/group/create`, {
         userId,
+        groupName: subscriptionName, // Consistent with personalSubscriptionInfo
         subscriptionName,
         planName,
         amount: parseFloat(amount),
@@ -138,16 +126,16 @@ export default function CustomPersonalSubscriptionScreen() {
         cycleDays,
         paymentFrequency: parseFloat(data.day),
         category,
-        subscriptionType,
+        logo: subscriptionImage || null, // Consistent with personalSubscriptionInfo
+        subscriptionType: "personal", // Always set for personal
+        personalType, // 'existing' or 'virtual'
       });
-
-      const nextRoute = subscriptionType === 'virtual'
+      const nextRoute = personalType === 'virtual'
         ? '/(personal)/createVirtualCard'
-        : '/(personal)/personalSubscriptionDetails';
-
+        : '/(personal)/addAccountCredentials';
       router.push({
         pathname: nextRoute,
-        params: { subscriptionId: response.data.subscriptionId },
+        params: { groupId: response.data.groupId, personalType },
       });
     } catch (error) {
       console.error(error);
@@ -187,12 +175,17 @@ export default function CustomPersonalSubscriptionScreen() {
         />
       )}
 
-      <CustomCategoryModal
+      <CustomInputModal
         visible={showCustomCategoryModal}
         value={customCategoryInput}
         onChangeText={setCustomCategoryInput}
         onCancel={handleCloseCustomCategoryModal}
         onAdd={handleAddCustomCategory}
+        title="Add custom category"
+        subtitle="Customize category for your subscription"
+        placeholder="Enter category name"
+        addButtonLabel="Add"
+        cancelButtonLabel="Cancel"
       />
 
       <View style={styles.contentContainer}>
@@ -239,11 +232,18 @@ export default function CustomPersonalSubscriptionScreen() {
                   </Text>
                   <Ionicons name="chevron-down" size={20} color="#888" />
                 </Pressable>
-
-                <CategoryDropdown
+                <CustomDropdownModal
                   visible={activeDropdown === 'category'}
-                  selectedCategory={categoryValue}
-                  onSelectCategory={(category) => {
+                  selectedValue={categoryValue}
+                  options={[
+                    { value: 'streaming', label: 'Streaming', icon: 'play' },
+                    { value: 'education', label: 'Education', icon: 'school' },
+                    { value: 'music', label: 'Music', icon: 'musical-notes' },
+                    { value: 'news', label: 'News', icon: 'newspaper' },
+                    { value: 'home', label: 'Home', icon: 'home' },
+                    { value: 'fitness', label: 'Health/fitness', icon: 'fitness' },
+                  ]}
+                  onSelect={(category) => {
                     setValue('category', category);
                     setActiveDropdown(null);
                   }}
@@ -251,6 +251,9 @@ export default function CustomPersonalSubscriptionScreen() {
                     setActiveDropdown(null);
                     setShowCustomCategoryModal(true);
                   }}
+                  header="Suggested"
+                  customPrompt="Don't see what you're looking for?"
+                  customButtonLabel="Custom"
                 />
               </View>
             )}
@@ -320,12 +323,12 @@ export default function CustomPersonalSubscriptionScreen() {
               control={control}
               name="amount"
               render={({ field: { value, onChange } }) => (
-                <TextInput
-                  style={[styles.amountInput, styles.inputStyle]}
+                <CustomInput
+                  control={control}
+                  name="amount"
                   placeholder="Amount"
-                  value={value}
-                  onChangeText={onChange}
                   keyboardType="decimal-pad"
+                  style={styles.amountInput}
                   blurOnSubmit={true}
                   returnKeyType="done"
                   onSubmitEditing={Keyboard.dismiss}
@@ -334,18 +337,39 @@ export default function CustomPersonalSubscriptionScreen() {
             />
           </View>
 
-          {/* Plan */}
+          {/* Plan field (generalized dropdown example) */}
           <Text style={styles.label}>Plan</Text>
           <Controller
             control={control}
             name="planName"
-            render={({ field: { value, onChange } }) => (
-              <TextInput
-                style={[styles.planInput, styles.inputStyle]}
-                placeholder="Enter plan name"
-                value={value}
-                onChangeText={onChange}
-              />
+            render={({ field: { value } }) => (
+              <View style={styles.categoryContainer}>
+                <Pressable
+                  style={styles.categoryInput}
+                  onPress={() => handleDropdownToggle('planName')}
+                >
+                  <Text style={value ? styles.inputText : styles.placeholderText}>
+                    {value ? value : 'Select plan name'}
+                  </Text>
+                  <Ionicons name="chevron-down" size={20} color="#888" />
+                </Pressable>
+                <CustomDropdownModal
+                  visible={activeDropdown === 'planName'}
+                  selectedValue={value}
+                  options={[
+                    { value: 'basic', label: 'Basic' },
+                    { value: 'premium', label: 'Premium' },
+                    { value: 'family', label: 'Family' },
+                  ]}
+                  onSelect={(plan) => {
+                    setValue('planName', plan);
+                    setActiveDropdown(null);
+                  }}
+                  header="Plans"
+                  customPrompt="Don't see your plan?"
+                  customButtonLabel="Custom"
+                />
+              </View>
             )}
           />
         </View>
@@ -355,7 +379,7 @@ export default function CustomPersonalSubscriptionScreen() {
       <View style={styles.buttonContainer}>
         <ProgressDots totalSteps={totalSteps} currentStep={currentStep} />
         <CustomButton
-          text="Next"
+          text={personalType === 'virtual' ? 'Next - Create virtual card' : 'Next - Update account credentials'}
           onPress={handleSubmit(handleCreatePersonalSubscription)}
           size="large"
           fullWidth
@@ -389,11 +413,11 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 24,
-    fontWeight: '700',
+    fontWeight: '600',
     marginBottom: 8,
     color: '#4A3DE3',
     alignSelf: 'center',
-    marginTop: -30
+    marginTop: -20
   },
   subtitle: {
     fontSize: 16,
@@ -535,7 +559,7 @@ const styles = StyleSheet.create({
   },
   buttonContainer: {
     position: 'absolute',
-    bottom: 0,
+    bottom: 35,
     left: 0,
     right: 0,
     paddingHorizontal: 20,

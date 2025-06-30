@@ -27,13 +27,13 @@ const formatRelativeDate = (dateString: string) => {
   const days = Math.ceil(diff / (1000 * 3600 * 24));
 
   if (days < 0) {
-    return "Due now";
+    return "now";
   } else if (days === 0) {
-    return "Due today";
+    return "today";
   } else if (days === 1) {
-    return "Due tomorrow";
+    return "tomorrow";
   } else {
-    return `${days} days left`;
+    return `in ${days} days`;
   }
 };
 
@@ -87,7 +87,7 @@ const GroupCard: React.FC<GroupCardProps> = ({ group, onPress }) => {
         {/* Show next payment for groups with endDate */}
         {!group.isPersonal && group.endDate && (
           <Text style={styles.nextPaymentText}>
-            Next payment: {formatRelativeDate(group.endDate)}
+            Due {formatRelativeDate(group.endDate)}
           </Text>
         )}
       </View>
@@ -162,7 +162,7 @@ const styles = StyleSheet.create({
   },
   price: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#111827',
     marginBottom: 4,
   },

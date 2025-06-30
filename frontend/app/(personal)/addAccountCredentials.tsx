@@ -5,22 +5,17 @@ import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import CredentialsVisibilityToggle from '@/components/CredentialsVisibilityToggle';
 import ProgressDots from '@/components/ProgressDots';
+import { useUserState } from '@/hooks/useUserState';
 
 export default function AddAccountCredentialsScreen() {
   const API_URL = process.env.EXPO_PUBLIC_API_URL;
-  const { subscriptionId, hasVirtualCard } = useLocalSearchParams();
+  const { groupId, personalType } = useLocalSearchParams();
   const router = useRouter();
+  const { userId } = useUserState();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [isVisible, setIsVisible] = useState(false);
   const [loading, setLoading] = useState(false);
-
-  const handleSkip = () => {
-    router.push({
-      pathname: '/(personal)/personalSubscriptionDetails',
-      params: { subscriptionId },
-    });
-  };
 
   const handleNext = async () => {
     if (!username.trim() || !password.trim()) {
@@ -30,14 +25,16 @@ export default function AddAccountCredentialsScreen() {
 
     setLoading(true);
     try {
-      await axios.put(`${API_URL}/api/personal-subscription/${subscriptionId}/credentials`, {
-        username: username.trim(),
-        password: password.trim(),
+      // Use unified endpoint for credentials update
+      await axios.put(`${API_URL}/api/group/${groupId}/credentials`, {
+        credentialUsername: username.trim(),
+        credentialPassword: password.trim(),
+        userId,
       });
 
       router.push({
         pathname: '/(personal)/personalSubscriptionDetails',
-        params: { subscriptionId },
+        params: { groupId, personalType },
       });
     } catch (error) {
       Alert.alert('Error', 'Failed to save credentials');
@@ -46,7 +43,8 @@ export default function AddAccountCredentialsScreen() {
     }
   };
 
-  const isVirtualFlow = hasVirtualCard === 'true';
+  // Use personalType for progress dots and navigation
+  const isVirtualFlow = personalType === 'virtual';
   const totalSteps = isVirtualFlow ? 4 : 3;
   const currentStep = isVirtualFlow ? 4 : 3;
 
@@ -54,18 +52,9 @@ export default function AddAccountCredentialsScreen() {
     <SafeAreaView style={styles.container}>
       <View style={styles.contentContainer}>
         <View style={styles.formContainer}>
-          {/* Header */}
-          <View style={styles.header}>
-            <Pressable onPress={() => router.back()}>
-              <Ionicons name="chevron-back" size={24} color="#000" />
-            </Pressable>
-            <Pressable onPress={handleSkip}>
-              <Text style={styles.skipText}>Skip</Text>
-            </Pressable>
-          </View>
 
           {/* Title */}
-          <Text style={styles.title}>Add subscription</Text>
+          <Text style={styles.title}>Add personal subscription</Text>
           <Text style={styles.subtitle}>Keep track of your account credentials</Text>
 
           {/* Form */}
@@ -92,13 +81,6 @@ export default function AddAccountCredentialsScreen() {
                 placeholderTextColor="#999"
                 secureTextEntry={!isVisible}
               />
-              <View style={styles.visibilityToggle}>
-                <CredentialsVisibilityToggle
-                  isVisible={isVisible}
-                  onToggle={() => setIsVisible(!isVisible)}
-                  size={20}
-                />
-              </View>
             </View>
             <Text style={styles.optional}>Optional</Text>
           </View>
@@ -108,8 +90,8 @@ export default function AddAccountCredentialsScreen() {
       {/* Progress Dots - Dynamic based on flow */}
       <View style={styles.bottomContainer}>
         <ProgressDots totalSteps={totalSteps} currentStep={currentStep} />
-        <Pressable 
-          style={[styles.nextButton, loading && styles.disabledButton]} 
+        <Pressable
+          style={[styles.nextButton, loading && styles.disabledButton]}
           onPress={handleNext}
           disabled={loading}
         >
@@ -148,10 +130,11 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 24,
-    fontWeight: '700',
+    fontWeight: '600',
     marginBottom: 8,
     color: '#4A3DE3',
     textAlign: 'center',
+    marginTop: -20
   },
   subtitle: {
     fontSize: 16,
@@ -183,11 +166,6 @@ const styles = StyleSheet.create({
   },
   passwordInput: {
     paddingRight: 50,
-  },
-  visibilityToggle: {
-    position: 'absolute',
-    right: 15,
-    top: 15,
   },
   optional: {
     fontSize: 14,

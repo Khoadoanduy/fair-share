@@ -14,7 +14,6 @@ import groupMemberRoute from './routes/groupMember'
 import virtualCardRoute from './routes/virtualCard';
 import notificationsRoute from './routes/notifications';
 import cors from 'cors';  
-import personalSubscriptionRoute from './routes/personalSubscription'; 
 
 dotenv.config();
 
@@ -39,7 +38,6 @@ app.use('/api/groupMember', groupMemberRoute);
 app.use('/api/virtualCard', virtualCardRoute);
 app.use('/api/subscriptions', subscriptionRouter);
 app.use('/api/notifications', notificationsRoute);
-app.use('/api/personal-subscription', personalSubscriptionRoute); // Add this route
 
 
 // Error handling (must be after all routes)

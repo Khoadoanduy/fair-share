@@ -8,7 +8,7 @@ import CustomInput from '@/components/CustomInput';
 import ProgressDots from '@/components/ProgressDots';
 import { Ionicons } from '@expo/vector-icons';
 import CustomDropdown, { DropdownOption } from '@/components/CustomDropdown';
-import { useUser } from '@clerk/clerk-expo';
+import { useUserState } from '@/hooks/useUserState';
 
 type FormatData = {
   subscriptionId?: string;
@@ -32,9 +32,10 @@ type Subscription = {
 export default function PersonalSubscriptionInfoScreen() {
   const API_URL = process.env.EXPO_PUBLIC_API_URL;
   const router = useRouter();
-  const { user } = useUser();
-  const clerkId = user?.id;
-  const { subscriptionType } = useLocalSearchParams(); // 'existing' or 'virtual'
+  const { userId } = useUserState();
+  // Get personalType from navigation params (either 'existing' or 'virtual')
+  const { personalType } = useLocalSearchParams();
+  const subscriptionType = personalType; // Keep subscriptionType for consistency, but it's the same as personalType
   const { control, handleSubmit, setValue, watch } = useForm<FormatData>({
     defaultValues: {
       currency: 'USD',
@@ -45,17 +46,6 @@ export default function PersonalSubscriptionInfoScreen() {
 
   const dayValue = watch('day');
   const cycleValue = watch('cycle');
-
-  const userFromMongo = async () => {
-    try {
-      const response = await axios.get(`${API_URL}/api/user/`, {
-        params: { clerkID: clerkId }
-      });
-      return response.data.id;
-    } catch (error) {
-      console.error("Error fetching user data:", error);
-    }
-  };
 
   // Dropdown states
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
@@ -127,7 +117,7 @@ export default function PersonalSubscriptionInfoScreen() {
   const handleCreateCustomSubscription = () => {
     router.push({
       pathname: '/(personal)/customPersonalSubscription',
-      params: { subscriptionType }
+      params: { personalType }
     });
   };
 
@@ -144,49 +134,31 @@ export default function PersonalSubscriptionInfoScreen() {
     }
 
     try {
-      const userId = await userFromMongo();
       const cycleDays = calculateTotalDays(info.day, info.cycle);
-
-      console.log('Creating personal subscription...');
-      console.log('subscriptionType:', subscriptionType); // Debug log
-
-      const response = await axios.post(`${API_URL}/api/personal-subscription/create`, {
+      // Use unified endpoint for group creation
+      const response = await axios.post(`${API_URL}/api/group/create`, {
+        groupName: info.subscriptionName,
         userId,
+        subscriptionId: info.subscriptionId,
         subscriptionName: info.subscriptionName,
         planName: info.planName,
         amount: parseFloat(info.amount),
         cycle: info.cycle,
-        cycleDays: cycleDays,
+        cycleDays,
+        paymentFrequency: parseFloat(info.day),
         category: info.category,
         logo: info.logo,
-        subscriptionType: subscriptionType, // Add this line
+        subscriptionType: "personal",
+        personalType, // 'existing' or 'virtual'
       });
-
-      console.log('Personal subscription created:', response.data.subscriptionId);
-
-      // ADD THIS LOGIC TO CHECK subscriptionType
-      if (subscriptionType === 'virtual') {
-        console.log('Navigating to createVirtualCard...');
-        router.push({
-          pathname: '/(personal)/createVirtualCard',
-          params: {
-            subscriptionId: response.data.subscriptionId,
-            subscriptionName: info.subscriptionName
-          },
-        });
-      } else {
-        console.log('Navigating to addAccountCredentials...');
-        router.push({
-          pathname: '/(personal)/addAccountCredentials',
-          params: {
-            subscriptionId: response.data.subscriptionId,
-            hasVirtualCard: 'false'
-          },
-        });
-      }
-
+      const nextRoute = personalType === 'virtual'
+        ? '/(personal)/createVirtualCard'
+        : '/(personal)/addAccountCredentials';
+      router.push({
+        pathname: nextRoute,
+        params: { groupId: response.data.groupId, personalType },
+      });
     } catch (error) {
-      console.error('Error creating personal subscription:', error);
       Alert.alert('Error', 'Failed to create personal subscription');
     }
   };
@@ -216,7 +188,7 @@ export default function PersonalSubscriptionInfoScreen() {
   const isVirtualFlow = subscriptionType === 'virtual';
 
   // Calculate total steps and current step based on subscription type
-  const totalSteps = subscriptionType === 'virtual' ? 4 : 3;
+  const totalSteps = personalType === 'virtual' ? 4 : 3;
   const currentStep = 2;
 
   return (
@@ -482,11 +454,11 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 24,
-    fontWeight: '700',
+    fontWeight: '600',
     marginBottom: 8,
     color: '#4A3DE3',
     alignSelf: 'center',
-    marginTop: -30
+    marginTop: -20
   },
   subtitle: {
     fontSize: 16,
@@ -509,7 +481,7 @@ const styles = StyleSheet.create({
   },
   buttonContainer: {
     position: 'absolute',
-    bottom: 0,
+    bottom: 35,
     left: 0,
     right: 0,
     paddingHorizontal: 20,

@@ -2,6 +2,7 @@ import { Redirect, Stack } from "expo-router";
 import { useAuth } from "@clerk/clerk-expo";
 import { ActivityIndicator, View } from "react-native";
 import BackButton from "../../components/BackButton";
+import SkipButton from "../../components/SkipButton";
 
 export default function PersonalLayout() {
   const { isSignedIn, isLoaded } = useAuth();
@@ -62,9 +63,20 @@ export default function PersonalLayout() {
       />
       <Stack.Screen
         name="addAccountCredentials"
-        options={{
-          title: "",
-          headerShown: false,
+        options={({ route }) => {
+          const params = route.params as any || {};
+          return {
+            title: "",
+            headerRight: () => (
+              <SkipButton
+                to="/(personal)/personalSubscriptionDetails"
+                params={{
+                  groupId: params.groupId,
+                  personalType: params.personalType,
+                }}
+              />
+            ),
+          };
         }}
       />
     </Stack>

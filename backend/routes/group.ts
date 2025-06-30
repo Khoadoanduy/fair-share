@@ -18,10 +18,10 @@ const calculateDaysBetween = (startDate: Date, endDate: Date): number => {
   return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 };
 
-// Create group
+// Create group (add subscriptionType and personalType, backward compatible)
 router.post('/create', async (request: Request, response: Response) => {
   try {
-    const { groupName, subscriptionName, subscriptionId, planName, amount, category, cycleDays, userId } = request.body;
+    const { groupName, subscriptionName, subscriptionId, planName, amount, category, cycleDays, userId, subscriptionType, personalType } = request.body;
 
     if (!groupName || !subscriptionName || !amount || !userId) {
       return response.status(400).json({ message: 'Missing required fields' });
@@ -44,7 +44,9 @@ router.post('/create', async (request: Request, response: Response) => {
           totalMem: 1,
           amountEach: parseFloat(parseFloat(amount).toFixed(2)),
           startDate,
-          endDate: nextPaymentDate
+          endDate: nextPaymentDate,
+          subscriptionType: subscriptionType || 'shared',
+          personalType: (subscriptionType === 'personal') ? (personalType || 'existing') : null
         },
         include: {
           subscription: true // Include subscription data in response
@@ -159,20 +161,35 @@ router.get('/:groupId', async (request: Request, response: Response) => {
   }
 });
 
-// Update credentials (leader only)
+// Update credentials (leader for shared, sole member for personal, backward compatible)
 router.put('/:groupId/credentials', async (request: Request, response: Response) => {
   try {
     const { groupId } = request.params;
     const { credentialUsername, credentialPassword, userId } = request.body;
 
-    const memberRole = await prisma.groupMember.findFirst({
-      where: { groupId, userId, userRole: 'leader' }
+    const group = await prisma.group.findUnique({
+      where: { id: groupId },
+      include: { members: true }
     });
-
-    if (!memberRole) {
-      return response.status(403).json({ message: 'Only group leaders can update credentials' });
+    if (!group) {
+      return response.status(404).json({ message: 'Group not found' });
     }
+    if (group.subscriptionType === 'personal') {
+      // Only the sole member can update
+      const isSoleMember = group.members.length === 1 && group.members[0].userId === userId;
+      if (!isSoleMember) {
+        return response.status(403).json({ message: 'Only the owner of the personal group can update credentials' });
+      }
+    } else {
+      // Only leader can update
+      const memberRole = await prisma.groupMember.findFirst({
+        where: { groupId, userId, userRole: 'leader' }
+      });
 
+      if (!memberRole) {
+        return response.status(403).json({ message: 'Only group leaders can update credentials' });
+      }
+    }
     await prisma.group.update({
       where: { id: groupId },
       data: { credentialUsername, credentialPassword }

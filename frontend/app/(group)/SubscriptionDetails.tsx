@@ -215,7 +215,7 @@ export default function SubscriptionDetailsScreen() {
           ) : (
             <View style={styles.logoPlaceholder}>
               <Text style={styles.logoText}>
-                {details.subscriptionName?.charAt(0) || 'S'}
+                {details.subscriptionName?.charAt(0)}
               </Text>
             </View>
           )}

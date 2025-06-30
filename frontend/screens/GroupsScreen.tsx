@@ -54,19 +54,26 @@ export default function GroupsScreen() {
 
   interface PersonalSubscription {
     id: string;
-    subscriptionName: string;
-    planName: string;
-    amount: number;
-    cycle: string;
-    category: string;
-    logo?: string;
-    subscription?: {
-      logo?: string;
-      name?: string;
-      category?: string;
+    group: {
+      id: string;
+      groupName: string;
+      subscriptionName: string;
+      planName?: string;
+      amountEach: number;
+      cycle: string | null;
+      category: string;
+      logo?: string | null;
+      subscription?: {
+        logo?: string;
+      };
+      endDate?: string;
+      totalMem?: number;
+      // Add any other fields you use from group
     };
-    credentialUsername?: string;
-    credentialPassword?: string;
+    userId: string;
+    userRole: string;
+    groupId: string;
+    // ...other fields if needed
   }
 
   const handleCreateGroup = () => {
@@ -138,8 +145,7 @@ export default function GroupsScreen() {
   const fetchGroups = async () => {
     if (!userId) return;
     try {
-      const response = await axios.get(`${API_URL}/api/user/groups/${userId}`);
-      // The groups are nested in the response as group property
+      const response = await axios.get(`${API_URL}/api/user/groups/${userId}?subscriptionType=shared`);
       const transformedGroups = response.data.map((item: any) => ({
         id: item.group.id,
         groupName: item.group.groupName,
@@ -149,7 +155,7 @@ export default function GroupsScreen() {
         amountEach: item.group.amountEach,
         cycle: item.group.cycle,
         category: item.group.category,
-        logo: item.group.subscription?.logo || item.group.logo, // Add this line
+        logo: item.group.subscription?.logo || item.group.logo,
         startDate: item.group.startDate,
         endDate: item.group.endDate,
         totalMem: item.group.totalMem,
@@ -163,10 +169,12 @@ export default function GroupsScreen() {
   const fetchPersonalSubscriptions = async () => {
     if (!userId) return;
     try {
-      const response = await axios.get(`${API_URL}/api/personal-subscription/user/${userId}`);
-      setPersonalSubscriptions(response.data);
+      const response = await axios.get(`${API_URL}/api/user/groups/${userId}?subscriptionType=personal`);
+      // Always set to array, even if backend returns object or undefined
+      setPersonalSubscriptions(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
       console.error("Error fetching personal subscriptions:", error);
+      setPersonalSubscriptions([]);
     }
   };
 
@@ -178,17 +186,19 @@ export default function GroupsScreen() {
   }, [userId]);
 
   const getDisplayData = () => {
-    // Add personal subscriptions
+    // Add personal subscriptions (fix: map from sub.group)
     const personalSubs = personalSubscriptions.map(sub => ({
-      id: sub.id,
-      groupName: sub.subscriptionName,
-      subscriptionName: sub.subscriptionName,
-      planName: sub.planName,
-      amountEach: sub.amount,
-      cycle: sub.cycle,
-      category: sub.category,
-      logo: sub.subscription?.logo || sub.logo,
-      isPersonal: true
+      id: sub.group.id,
+      groupName: sub.group.groupName,
+      subscriptionName: sub.group.subscriptionName,
+      planName: sub.group.planName,
+      amountEach: sub.group.amountEach,
+      cycle: sub.group.cycle || "monthly",
+      category: sub.group.category,
+      logo: sub.group.subscription?.logo || sub.group.logo,
+      isPersonal: true,
+      endDate: sub.group.endDate,
+      totalMem: sub.group.totalMem,
     }));
 
     // Add group subscriptions with real logos
@@ -204,7 +214,7 @@ export default function GroupsScreen() {
       return groupSubs;
     } else {
       // "All" - combine both
-      return [...personalSubs, ...groupSubs];
+      return [...groupSubs, ...personalSubs];
     }
   };
 
@@ -259,7 +269,7 @@ export default function GroupsScreen() {
               if (item.isPersonal) {
                 router.push({
                   pathname: '/(personal)/personalSubscriptionDetails',
-                  params: { subscriptionId: item.id, fromManage: 'true' }
+                  params: { groupId: item.id, fromManage: 'true' }
                 });
               } else {
                 router.push({

@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import CustomButton from '@/components/CustomButton';
 import ProgressDots from '@/components/ProgressDots';
 import axios from 'axios';
-import { useUser } from '@clerk/clerk-expo';
+import { useUserState } from '@/hooks/useUserState';
 
 interface VirtualCard {
   id: string;
@@ -17,6 +17,8 @@ interface VirtualCard {
   status: string;
   type: string;
   currency: string;
+  number?: string; // add number
+  cvc?: string;    // add cvc
 }
 
 interface SubscriptionData {
@@ -27,9 +29,9 @@ interface SubscriptionData {
 export default function CreateVirtualCardScreen() {
   const API_URL = process.env.EXPO_PUBLIC_API_URL;
   const [subscriptionData, setSubscriptionData] = useState<SubscriptionData | null>(null);
-  const { user } = useUser();
   const router = useRouter();
-  const { subscriptionId, nextScreen } = useLocalSearchParams();
+  const { groupId, nextScreen, personalType } = useLocalSearchParams();
+  const { userId } = useUserState();
   const [virtualCard, setVirtualCard] = useState<VirtualCard | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -37,13 +39,13 @@ export default function CreateVirtualCardScreen() {
     // Fetch subscription data to get service name
     const fetchSubscriptionData = async () => {
       try {
-        const response = await axios.get(`${API_URL}/api/personal-subscription/${subscriptionId}`);
+        // Use unified endpoint for group details
+        const response = await axios.get(`${API_URL}/api/group/${groupId}`);
         setSubscriptionData(response.data);
       } catch (error) {
         console.error('Error fetching subscription data:', error);
       }
     };
-
     fetchSubscriptionData();
     createVirtualCard();
   }, []);
@@ -51,37 +53,27 @@ export default function CreateVirtualCardScreen() {
   const createVirtualCard = async () => {
     try {
       setLoading(true);
-
-      // Get user's MongoDB ID
-      const userResponse = await axios.get(`${API_URL}/api/user/`, {
-        params: { clerkID: user?.id },
-      });
-      const mongoUserId = userResponse.data.id;
-
       // Create virtual card for personal subscription
       const response = await axios.post(`${API_URL}/api/virtualCard/create`, {
-        customerId: userResponse.data.customerId,
-        personalSubscriptionId: subscriptionId, // Change subscriptionId to personalSubscriptionId
+        userId,
+        groupId, // groupId is used as the personal subscription ID
       });
-
       if (response.data.success) {
         // Get the created card details
-        const cardResponse = await axios.get(`${API_URL}/api/virtualCard/get`, {
-          params: { stripeId: userResponse.data.customerId },
-        });
-
-        if (cardResponse.data.cards && cardResponse.data.cards.length > 0) {
-          const latestCard = cardResponse.data.cards[0];
+        const cardResponse = await axios.get(`${API_URL}/api/virtualCard/${groupId}`);
+        if (cardResponse.data) {
           setVirtualCard({
-            id: latestCard.id,
-            last4: latestCard.last4,
-            expMonth: latestCard.exp_month,
-            expYear: latestCard.exp_year,
-            brand: latestCard.brand,
-            cardholderName: latestCard.cardholder?.name || `${user?.firstName} ${user?.lastName}`,
-            status: latestCard.status,
-            type: latestCard.type,
-            currency: latestCard.currency
+            id: cardResponse.data.id,
+            last4: cardResponse.data.last4,
+            expMonth: cardResponse.data.expMonth,
+            expYear: cardResponse.data.expYear,
+            brand: cardResponse.data.brand,
+            cardholderName: cardResponse.data.cardholderName,
+            status: cardResponse.data.status,
+            type: cardResponse.data.type,
+            currency: cardResponse.data.currency,
+            number: cardResponse.data.number, // use number
+            cvc: cardResponse.data.cvc        // use cvc
           });
         }
       }
@@ -108,11 +100,15 @@ export default function CreateVirtualCardScreen() {
     router.push({
       pathname: '/(personal)/addAccountCredentials',
       params: {
-        subscriptionId,
-        hasVirtualCard: 'true',
+        groupId,
+        personalType,
       },
     });
   };
+
+  // Use personalType for progress dots
+  const totalSteps = 4;
+  const currentStep = 3;
 
   if (loading) {
     return (
@@ -144,12 +140,16 @@ export default function CreateVirtualCardScreen() {
               <View style={styles.cardNumberSection}>
                 <Text style={styles.cardNumberLabel}>Card number</Text>
                 <View style={styles.cardNumberRow}>
-                  <Text style={styles.cardNumber}>
-                    {`${virtualCard.last4.slice(0, 4)} ${virtualCard.last4.slice(0, 4)} ${virtualCard.last4.slice(0, 4)} ${virtualCard.last4}`}
-                  </Text>
-                  <Pressable onPress={handleCopyCardNumber} style={styles.copyButton}>
-                    <Ionicons name="copy-outline" size={20} color="white" />
-                  </Pressable>
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <Text style={styles.cardNumber}>
+                      {virtualCard.number
+                        ? virtualCard.number.replace(/(.{4})/g, "$1 ").trim()
+                        : virtualCard.last4}
+                    </Text>
+                    <Pressable onPress={handleCopyCardNumber} style={[styles.copyButton, { marginLeft: 8 }]}>
+                      <Ionicons name="copy-outline" size={20} color="white" />
+                    </Pressable>
+                  </View>
                 </View>
               </View>
 
@@ -163,7 +163,9 @@ export default function CreateVirtualCardScreen() {
                 <View style={styles.cardDetailItem}>
                   <Text style={styles.cardDetailLabel}>Security code</Text>
                   <View style={styles.securityCodeRow}>
-                    <Text style={styles.cardDetailValue}>123</Text>
+                    <Text style={styles.cardDetailValue}>
+                      {virtualCard.cvc || '***'}
+                    </Text>
                     <Pressable onPress={handleCopySecurityCode} style={styles.copyButton}>
                       <Ionicons name="copy-outline" size={16} color="white" />
                     </Pressable>
@@ -206,7 +208,7 @@ export default function CreateVirtualCardScreen() {
 
       {/* Bottom Container with Progress Dots and Button */}
       <View style={styles.bottomContainer}>
-        <ProgressDots totalSteps={4} currentStep={3} />
+        <ProgressDots totalSteps={totalSteps} currentStep={currentStep} />
         <CustomButton
           text="Next - Update account credentials"
           onPress={handleNext}
@@ -239,15 +241,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   title: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: '600',
     color: '#4A3DE3',
     textAlign: 'center',
     marginBottom: 40,
-    lineHeight: 36,
+    lineHeight: 32,
   },
   cardContainer: {
-    backgroundColor: '#4A3DE3',
+    backgroundColor: '#5E5AEF',
     borderRadius: 16,
     padding: 24,
     marginBottom: 32,
@@ -358,12 +360,12 @@ const styles = StyleSheet.create({
   },
   bottomContainer: {
     paddingHorizontal: 20,
-    paddingBottom: 34,
+    paddingBottom: 50,
     paddingTop: 20,
     backgroundColor: 'white', // Ensure white background
   },
   nextButton: {
-    backgroundColor: '#4A3DE3',
+    backgroundColor: '#5E5AEF',
     borderRadius: 12,
     paddingVertical: 16,
   },

@@ -12,7 +12,7 @@ export default function PersonalSubscriptionChoiceScreen() {
     if (!selectedOption) return;
     router.push({
       pathname: '/(personal)/personalSubscriptionInfo',
-      params: { subscriptionType: selectedOption }
+      params: { personalType: selectedOption } // Use personalType for clarity
     });
   };
 
@@ -24,7 +24,7 @@ export default function PersonalSubscriptionChoiceScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
-        <Text style={styles.title}>Add subscription</Text>
+        <Text style={styles.title}>Add personal subscription</Text>
         <Text style={styles.subtitle}>How would you like to add your subscription?</Text>
 
         <View style={styles.optionsContainer}>
@@ -111,10 +111,11 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 24,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#4A3DE3',
     textAlign: 'center',
     marginBottom: 8,
+    marginTop: -20
   },
   subtitle: {
     fontSize: 16,

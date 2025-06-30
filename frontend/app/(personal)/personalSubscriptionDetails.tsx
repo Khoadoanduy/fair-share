@@ -6,7 +6,7 @@ import axios from 'axios';
 import CredentialsContainer from '@/components/CredentialsContainer';
 import CredentialsVisibilityToggle from '@/components/CredentialsVisibilityToggle';
 import VirtualCardDisplay from '@/components/VirtualCardDisplay';
-import { useUser } from '@clerk/clerk-expo';
+import { useUserState } from '@/hooks/useUserState';
 
 type PersonalSubscriptionData = {
   id: string;
@@ -26,7 +26,9 @@ type PersonalSubscriptionData = {
   credentialUsername?: string;
   credentialPassword?: string;
   virtualCardId?: string;
-  subscriptionType?: string; 
+  subscriptionType?: string;
+  personalType?: string; 
+  startDate?: string; 
 };
 
 type VirtualCard = {
@@ -42,9 +44,9 @@ type VirtualCard = {
 };
 export default function PersonalSubscriptionDetailsScreen() {
   const API_URL = process.env.EXPO_PUBLIC_API_URL;
-  const { subscriptionId, fromManage } = useLocalSearchParams();
+  const { groupId, fromManage } = useLocalSearchParams();
   const router = useRouter();
-  const { user } = useUser();
+  const { userId } = useUserState();
   const [subscriptionData, setSubscriptionData] = useState<PersonalSubscriptionData | null>(null);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
@@ -55,43 +57,32 @@ export default function PersonalSubscriptionDetailsScreen() {
   useEffect(() => {
     const fetchSubscriptionDetails = async () => {
       try {
-        const response = await axios.get(`${API_URL}/api/personal-subscription/${subscriptionId}`);
+        // Use unified endpoint for fetching group (personal subscription) details
+        const response = await axios.get(`${API_URL}/api/group/${groupId}`);
         setSubscriptionData(response.data);
         setEditUsername(response.data.credentialUsername || "");
         setEditPassword(response.data.credentialPassword || "");
 
-        // Fetch virtual card if subscription has a virtualCardId
-        if (response.data.virtualCardId) {
+        // Fetch virtual card if subscription has a virtualCardId and personalType is 'virtual'
+        if (response.data.virtualCardId && response.data.personalType === 'virtual') {
           try {
-            // Get the user's customer ID first
-            const userResponse = await axios.get(`${API_URL}/api/user/`, {
-              params: { clerkID: user?.id },
-            });
 
-            // Use the existing endpoint with the user's customer ID
-            const cardResponse = await axios.get(`${API_URL}/api/virtualCard/get`, {
-              params: { stripeId: userResponse.data.customerId }
-            });
+            const cardResponse = await axios.get(`${API_URL}/api/virtualCard/${groupId}`);
 
-            if (cardResponse.data.cards && cardResponse.data.cards.length > 0) {
-              // Find the card that matches the virtualCardId from personal subscription
-              const matchingCard = cardResponse.data.cards.find(
-                (card: any) => card.id === response.data.virtualCardId
-              );
-
-              if (matchingCard) {
-                setVirtualCard({
-                  id: matchingCard.id,
-                  last4: matchingCard.last4,
-                  expMonth: matchingCard.exp_month,
-                  expYear: matchingCard.exp_year,
-                  brand: matchingCard.brand,
-                  cardholderName: matchingCard.cardholder?.name || '',
-                  status: matchingCard.status,
-                  type: matchingCard.type,
-                  currency: matchingCard.currency
-                });
-              }
+            if (cardResponse.status !== 200) {
+              console.error('Failed to load virtual card: status', cardResponse.status, cardResponse.data);
+            } else if (cardResponse.data && cardResponse.data.id) {
+              setVirtualCard({
+                id: cardResponse.data.id,
+                last4: cardResponse.data.last4,
+                expMonth: cardResponse.data.expMonth,
+                expYear: cardResponse.data.expYear,
+                brand: cardResponse.data.brand,
+                cardholderName: cardResponse.data.cardholderName,
+                status: cardResponse.data.status,
+                type: cardResponse.data.type,
+                currency: cardResponse.data.currency
+              });
             }
           } catch (cardError) {
             console.error('Failed to load virtual card:', cardError);
@@ -104,10 +95,10 @@ export default function PersonalSubscriptionDetailsScreen() {
       }
     };
 
-    if (subscriptionId) {
+    if (groupId) {
       fetchSubscriptionDetails();
     }
-  }, [subscriptionId]);
+  }, [groupId]);
 
   const handleBack = () => {
     router.push('/(tabs)/groups'); // Always go to GroupsScreen
@@ -120,19 +111,27 @@ export default function PersonalSubscriptionDetailsScreen() {
     }
 
     try {
-      await axios.put(`${API_URL}/api/personal-subscription/${subscriptionId}/credentials`, {
-        username: editUsername.trim(),
-        password: editPassword.trim(),
+      // Use unified endpoint for credentials update
+      await axios.put(`${API_URL}/api/group/${groupId}/credentials`, {
+        credentialUsername: editUsername.trim(),
+        credentialPassword: editPassword.trim(),
+        userId,
       });
-
-      // Refresh data
-      const response = await axios.get(`${API_URL}/api/personal-subscription/${subscriptionId}`);
+      // Refresh data using unified endpoint
+      const response = await axios.get(`${API_URL}/api/group/${groupId}`);
       setSubscriptionData(response.data);
       setIsEditing(false);
       Alert.alert('Success', 'Credentials updated successfully');
     } catch (error) {
       Alert.alert('Error', 'Failed to update credentials');
     }
+  };
+
+  const getNextPaymentDate = () => {
+    if (!subscriptionData?.startDate || !subscriptionData?.cycleDays) return "";
+    const start = new Date(subscriptionData.startDate);
+    start.setDate(start.getDate() + subscriptionData.cycleDays);
+    return start.toLocaleDateString();
   };
 
   if (loading) {
@@ -181,7 +180,7 @@ export default function PersonalSubscriptionDetailsScreen() {
               />
             ) : (
               <View style={styles.logoPlaceholder}>
-                <Text style={styles.logoText}>{subscriptionData.subscriptionName.charAt(0)}</Text>
+                <Text style={styles.logoText}>{subscriptionData.subscriptionName ? subscriptionData.subscriptionName.charAt(0) : "?"}</Text>
               </View>
             )}
             <View style={styles.serviceInfo}>
@@ -229,14 +228,14 @@ export default function PersonalSubscriptionDetailsScreen() {
             <View style={styles.detailItem}>
               <Text style={styles.detailLabel}>Next payment</Text>
               <View>
-                <Text style={styles.detailValue}>15 June 2025</Text>
+                <Text style={styles.detailValue}>{getNextPaymentDate()}</Text>
                 <Text style={styles.detailSubtext}>In {subscriptionData.cycleDays} days</Text>
               </View>
             </View>
           </View>
 
           {/* Virtual Card Section - Add this */}
-          {subscriptionData?.subscriptionType === 'virtual' && virtualCard && (
+          {subscriptionData?.personalType === 'virtual' && virtualCard && (
             <View style={styles.virtualCardSection}>
               <Text style={styles.sectionTitle}>Virtual Card</Text>
               <VirtualCardDisplay
@@ -371,7 +370,7 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   title: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: "600",
     color: "#4A3DE3",
   },
