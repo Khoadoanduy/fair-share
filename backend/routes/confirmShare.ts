@@ -1,12 +1,11 @@
 import express, { Request, Response, Router } from 'express';
 import dotenv from 'dotenv';
-import { PrismaClient } from '@prisma/client';
+import prisma from '../prisma/client';
 import { group } from 'console';
 
 dotenv.config();
 
 const router: Router = express.Router();
-const prisma = new PrismaClient();
 
 //Create share confirmation request for everyone
 router.post('/:groupId', async (request: Request, response: Response) => {
@@ -17,7 +16,7 @@ router.post('/:groupId', async (request: Request, response: Response) => {
         }
         //Find the member of the group
         const groupMembers = await prisma.groupMember.findMany({
-            where: { groupId: groupId},
+            where: { groupId: groupId },
             select: {
                 userId: true,
                 userRole: true
@@ -36,7 +35,7 @@ router.post('/:groupId', async (request: Request, response: Response) => {
                     status: member.userRole === "leader"
                 }
             }))
-        );   
+        );
         response.status(200).json({ message: 'Confirm shares created ' });
 
     } catch (error) {
@@ -46,7 +45,7 @@ router.post('/:groupId', async (request: Request, response: Response) => {
 });
 
 //Check if user has accepted the confirm request 
-router.get('/:groupId/:userId', async (request: Request, response: Response) => {
+router.get('/check-status/:groupId/:userId', async (request: Request, response: Response) => {
     try {
         const { groupId, userId } = request.params;
         if (!groupId) {
@@ -54,7 +53,7 @@ router.get('/:groupId/:userId', async (request: Request, response: Response) => 
         }
         //Find the member of the group
         const confirmReq = await prisma.confirmShare.findFirst({
-            where: { 
+            where: {
                 groupId: groupId,
                 userId: userId
             },
@@ -67,12 +66,12 @@ router.get('/:groupId/:userId', async (request: Request, response: Response) => 
 
     } catch (error) {
         console.error(error);
-        response.status(500).json({ message: 'Error creating confirm shares' });
+        response.status(500).json({ message: 'Error checking user confirm shares' });
     }
 });
 
 //Check if the leader has sent the confirm request
-router.get('/:groupId', async (request: Request, response: Response) => {
+router.get('/leader-sent/:groupId', async (request: Request, response: Response) => {
     try {
         const { groupId } = request.params;
         if (!groupId) {
@@ -80,7 +79,7 @@ router.get('/:groupId', async (request: Request, response: Response) => {
         }
         //Find the member of the group
         const confirmReq = await prisma.confirmShare.findFirst({
-            where: { 
+            where: {
                 groupId: groupId,
             },
         });
@@ -105,8 +104,8 @@ router.put('/:groupId/:userId', async (request: Request, response: Response) => 
         }
         //Find confirm request
         const cfRequest = await prisma.confirmShare.findFirst({
-            where: { 
-                groupId: groupId, 
+            where: {
+                groupId: groupId,
                 userId: userId
             },
         });
@@ -117,13 +116,39 @@ router.put('/:groupId/:userId', async (request: Request, response: Response) => 
         //
         await prisma.confirmShare.update({
             where: { id: cfRequest.id },
-            data: { status: true}
+            data: { status: true }
         })
         response.status(200).json({ message: 'Confirm shares updated ' });
 
     } catch (error) {
         console.error(error);
         response.status(500).json({ message: 'Error updating confirm shares' });
+    }
+});
+
+//Check if all members have confirmed request
+router.get('/all-confirmed/:groupId', async (request: Request, response: Response) => {
+    try {
+        const { groupId } = request.params;
+        if (!groupId) {
+            return response.status(400).json({ message: 'groupId is required' });
+        }
+        //Find the member of the group
+        const notConfirmed = await prisma.confirmShare.findFirst({
+            where: {
+                groupId: groupId,
+                status: false
+            },
+        });
+
+        if (notConfirmed) {
+            return response.status(200).json(false);
+        }
+        response.status(200).json(true);
+
+    } catch (error) {
+        console.error(error);
+        response.status(500).json({ message: 'Error checking all members confirm shares' });
     }
 });
 

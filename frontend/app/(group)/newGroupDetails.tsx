@@ -69,24 +69,28 @@ export default function GroupDetailsScreen() {
   const [confirmRequestSent, setConfirmRequestSent] = useState<boolean>(false);
   const { userId } = useUserState();
   const [isPaymentModalVisible, setPaymentModalVisible] = useState(false);
+  const [isSubscribeModalVisible, setSubscribeModalVisible] = useState(false);
   const [showMembers, setShowMembers] = useState(false);
   const [confirmShare, setConfirmShare] = useState(false);
+  const [allConfirmed, setAllConfirmed] = useState(false);
 
 
   useEffect(() => {
     const fetchGroupDetails = async () => {
       try {
         setLoading(true);
-        const [groupResponse, roleResponse, requestSent, shareConfirmed] = await Promise.all([
+        const [groupResponse, roleResponse, requestSent, shareConfirmed, checkAllConfirmed] = await Promise.all([
           axios.get(`${API_URL}/api/group/${groupId}`),
           axios.get(`${API_URL}/api/groupMember/${groupId}/${userId}`),
-          axios.get(`${API_URL}/api/cfshare/${groupId}`),
-          axios.get(`${API_URL}/api/cfshare/${groupId}/${userId}`)
+          axios.get(`${API_URL}/api/cfshare/leader-sent/${groupId}`),
+          axios.get(`${API_URL}/api/cfshare/check-status/${groupId}/${userId}`),
+          axios.get(`${API_URL}/api/cfshare/all-confirmed/${groupId}`)
         ]);
         setGroup(groupResponse.data);
         setIsLeader(roleResponse.data.isLeader);
         setConfirmRequestSent(requestSent.data);
         setConfirmShare(shareConfirmed.data);
+        setAllConfirmed(checkAllConfirmed.data);
         setError(null);
       } catch (err) {
         console.error("Error fetching group details:", err);
@@ -141,6 +145,10 @@ export default function GroupDetailsScreen() {
     setPaymentModalVisible(!isPaymentModalVisible);
   };
 
+  const toggleSubscribeModal = () => {
+    setSubscribeModalVisible(!isSubscribeModalVisible);
+  }
+
   const handleConfirmShare = async () => {
     try {
       const response = await axios.put(`${API_URL}/api/cfshare/${groupId}/${userId}`);
@@ -162,6 +170,7 @@ export default function GroupDetailsScreen() {
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
       >
+        {/* Propmt member to confirm share request */}
         {confirmRequestSent && !leader && !confirmShare && (
           <View style={styles.viewShareContainer}>
             <Image source={require('../../assets/money-square.png')}/>
@@ -177,6 +186,24 @@ export default function GroupDetailsScreen() {
           </View>
           )
         }
+
+        {/* Prompt leader to charge members and start subscription */}
+        {confirmRequestSent && leader && allConfirmed && (
+          <View style={styles.viewShareContainer}>
+            <Image source={require('../../assets/Vector.png')}/>
+            <View style={styles.viewShareContent}>
+              <Text style={{ color: 'black', fontWeight: '600' }}>Subscribe with virtual card</Text>
+              <Text style={{color: '#6D717F'}}>
+                All members have confirmed their shares. You can now pull funds, generate a virtual card, and subscribe to the service!
+              </Text>
+              <TouchableOpacity onPress={toggleSubscribeModal}>
+                <Text style={{ color: '#4A3DE3', fontWeight: '600' }}>Get started</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+          )
+        }
+
         {/* Top Info Card */}
         <GroupHeader
           groupName={group.groupName}
@@ -230,6 +257,8 @@ export default function GroupDetailsScreen() {
             />
         )}
       </ScrollView>
+
+      {/* Model for members to confirm share request */}
       <Modal
         animationType="slide"
         transparent={true}
@@ -276,6 +305,70 @@ export default function GroupDetailsScreen() {
               >
                 <Text style={[styles.buttonText, styles.confirmText]}>Confirm</Text>
               </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal for leader to subscribe */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={isSubscribeModalVisible}
+        onRequestClose={toggleSubscribeModal}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.bottomModal}>
+            <Text style={[styles.modalTitle, {color: 'black'}]}>
+              Subscribe to {group.subscriptionName} {"\n"}with your group’s{" "}
+              <Text style={{ color: '#4A3DE3' }}>virtual card</Text>!
+            </Text>
+            <Text style={styles.modalMessage}>
+              All members have confirmed their shares. 
+              You can now pull funds, generate a virtual card, 
+              and use it to subscribe to the service.
+            </Text>
+            <View style={styles.stepContainer}>
+                <View style={styles.stepItem}>
+                  <Ionicons name="checkmark-circle" size={24} color="#34D399" style={styles.stepIcon} />
+                  <View style={styles.stepTextContainer}>
+                    <Text style={[styles.stepTitle, {color: 'black'}]}>Confirm member shares</Text>
+                    <Text style={[styles.stepSub, {color: '#64748B'}]}>Review and confirm each member's share</Text>
+                  </View>
+                </View>
+
+                <TouchableOpacity style={styles.stepItem}>
+                  <Ionicons name="card" size={24} color="black" style={styles.stepIcon} />
+                  <View style={styles.stepTextContainer}>
+                    <Text style={[styles.stepTitle, {color: 'black'}]}>Pull funds & generate virtual card</Text>
+                    <Text style={[styles.stepSub, {color: '#64748B'}]}>Pull funds from members and generate a virtual card</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color="#C7C7CC" />
+                </TouchableOpacity>
+
+                <View style={styles.stepItem}>
+                  <Ionicons name="wallet-outline" size={24} color="#C7C7CC" style={styles.stepIcon} />
+                  <View style={styles.stepTextContainer}>
+                    <Text style={styles.stepTitle}>Subscribe to Netflix</Text>
+                    <Text style={styles.stepSub}>Use the card to subscribe to the service</Text>
+                  </View>
+                </View>
+
+                <View style={styles.stepItem}>
+                  <Ionicons name="checkmark-done-outline" size={24} color="#C7C7CC" style={styles.stepIcon} />
+                  <View style={styles.stepTextContainer}>
+                    <Text style={styles.stepTitle}>Start cycle</Text>
+                    <Text style={styles.stepSub}>Confirm the subscription and notify members</Text>
+                  </View>
+                </View>
+
+                <View style={styles.stepItem}>
+                  <Ionicons name="key-outline" size={24} color="#C7C7CC" style={styles.stepIcon} />
+                  <View style={styles.stepTextContainer}>
+                    <Text style={styles.stepTitle}>Update account credentials</Text>
+                    <Text style={styles.stepSub}>Enter the login details for the shared subscription</Text>
+                  </View>
+                </View>
             </View>
           </View>
         </View>
@@ -550,6 +643,37 @@ const styles = StyleSheet.create({
 
   confirmText: {
     color: 'white',
+  },
+  stepContainer: {
+    marginTop: 10,
+    gap: 16,
+    marginBottom: 15,
+  },
+
+  stepItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 3,
+  },
+
+  stepIcon: {
+    marginRight: 12,
+  },
+
+  stepTextContainer: {
+    flex: 1,
+  },
+
+  stepTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#94A3B8',
+  },
+
+  stepSub: {
+    fontSize: 13,
+    color: '#94A3B8',
+    marginTop: 2,
   },
 
 });
