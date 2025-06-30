@@ -37,6 +37,7 @@ interface Group {
     logo?: string;
     category?: string;
   };
+  subscriptionType: 'shared' | 'personal';
   totalMem: number;
 }
 
@@ -125,7 +126,7 @@ const HistoryScreen = () => {
               subscriptionName: group.subscriptionName,
               category: group.subscription?.category || group.category,
               logo: group.subscription?.logo || group.logo || null,
-              isShared: group.totalMem > 1,
+              isShared: group.subscriptionType == "shared",
             };
           }
         } catch (err) {
