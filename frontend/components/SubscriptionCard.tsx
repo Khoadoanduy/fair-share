@@ -8,6 +8,7 @@ interface SubscriptionCardProps {
   cycle?: string;
   isShared?: boolean;
   category?: string;
+  amount?: number;
 }
 
 const SubscriptionCard: React.FC<SubscriptionCardProps> = ({
