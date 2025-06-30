@@ -320,7 +320,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 24,
-    fontWeight: "700",
+    fontWeight: "600",
     color: "#4A3DE3",
   },
   toggleContainer: {
