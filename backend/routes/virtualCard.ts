@@ -14,10 +14,7 @@ router.post('/create', async function (request, response) {
     try {
         const { groupId, userId } = request.body;
         
-        // Determine if this is a group card creation or individual card creation
-        const isGroupCard = groupId && userId;
-        
-        // Get user information (either customer or leader)
+        // Get user information 
         const user = await prisma.user.findUnique({
             where: {
                 id: userId 
@@ -34,37 +31,17 @@ router.post('/create', async function (request, response) {
             return response.status(400).json({ error: 'User information is incomplete' });
         }
 
-        if (isGroupCard && !user.customerId) {
-            return response.status(400).json({ error: 'Leader does not have a Stripe customer ID' });
+        if (!user.customerId) {
+            return response.status(400).json({ error: 'User does not have a Stripe customer ID' });
         }
 
-        // Get group information if it's a group card
-        let group;
-        let personalSub;
-        if (isGroupCard) {
-            group = await prisma.group.findUnique({
-                where: { id: groupId }
-            });
+        // Get group information 
+        const group = await prisma.group.findUnique({
+            where: { id: groupId }
+        });
 
-            if (!group) {
-                return response.status(400).json({ error: 'Group not found' });
-            }
-        } else {
-            // For individual card, ensure the user has a customer ID
-            if (!user.customerId) {
-                return response.status(400).json({ error: 'User does not have a Stripe customer ID' });
-            }
-
-            // Get personal subscription details
-            personalSub = await prisma.personalSubscription.findFirst({
-                where: {
-                    userId: user.id,
-                }
-            });
-
-            if (!personalSub) {
-                return response.status(400).json({ error: 'User does not have an active subscription' });
-            }
+        if (!group) {
+            return response.status(400).json({ error: 'Group not found' });
         }
 
         const ip = request.headers['x-forwarded-for'] || 
@@ -136,25 +113,16 @@ router.post('/create', async function (request, response) {
             status: 'active',
             spending_controls: {
                 spending_limits: [{
-                    amount: isGroupCard && group ? Math.round(group.amount * 100) : Math.round((personalSub?.amount || 0) * 100), // Default $1000 in cents for individual cards
+                    amount: Math.round(group.amount * 100), // Default $1000 in cents for individual cards
                     interval: 'all_time'
                 }]
             },
         });
 
-        // If it's a group card, update the group with the virtual card ID
-        if (isGroupCard) {
-            await prisma.group.update({
-                where: { id: groupId },
-                data: { virtualCardId: card.id }
-            });
-        } else if (personalSub) {
-            // For individual cards, update the user's personal subscription with the virtual card ID
-            await prisma.personalSubscription.update({
-                where: { id: personalSub.id },
-                data: { virtualCardId: card.id }
-            });
-        }
+        await prisma.group.update({
+            where: { id: groupId },
+            data: { virtualCardId: card.id }
+        });
 
         response.json({
             success: true,
@@ -169,49 +137,29 @@ router.post('/create', async function (request, response) {
 });
 
 // Get virtual card details for a group
-router.get('/:type/:id', async function (request, response) {
+router.get('/:groupId', async function (request, response) {
     try {
-        const { type, id } = request.params;
+        const { groupId } = request.params;
 
-        if (!type || !id) {
+        if (!groupId) {
             return response.status(400).json({ 
-                error: 'Type and ID are required. Use /group/{groupId} or /personal/{userId}' 
+                error: 'ID is required.' 
             });
         }
 
-        if (!['group', 'personal'].includes(type)) {
-            return response.status(400).json({ 
-                error: 'Type must be either "group" or "personal"' 
-            });
+        const group = await prisma.group.findUnique({
+            where: { id: groupId }
+        });
+
+        if (!group) {
+            return response.status(400).json({ error: 'Group not found' });
         }
-
-        const groupId = type === 'group' ? id : null;
-        const personaId = type === 'personal' ? id : null;
-        let group = null;
-        let personalSub = null;
-        if (groupId) {
-            group = await prisma.group.findUnique({
-                where: { id: groupId }
-            });
-
-            if (!group) {
-                return response.status(400).json({ error: 'Group not found' });
-            }
     
             if (!group.virtualCardId) {
                 return response.status(404).json({ error: 'No virtual card found for this group' });
             }
-        } else {
-            if (personaId) {
-                personalSub = await prisma.personalSubscription.findFirst({
-                    where: { id: personaId }
-                });
-            } else {
-                return response.status(400).json({ error: 'Personal subscription ID is required' });
-            }
-        }
 
-        let virtualCardId = type === 'group' && group ? group.virtualCardId : personalSub ? personalSub.virtualCardId : null;
+        const virtualCardId = group.virtualCardId;
 
         // Retrieve the card details from Stripe
         const card = await stripe.issuing.cards.retrieve(virtualCardId, {
