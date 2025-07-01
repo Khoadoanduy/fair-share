@@ -47,12 +47,8 @@ const CustomInput = ({
 
 const styles = StyleSheet.create({
   input: {
-    height: 50,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 12,
-    backgroundColor: '#F8FAFC',
-    paddingHorizontal: 16,
+    // Remove any padding that might interfere with alignment
+    // paddingHorizontal: 0,
     fontSize: 16,
   },
   inputError: {

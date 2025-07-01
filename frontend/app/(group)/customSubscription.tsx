@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Alert, SafeAreaView, Pressable, Image, Platform, TouchableOpacity, Keyboard, TextInput } from 'react-native';
+import { View, Text, StyleSheet, Alert, SafeAreaView, Pressable, Image, Platform, TouchableOpacity, Keyboard } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import CustomButton from '@/components/CustomButton';
 import axios from 'axios';
@@ -10,8 +10,6 @@ import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import CustomDropdown, { DropdownOption } from '@/components/CustomDropdown';
 import { useUserState } from '@/hooks/useUserState';
-import CustomDropdownModal from '@/components/CustomDropdownModal';
-import CustomInputModal from '@/components/CustomInputModal';
 
 
 type FormatData = {
@@ -43,14 +41,10 @@ export default function CustomSubscriptionScreen() {
   });
   const dayValue = watch('day');
   const cycleValue = watch('cycle');
-  const categoryValue = watch('category');
 
-  // State for modals and dropdowns
   const [subscriptionImage, setSubscriptionImage] = useState<string | null>(null);
   const [showCycleDropdown, setShowCycleDropdown] = useState(false);
   const [showCurrencyDropdown, setShowCurrencyDropdown] = useState(false);
-  const [showCustomCategoryModal, setShowCustomCategoryModal] = useState(false);
-  const [customCategoryInput, setCustomCategoryInput] = useState('');
 
   // Request permission on mount
   useEffect(() => {
@@ -82,11 +76,22 @@ export default function CustomSubscriptionScreen() {
       Alert.alert('Error', 'Could not pick the image.');
     }
   };
-
+  const convertCycleToDays = (cycle: string): number => {
+    switch (cycle.toLowerCase()) {
+      case "weekly":
+        return 7;
+      case "monthly":
+        return 30;
+      case "yearly":
+        return 365;
+      default:
+        return 30;
+    }
+  };
   const calculateTotalDays = (dayValue: string, cycle: string): number => {
+    // Parse the day value - handle decimal numbers
     const parsedDay = parseFloat(dayValue) || 1;
     // Base days for each cycle
-
     const cycleDaysMap: { [key: string]: number } = {
       'weekly': 7,
       'monthly': 30,
@@ -97,7 +102,9 @@ export default function CustomSubscriptionScreen() {
     const totalDays = Math.round(parsedDay * baseDays);
     return totalDays;
   };
-
+  const getCurrentCalculatedDays = (): number => {
+    return calculateTotalDays(dayValue || '1', cycleValue || 'monthly');
+  };
   const handleCreateGroup: SubmitHandler<FormatData> = async (info) => {
     if (!info.subscriptionName || !info.planName || !info.amount || !info.cycle || !info.category) {
       Alert.alert('Missing Info', 'Please fill in all fields');
@@ -106,7 +113,7 @@ export default function CustomSubscriptionScreen() {
 
     try {
       const cycleDays = calculateTotalDays(info.day, info.cycle);
-
+      
       // Create the group
       const response = await axios.post(`${API_URL}/api/group/create`, {
         groupName,
@@ -132,21 +139,10 @@ export default function CustomSubscriptionScreen() {
       Alert.alert('Error', 'Failed to create group');
     }
   };
-
   const toggleDropdown = (dropdown: string) => {
     setActiveDropdown(activeDropdown === dropdown ? null : dropdown);
   };
-
   const isDropdownOpen = (dropdown: string) => activeDropdown === dropdown;
-
-  const handleAddCustomCategory = () => {
-    if (customCategoryInput.trim()) {
-      setValue('category', customCategoryInput.trim().toLowerCase());
-      setCustomCategoryInput('');
-      setShowCustomCategoryModal(false);
-    }
-  };
-
   const cycleOptions: DropdownOption[] = [
     { label: 'Weekly', value: 'weekly' },
     { label: 'Monthly', value: 'monthly' },
@@ -158,6 +154,14 @@ export default function CustomSubscriptionScreen() {
     { label: 'EUR (€)', value: 'EUR' },
     { label: 'JPY (¥)', value: 'JPY' },
   ];
+  const categoryOptions: DropdownOption[] = [
+    { label: 'Streaming', value: 'streaming' },
+    { label: 'Music', value: 'music' },
+    { label: 'Gaming', value: 'gaming' },
+    { label: 'Productivity', value: 'productivity' },
+    { label: 'Cloud Storage', value: 'cloud_storage' },
+    { label: 'Fitness', value: 'fitness' },
+  ];
 
   // Close dropdown when clicking outside
   const handleOutsideClick = () => {
@@ -167,42 +171,33 @@ export default function CustomSubscriptionScreen() {
     if (showCurrencyDropdown) {
       setShowCurrencyDropdown(false);
     }
-    setActiveDropdown(null);
     Keyboard.dismiss();
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      {(showCycleDropdown || showCurrencyDropdown || activeDropdown) && (
+      {(showCycleDropdown || showCurrencyDropdown) && (
         <TouchableOpacity
-          style={styles.overlay}
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0,0,0,0)',
+            zIndex: 90,
+          }}
           activeOpacity={1}
           onPress={handleOutsideClick}
         />
       )}
-
-      <CustomInputModal
-        visible={showCustomCategoryModal}
-        value={customCategoryInput}
-        onChangeText={setCustomCategoryInput}
-        onCancel={() => {
-          setShowCustomCategoryModal(false);
-          setCustomCategoryInput('');
-        }}
-        onAdd={handleAddCustomCategory}
-        title="Add custom category"
-        subtitle="Customize category for your subscription"
-        placeholder="Enter category name"
-        addButtonLabel="Add"
-        cancelButtonLabel="Cancel"
-      />
 
       <View style={styles.contentContainer}>
         <Text style={styles.title}>Create new group</Text>
         <Text style={styles.subtitle}>Next, enter some subscription details</Text>
 
         <View style={styles.formContainer}>
-          {/* Subscription section */}
+          {/* Subscription section with image picker and inline label/input */}
           <View style={styles.subscriptionSection}>
             <Pressable onPress={pickImage} style={styles.imageContainer}>
               {subscriptionImage ? (
@@ -231,61 +226,36 @@ export default function CustomSubscriptionScreen() {
             control={control}
             name="category"
             render={({ field: { value } }) => (
-              <View style={styles.categoryContainer}>
-                <Pressable
-                  style={styles.categoryInput}
-                  onPress={() => toggleDropdown('category')}
-                >
-                  <Text style={value ? styles.inputText : styles.placeholderText}>
-                    {value ? value.charAt(0).toUpperCase() + value.slice(1) : 'Select subscription category'}
-                  </Text>
-                  <Ionicons name="chevron-down" size={20} color="#888" />
-                </Pressable>
-                <CustomDropdownModal
-                  visible={activeDropdown === 'category'}
-                  selectedValue={categoryValue}
-                  options={[
-                    { value: 'streaming', label: 'Streaming', icon: 'play' },
-                    { value: 'education', label: 'Education', icon: 'school' },
-                    { value: 'music', label: 'Music', icon: 'musical-notes' },
-                    { value: 'news', label: 'News', icon: 'newspaper' },
-                    { value: 'home', label: 'Home', icon: 'home' },
-                    { value: 'fitness', label: 'Health/fitness', icon: 'fitness' },
-                  ]}
-                  onSelect={(category) => {
-                    setValue('category', category);
-                    setActiveDropdown(null);
-                  }}
-                  onCustomPress={() => {
-                    setActiveDropdown(null);
-                    setShowCustomCategoryModal(true);
-                  }}
-                  header="Suggested"
-                  customPrompt="Don't see what you're looking for?"
-                  customButtonLabel="Custom"
-                />
-              </View>
+              <CustomDropdown
+                options={categoryOptions}
+                value={value}
+                placeholder="Select subscription category"
+                onChange={(val) => setValue('category', val)}
+                isOpen={isDropdownOpen('category')}
+                setIsOpen={() => toggleDropdown('category')}
+                style={styles.dropdownInput}
+                menuStyle={{
+                  position: 'absolute',
+                  top: 195,
+                  left: 0,
+                  right: 0,
+                  zIndex: 100,
+                }}
+              />
             )}
           />
 
-          {/* Payment every */}
           <Text style={styles.label}>Payment every</Text>
           <View style={styles.rowContainer}>
-            <Controller
+            <CustomInput
               control={control}
               name="day"
-              render={({ field: { value, onChange } }) => (
-                <TextInput
-                  style={[styles.dayInput, styles.inputStyle]}
-                  placeholder="1"
-                  value={value}
-                  onChangeText={onChange}
-                  keyboardType="decimal-pad"
-                  blurOnSubmit={true}
-                  returnKeyType="done"
-                  onSubmitEditing={() => Keyboard.dismiss()}
-                />
-              )}
+              placeholder="1"
+              keyboardType="decimal-pad"
+              style={styles.dayInput}
+              blurOnSubmit={true}
+              returnKeyType="done"
+              onSubmitEditing={() => Keyboard.dismiss()}
             />
 
             <Controller
@@ -313,7 +283,6 @@ export default function CustomSubscriptionScreen() {
             />
           </View>
 
-          {/* Amount */}
           <Text style={styles.label}>Amount</Text>
           <View style={styles.rowContainer}>
             <Controller
@@ -340,63 +309,29 @@ export default function CustomSubscriptionScreen() {
               )}
             />
 
-            <Controller
+            <CustomInput
               control={control}
               name="amount"
-              render={({ field: { value, onChange } }) => (
-                <TextInput
-                  style={[styles.amountInput, styles.inputStyle]}
-                  placeholder="Amount"
-                  value={value}
-                  onChangeText={onChange}
-                  keyboardType="decimal-pad"
-                  blurOnSubmit={true}
-                  returnKeyType="done"
-                  onSubmitEditing={() => Keyboard.dismiss()}
-                />
-              )}
+              placeholder="Amount"
+              keyboardType="decimal-pad"
+              style={styles.amountInput}
+              blurOnSubmit={true}
+              returnKeyType="done"
+              onSubmitEditing={() => Keyboard.dismiss()}
             />
           </View>
 
-          {/* Plan field (generalized dropdown example) */}
           <Text style={styles.label}>Plan</Text>
-          <Controller
+          <CustomInput
             control={control}
             name="planName"
-            render={({ field: { value } }) => (
-              <View style={styles.categoryContainer}>
-                <Pressable
-                  style={styles.categoryInput}
-                  onPress={() => toggleDropdown('planName')}
-                >
-                  <Text style={value ? styles.inputText : styles.placeholderText}>
-                    {value ? value : 'Select plan name'}
-                  </Text>
-                  <Ionicons name="chevron-down" size={20} color="#888" />
-                </Pressable>
-                <CustomDropdownModal
-                  visible={activeDropdown === 'planName'}
-                  selectedValue={value}
-                  options={[
-                    { value: 'basic', label: 'Basic' },
-                    { value: 'premium', label: 'Premium' },
-                    { value: 'family', label: 'Family' },
-                  ]}
-                  onSelect={(plan) => {
-                    setValue('planName', plan);
-                    setActiveDropdown(null);
-                  }}
-                  header="Plans"
-                  customPrompt="Don't see your plan?"
-                  customButtonLabel="Custom"
-                />
-              </View>
-            )}
+            placeholder="Enter plan name"
+            style={styles.planInput}
           />
         </View>
       </View>
 
-      {/* Bottom section */}
+      {/* Bottom section with dots and button */}
       <View style={styles.buttonContainer}>
         <ProgressDots totalSteps={3} currentStep={2} />
         <CustomButton
@@ -418,14 +353,9 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     justifyContent: 'space-between',
   },
-  overlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0)',
-    zIndex: 90,
+  header: {
+    paddingHorizontal: 20,
+    paddingVertical: 16,
   },
   title: {
     fontSize: 24,
@@ -463,7 +393,7 @@ const styles = StyleSheet.create({
     color: '#000',
   },
 
-  // Subscription section
+  // Subscription section with image
   subscriptionSection: {
     paddingVertical: 16,
     flexDirection: 'row',
@@ -508,6 +438,14 @@ const styles = StyleSheet.create({
   },
 
   // Input styles
+  input: {
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 12,
+    backgroundColor: '#F8FAFC',
+    height: 50,
+    paddingHorizontal: 16,
+  },
   subscriptionInput: {
     borderWidth: 1,
     borderColor: '#E2E8F0',
@@ -515,39 +453,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC',
     height: 50,
     paddingHorizontal: 16,
-  },
-  inputStyle: {
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 12,
-    backgroundColor: '#F8FAFC',
-    paddingHorizontal: 16,
-    fontSize: 16,
-  },
-
-  // Category styles
-  categoryContainer: {
-    position: 'relative',
-  },
-  categoryInput: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 12,
-    backgroundColor: '#F8FAFC',
-    height: 50,
-  },
-  inputText: {
-    fontSize: 16,
-    color: '#000',
-  },
-  placeholderText: {
-    color: '#888',
-    fontSize: 16,
   },
 
   // Row container for inputs
@@ -560,22 +465,88 @@ const styles = StyleSheet.create({
   dayInput: {
     width: '48%',
     height: 50,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 12,
+    backgroundColor: '#F8FAFC',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
   },
   simpleDropdown: {
     width: '48%',
     height: 50,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 12,
+    backgroundColor: '#F8FAFC',
+    paddingHorizontal: 16,
+    paddingVertical: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   currencyInput: {
     width: '30%',
     height: 50,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 12,
+    backgroundColor: '#F8FAFC',
+    paddingHorizontal: 16,
+    paddingVertical: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   amountInput: {
     width: '67%',
     height: 50,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 12,
+    backgroundColor: '#F8FAFC',
+    paddingHorizontal: 16,
   },
   planInput: {
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 12,
+    backgroundColor: '#F8FAFC',
     height: 50,
     marginBottom: 20,
+    paddingHorizontal: 16,
+  },
+
+  // Dropdown styles
+  dropdownMenuSmall: {
+    position: 'absolute',
+    backgroundColor: 'white',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 12,
+    zIndex: 100,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    padding: 8,
+    elevation: 10,
+    marginTop: 4,
+  },
+  dropdownItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    borderRadius: 8,
+  },
+  dropdownText: {
+    fontSize: 16,
+    color: '#333',
+  },
+  dropdownValue: {
+    fontSize: 16,
+    color: '#000',
   },
 
   // Button container
@@ -596,5 +567,8 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingVertical: 14,
     width: '100%',
+  },
+  dropdownInput: {
+    paddingVertical: 12,
   },
 });

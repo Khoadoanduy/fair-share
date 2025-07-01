@@ -1,3 +1,4 @@
+
 import express, { Request, Response, Router, response } from 'express';
 import { User } from '@prisma/client';
 import prisma from '../prisma/client';
@@ -89,32 +90,23 @@ router.get('/invitation/:userId', async (request: Request, response: Response) =
     }
 });
 
-//Show all user's groups (with optional subscriptionType filter)
+//Show all user's groups
 router.get('/groups/:userId', async (request: Request, response: Response) => {
     try {
         const { userId } = request.params;
-        const { subscriptionType } = request.query;
         if (!userId) {
             return response.status(400).json({ message: 'userId are required' });
         }
+        //Check if the user has already been invited to this group
         const allGroups = await prisma.groupMember.findMany({
           where: { userId },
-          include: { 
-            group: {
-              include: {
-                subscription: true // Add this line to include subscription data
-              }
-            }
-          }
-        });
-        // Filter by subscriptionType if provided
-        const filteredGroups = subscriptionType
-          ? allGroups.filter(gm => gm.group && gm.group.subscriptionType === subscriptionType)
-          : allGroups;
-        if (filteredGroups.length == 0) {
+          include: { group: true }
+        })
+        
+        if (allGroups.length == 0) {
           return response.json({ message: 'No group found' });
         }
-        response.status(200).json(filteredGroups);
+        response.status(200).json(allGroups);
 
     } catch (error) {
         console.error(error);

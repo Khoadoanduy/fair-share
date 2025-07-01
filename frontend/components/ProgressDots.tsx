@@ -12,8 +12,8 @@ interface ProgressDotsProps {
 const ProgressDots: React.FC<ProgressDotsProps> = ({
   totalSteps,
   currentStep,
-  activeColor = '#4A3DE3', // Changed from '#000' to match your app's primary color
-  inactiveColor = '#E0E0E0', // Changed from '#ccc' to a lighter gray
+  activeColor = '#000',
+  inactiveColor = '#ccc',
   size = 8,
 }) => {
   return (
@@ -40,12 +40,11 @@ const styles = StyleSheet.create({
   dotsContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    alignItems: 'center', // Added for better alignment
     marginBottom: 20,
     marginTop: 10,
   },
   dot: {
-    marginHorizontal: 4, // Reduced from 5 to 4 for slightly tighter spacing
+    marginHorizontal: 5,
   },
 });
 
