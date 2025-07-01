@@ -14,7 +14,7 @@ import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { useUser } from "@clerk/clerk-expo";
 import { Ionicons } from "@expo/vector-icons";
-import GroupCard from '@/components/GroupCard';
+import SubscriptionCard from '@/components/SubscriptionCard';
 import AddSubscriptionModal from '@/components/AddSubscriptionModal';
 import PersonalSubscriptionModal from '@/components/PersonalSubscriptionModal';
 
@@ -25,6 +25,7 @@ interface Group {
   subscriptionId?: string;
   planName?: string;
   amountEach: number;
+  amount: number;
   cycle: string;
   category: string;
   startDate?: string;
@@ -36,6 +37,7 @@ interface Group {
     name?: string;
     category?: string;
   };
+  nextPaymentDate?: string;
 }
 
 export default function GroupsScreen() {
@@ -195,7 +197,7 @@ export default function GroupsScreen() {
       amountEach: sub.group.amountEach,
       cycle: sub.group.cycle || "monthly",
       category: sub.group.category,
-      logo: sub.group.subscription?.logo || sub.group.logo,
+      logo: sub.group.subscription?.logo ?? (sub.group.logo ?? undefined),
       isPersonal: true,
       endDate: sub.group.endDate,
       totalMem: sub.group.totalMem,
@@ -204,7 +206,7 @@ export default function GroupsScreen() {
     // Add group subscriptions with real logos
     const groupSubs = groups.map(group => ({
       ...group,
-      logo: group.subscription?.logo || group.logo,
+      logo: group.subscription?.logo ?? (group.logo ?? undefined),
       isPersonal: false
     }));
 
@@ -263,7 +265,7 @@ export default function GroupsScreen() {
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContainer}
         renderItem={({ item }) => (
-          <GroupCard
+          <SubscriptionCard
             group={item}
             onPress={() => {
               if (item.isPersonal) {
@@ -273,7 +275,7 @@ export default function GroupsScreen() {
                 });
               } else {
                 router.push({
-                  pathname: "/(group)/groupDetails",
+                  pathname: item.endDate === null ? "/(group)/newGroupDetails",
                   params: { groupId: item.id },
                 });
               }

@@ -12,8 +12,10 @@ import groupRoute from './routes/group';
 import subscriptionRouter from './routes/subscription';
 import groupMemberRoute from './routes/groupMember'
 import virtualCardRoute from './routes/virtualCard';
+import webhookRoute from './routes/webhook';
 import notificationsRoute from './routes/notifications';
-import cors from 'cors';  
+import confirmShare from './routes/confirmShare';
+import cors from 'cors';  // Add this
 
 dotenv.config();
 
@@ -26,6 +28,7 @@ app.use(express.json());
 // Mount webhook router
 app.use(cors());
 app.use('/', webhookRouter);
+app.use('/stripe', webhookRoute);
 
 app.use('/api/stripe-customer', customerRoutes);
 app.use('/api/stripe-payment', paymentRoutes);
@@ -37,6 +40,7 @@ app.use('/api/group', groupRoute);
 app.use('/api/groupMember', groupMemberRoute);
 app.use('/api/virtualCard', virtualCardRoute);
 app.use('/api/subscriptions', subscriptionRouter);
+app.use('/api/cfshare', confirmShare);
 app.use('/api/notifications', notificationsRoute);
 
 

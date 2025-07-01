@@ -45,13 +45,13 @@ router.get('/subscriptions/:userId', async (req: Request, res: Response) => {
         });
         const existingGroupIds = existingGroups.map(g => g.id);
 
-        // Get groups that friends are in but user is not, and that actually exist
+        // Get groups that friends are in but user is not - REMOVE visibility filter
         const friendGroups = await prisma.groupMember.findMany({
             where: {
                 userId: { in: friendIds },
                 groupId: {
                     notIn: userGroupIds,
-                    in: existingGroupIds // Only include groups that actually exist
+                    in: existingGroupIds
                 }
             },
             include: {
@@ -72,17 +72,20 @@ router.get('/subscriptions/:userId', async (req: Request, res: Response) => {
                         cycleDays: true,
                         category: true,
                         totalMem: true,
-                        amountEach: true
+                        amountEach: true,
+                        visibility: true
                     }
                 }
             },
-            orderBy: {
-                id: 'desc' // Use id instead of createdAt
-            }
         });
 
-        // Format for feed display (no need to filter for null since we pre-filtered)
-        const feed = friendGroups.map(item => ({
+        // Filter for 'friends' visibility in JavaScript instead
+        const visibleFriendGroups = friendGroups.filter(item =>
+            item.group.visibility === 'friends'
+        );
+
+        // Format for feed display
+        const feed = visibleFriendGroups.map((item: any) => ({
             id: item.id,
             friend: item.user,
             group: item.group,

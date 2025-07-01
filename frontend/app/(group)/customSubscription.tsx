@@ -9,11 +9,10 @@ import ProgressDots from '@/components/ProgressDots';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import CustomDropdown, { DropdownOption } from '@/components/CustomDropdown';
-import { useUser } from '@clerk/clerk-expo';
 import { useUserState } from '@/hooks/useUserState';
-import CustomCategoryModal from '@/components/CustomCategoryModal';
 import CustomDropdownModal from '@/components/CustomDropdownModal';
 import CustomInputModal from '@/components/CustomInputModal';
+
 
 type FormatData = {
   subscriptionName: string;
@@ -28,10 +27,11 @@ type FormatData = {
 export default function CustomSubscriptionScreen() {
   const API_URL = process.env.EXPO_PUBLIC_API_URL;
   const router = useRouter();
-  const { user } = useUser();
-  const clerkId = user?.id;
-  const { groupName } = useLocalSearchParams();
-  const customerId = useUserState();
+  const { userId } = useUserState();
+
+
+  // Add visibility to the destructured params
+  const { groupName, visibility } = useLocalSearchParams();
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
 
   const { control, handleSubmit, setValue, watch } = useForm<FormatData>({
@@ -51,20 +51,6 @@ export default function CustomSubscriptionScreen() {
   const [showCurrencyDropdown, setShowCurrencyDropdown] = useState(false);
   const [showCustomCategoryModal, setShowCustomCategoryModal] = useState(false);
   const [customCategoryInput, setCustomCategoryInput] = useState('');
-
-  const userFromMongo = async () => {
-    try {
-      const response = await axios.get(`${API_URL}/api/user/`, {
-        params: {
-          clerkID: clerkId
-        }
-      })
-      return response.data.id
-    }
-    catch (error) {
-      console.error("Error fetching user data:", error);
-    }
-  }
 
   // Request permission on mount
   useEffect(() => {
@@ -99,16 +85,16 @@ export default function CustomSubscriptionScreen() {
 
   const calculateTotalDays = (dayValue: string, cycle: string): number => {
     const parsedDay = parseFloat(dayValue) || 1;
+    // Base days for each cycle
 
     const cycleDaysMap: { [key: string]: number } = {
       'weekly': 7,
       'monthly': 30,
       'yearly': 365,
     };
-
     const baseDays = cycleDaysMap[cycle.toLowerCase()] || 30;
+    // Calculate total days by multiplying base cycle days with the day value
     const totalDays = Math.round(parsedDay * baseDays);
-
     return totalDays;
   };
 
@@ -119,7 +105,6 @@ export default function CustomSubscriptionScreen() {
     }
 
     try {
-      const leaderId = await userFromMongo();
       const cycleDays = calculateTotalDays(info.day, info.cycle);
 
       // Create the group
@@ -132,9 +117,12 @@ export default function CustomSubscriptionScreen() {
         cycleDays: cycleDays,
         paymentFrequency: parseFloat(info.day),
         category: info.category,
-        userId: leaderId
+        userId: userId, 
+        visibility: visibility || 'friends', 
       });
-
+      
+      const groupId = response.data.groupId;
+      await axios.post(`${API_URL}/api/groupMember/${groupId}/${userId}`, { userRole: "leader" });
       router.push({
         pathname: '/(group)/inviteMember',
         params: { groupId: response.data.groupId },
@@ -237,7 +225,7 @@ export default function CustomSubscriptionScreen() {
             </View>
           </View>
 
-          {/* Category field */}
+          {/* Category field using the imported CustomDropdown */}
           <Text style={styles.label}>Category</Text>
           <Controller
             control={control}

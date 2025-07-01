@@ -16,7 +16,6 @@ import axios from "axios";
 import { Ionicons } from "@expo/vector-icons";
 import CustomButton from "@/components/CustomButton";
 import { formatPaymentDate, getDaysRemaining } from "@/utils/dateUtils";
-import BankCardDisplay from "@/components/bankCardDisplay";
 import VirtualCardDisplay from "@/components/VirtualCardDisplay";
 import { useUserState } from "@/hooks/useUserState";
 
@@ -33,7 +32,7 @@ type GroupMember = {
   };
 };
 
-type Group = {
+interface Group {
   id: string;
   groupName: string;
   subscriptionName: string;
@@ -49,6 +48,7 @@ type Group = {
   members: GroupMember[];
   daysUntilNextPayment: number;
   nextPaymentDate: string;
+  visibility?: string; // Add to the Group interface
   virtualCardId?: string;
   logo?: string;
   subscription?: {
@@ -71,6 +71,7 @@ type VirtualCard = {
   type: string;
   currency: string;
 };
+
 
 export default function GroupDetailsScreen() {
   const API_URL = process.env.EXPO_PUBLIC_API_URL;
@@ -199,8 +200,21 @@ export default function GroupDetailsScreen() {
         {/* Top Info Card */}
         <View style={styles.topCard}>
           <View style={styles.lockContainer}>
-            <Ionicons name="lock-closed-outline" size={24} color="#4353ED" />
+            <Ionicons
+              name={
+                group.visibility === "friends"
+                  ? "people-outline"
+                  : "lock-closed-outline"
+              }
+              size={24}
+              color="#4353ED"
+            />
             <Text style={styles.groupName}>{group.groupName}</Text>
+            <View style={styles.visibilityBadge}>
+              <Text style={styles.visibilityText}>
+                {group.visibility === "friends" ? "Friends" : "Private"}
+              </Text>
+            </View>
           </View>
 
           <View style={styles.infoCardsContainer}>
@@ -461,6 +475,18 @@ const styles = StyleSheet.create({
     color: "#4A3DE3",
     marginLeft: 12,
     textAlign: "center", // Add this
+  },
+  visibilityBadge: {
+    backgroundColor: "#E0E7FF",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginLeft: 8,
+  },
+  visibilityText: {
+    fontSize: 12,
+    color: "#4A3DE3",
+    fontWeight: "500",
   },
   infoCardsContainer: {
     flexDirection: "row",

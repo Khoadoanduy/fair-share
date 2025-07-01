@@ -2,7 +2,7 @@ import React from "react";
 import { View, Text, Image, StyleSheet, Pressable } from "react-native";
 import { Ionicons } from '@expo/vector-icons';
 
-interface GroupCardProps {
+interface SubscriptionCardProps {
   group: {
     id: string;
     groupName: string;
@@ -37,7 +37,7 @@ const formatRelativeDate = (dateString: string) => {
   }
 };
 
-const GroupCard: React.FC<GroupCardProps> = ({ group, onPress }) => {
+const SubscriptionCard: React.FC<SubscriptionCardProps> = ({ group, onPress }) => {
   return (
     <Pressable style={styles.subscriptionCard} onPress={onPress}>
       {/* Use real logo or fallback to placeholder */}
@@ -187,4 +187,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default GroupCard;
+export default SubscriptionCard;

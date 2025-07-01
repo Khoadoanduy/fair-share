@@ -87,7 +87,7 @@ export default function SubscriptionDetailsScreen() {
       setMongoUserId(mongoId);
 
       const [detailsResponse, roleResponse] = await Promise.all([
-        axios.get(`${API_URL}/api/group/${groupId}/subscription-details`),
+        axios.get(`${API_URL}/api/group/${groupId}`),
         axios.get(`${API_URL}/api/group/${groupId}/user-role/${mongoId}`),
       ]);
 
@@ -143,7 +143,7 @@ export default function SubscriptionDetailsScreen() {
         });
 
         const response = await axios.get(
-          `${API_URL}/api/group/${groupId}/subscription-details`
+          `${API_URL}/api/group/${groupId}`
         );
         setDetails(response.data);
 
