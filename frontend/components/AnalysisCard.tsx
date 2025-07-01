@@ -174,7 +174,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 16,
     borderWidth: 1,
-    borderColor: "rgba(74, 61, 227, 0.1)", // This is equivalent to #4A3DE31A
+    borderColor: "rgba(74, 61, 227, 0.1)",
   },
   chartSection: {
     alignItems: "center",
@@ -225,8 +225,8 @@ const styles = StyleSheet.create({
     fontFamily: "Inter",
     fontWeight: "600",
     lineHeight: 28,
-    textAlign: "center", // Add this line to center the text
-    width: "100%", // Add this to ensure full width
+    textAlign: "center",
+    width: "100%",
   },
   categoriesContainer: {
     maxHeight: 200,

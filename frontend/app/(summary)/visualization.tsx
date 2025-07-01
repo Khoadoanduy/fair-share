@@ -37,12 +37,37 @@ export default function Visualization() {
       return acc;
     }, {});
 
-    return Object.entries(categoryTotals).map(([category, amount]) => ({
-      category,
-      amount,
-      percentage: Math.round((amount / totalAmount) * 100),
-      color: hashmap[category],
+    const categories = Object.entries(categoryTotals).map(
+      ([category, amount]) => ({
+        category,
+        amount,
+        exactPercentage: (amount / totalAmount) * 100,
+        color: hashmap[category],
+      })
+    );
+
+    const roundedCategories = categories.map((item) => ({
+      ...item,
+      percentage: Math.floor(item.exactPercentage),
     }));
+
+    const totalRounded = roundedCategories.reduce(
+      (sum, item) => sum + item.percentage,
+      0
+    );
+    const remaining = 100 - totalRounded;
+    const withDecimals = categories
+      .map((item, index) => ({
+        index,
+        decimal: item.exactPercentage - Math.floor(item.exactPercentage),
+      }))
+      .sort((a, b) => b.decimal - a.decimal);
+    for (let i = 0; i < remaining; i++) {
+      const indexToIncrement = withDecimals[i % withDecimals.length].index;
+      roundedCategories[indexToIncrement].percentage += 1;
+    }
+
+    return roundedCategories;
   }, [subscriptions, totalAmount]);
 
   return (
@@ -55,7 +80,7 @@ export default function Visualization() {
           amount: item.amount.toFixed(2),
           color: item.color,
         }))}
-        amountOfActive={subscriptions.length} // Add this line as a separate prop
+        amountOfActive={subscriptions.length}
         totalAmount={totalAmount.toFixed(2)}
         size={200}
         strokeWidth={25}
@@ -72,7 +97,7 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   calendarPlaceholder: {
-    height: 100, // Adjust this value based on your needs
+    height: 100,
     marginBottom: 16,
   },
 });
