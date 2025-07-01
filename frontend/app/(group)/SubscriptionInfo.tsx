@@ -145,7 +145,7 @@ export default function SubscriptionScreen() {
 
     try {
       const cycleDays = calculateTotalDays(info.day, info.cycle);
-
+      
       const response = await axios.post(`${API_URL}/api/group/create`, {
         groupName,
         userId: userId,
@@ -161,9 +161,9 @@ export default function SubscriptionScreen() {
         visibility: visibility || 'friends', 
         userId: leaderId
       });
-
+      
       const groupId = response.data.groupId;
-
+      
       router.push({
         pathname: '/(group)/inviteMember',
         params: { groupId: response.data.groupId },
@@ -180,9 +180,8 @@ export default function SubscriptionScreen() {
     { label: 'Music', value: 'music' },
     { label: 'Gaming', value: 'gaming' },
     { label: 'Productivity', value: 'productivity' },
+    { label: 'Cloud Storage', value: 'cloud_storage' },
     { label: 'Fitness', value: 'fitness' },
-    { label: 'Food Delivery', value: 'food delivery' }, 
-    { label: 'News', value: 'news' },                   
   ];
 
   const cycleOptions: DropdownOption[] = [
