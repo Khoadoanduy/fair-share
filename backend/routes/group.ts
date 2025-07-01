@@ -18,10 +18,10 @@ const calculateDaysBetween = (startDate: Date, endDate: Date): number => {
   return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 };
 
-// Create group
+// Create group (add subscriptionType and personalType, backward compatible)
 router.post('/create', async (request: Request, response: Response) => {
   try {
-    const { groupName, subscriptionName, subscriptionId, planName, amount, cycle, category, cycleDays, userId } = request.body;
+    const { groupName, subscriptionName, subscriptionId, planName, amount, cycle, category, cycleDays, userId, subscriptionType, personalType } = request.body;
 
     if (!groupName || !subscriptionName || !amount || !userId) {
       return response.status(400).json({ message: 'Missing required fields' });
@@ -46,7 +46,12 @@ router.post('/create', async (request: Request, response: Response) => {
           amountEach: parseFloat(parseFloat(amount).toFixed(2)),
           startDate,
           endDate: nextPaymentDate,
-          visibility: visibility || 'friends' // Add this line with default fallback
+          visibility: visibility || 'friends', 
+          subscriptionType: subscriptionType || 'shared',
+          personalType: (subscriptionType === 'personal') ? (personalType || 'existing') : null
+        },
+        include: {
+          subscription: true // Include subscription data in response
         }
       });
 
@@ -108,70 +113,106 @@ router.get('/:groupId', async (request: Request, response: Response) => {
     if (!groupId) {
       return response.status(400).json({ message: 'groupId is required' });
     }
-    
+
     const group = await prisma.group.findUnique({
       where: { id: groupId },
       include: {
         members: {
-          include: {
-            user: true
-          }
+          include: { user: true }
         },
         subscription: true
       }
     });
-    
+
     if (!group) {
       return response.status(404).json({ message: 'Group not found' });
     }
-    
+
     const today = new Date();
     let nextPaymentDate = group.endDate;
     let daysUntilNextPayment = 0;
 
     if (group.startDate && group.cycleDays) {
       nextPaymentDate = calculateNextPaymentDate(group.cycleDays, group.startDate);
-      
+
       if (nextPaymentDate < today) {
         const daysSinceStart = calculateDaysBetween(group.startDate, today);
         const cyclesPassed = Math.floor(daysSinceStart / group.cycleDays);
         nextPaymentDate = new Date(group.startDate);
         nextPaymentDate.setDate(group.startDate.getDate() + (cyclesPassed + 1) * group.cycleDays);
       }
-      
+
       daysUntilNextPayment = calculateDaysBetween(today, nextPaymentDate);
-      
+
       await prisma.group.update({
         where: { id: groupId },
         data: { endDate: nextPaymentDate }
       });
     }
-    
-    response.status(200).json({
-      ...group,
-      daysUntilNextPayment,
-      nextPaymentDate: nextPaymentDate?.toISOString().split('T')[0]
-    });
+
+    const subscriptionDetails = {
+      id: group.id,
+      groupName: group.groupName,
+      subscriptionName: group.subscriptionName,
+      planName: group.planName,
+      amount: group.amount,
+      cycle: group.cycle,
+      currency: 'USD',
+      nextPaymentDate: nextPaymentDate?.toISOString().split('T')[0],
+      cycleDays: group.cycleDays,
+      category: group.category,
+      virtualCardId: group.virtualCardId,
+      subscription: group.subscription ? {
+        id: group.subscription.id,
+        name: group.subscription.name,
+        logo: group.subscription.logo,
+        domain: group.subscription.domain,
+        category: group.subscription.category
+      } : null,
+      credentials: group.credentialUsername && group.credentialPassword ? {
+        username: group.credentialUsername,
+        password: group.credentialPassword
+      } : null,
+      members: group.members,
+      daysUntilNextPayment
+    };
+
+    response.status(200).json(subscriptionDetails);
   } catch (error) {
     console.error(error);
     response.status(500).json({ message: 'Error getting group details' });
   }
 });
 
-// Update credentials (leader only)
+// Update credentials (leader for shared, sole member for personal, backward compatible)
 router.put('/:groupId/credentials', async (request: Request, response: Response) => {
   try {
     const { groupId } = request.params;
     const { credentialUsername, credentialPassword, userId } = request.body;
 
-    const memberRole = await prisma.groupMember.findFirst({
-      where: { groupId, userId, userRole: 'leader' }
+    const group = await prisma.group.findUnique({
+      where: { id: groupId },
+      include: { members: true }
     });
-
-    if (!memberRole) {
-      return response.status(403).json({ message: 'Only group leaders can update credentials' });
+    if (!group) {
+      return response.status(404).json({ message: 'Group not found' });
     }
+    if (group.subscriptionType === 'personal') {
+      // Only the sole member can update
+      const isSoleMember = group.members.length === 1 && group.members[0].userId === userId;
+      if (!isSoleMember) {
+        return response.status(403).json({ message: 'Only the owner of the personal group can update credentials' });
+      }
+    } else {
+      // Only leader can update
+      const memberRole = await prisma.groupMember.findFirst({
+        where: { groupId, userId, userRole: 'leader' }
+      });
 
+      if (!memberRole) {
+        return response.status(403).json({ message: 'Only group leaders can update credentials' });
+      }
+    }
     await prisma.group.update({
       where: { id: groupId },
       data: { credentialUsername, credentialPassword }
@@ -184,7 +225,7 @@ router.put('/:groupId/credentials', async (request: Request, response: Response)
   }
 });
 
-// Check user role in group
+// Get user role in a group
 router.get('/:groupId/user-role/:userId', async (request: Request, response: Response) => {
   try {
     const { groupId, userId } = request.params;
@@ -199,8 +240,8 @@ router.get('/:groupId/user-role/:userId', async (request: Request, response: Res
 
     response.status(200).json({ role: member.userRole });
   } catch (error) {
-    console.error('Error checking user role:', error);
-    response.status(500).json({ message: 'Error checking user role' });
+    console.error('Error fetching user role:', error);
+    response.status(500).json({ message: 'Error fetching user role' });
   }
 });
 
@@ -224,58 +265,6 @@ router.get('/invitation/:groupId', async (request: Request, response: Response) 
   } catch (error) {
     console.error(error);
     response.status(500).json({ message: 'Error getting invitation' });
-  }
-});
-
-// Get subscription details for a group
-router.get('/:groupId/subscription-details', async (request: Request, response: Response) => {
-  try {
-    const { groupId } = request.params;
-
-    // Validate ObjectID format
-    if (!groupId || groupId.length !== 24 || !/^[0-9a-fA-F]{24}$/.test(groupId)) {
-      return response.status(400).json({ message: 'Invalid group ID format' });
-    }
-
-    const group = await prisma.group.findUnique({
-      where: { id: groupId },
-      include: {
-        subscription: {
-          select: {
-            id: true,
-            name: true,
-            logo: true,
-            category: true,
-            domain: true
-          }
-        }
-      }
-    });
-
-    if (!group) {
-      return response.status(404).json({ message: 'Group not found' });
-    }
-
-    const subscriptionDetails = {
-      id: group.id,
-      groupName: group.groupName,
-      subscriptionName: group.subscriptionName,
-      planName: group.planName,
-      amount: group.amount,
-      cycle: group.cycle,
-      currency: 'USD',
-      nextPaymentDate: '', // Left blank as requested
-      subscription: group.subscription,
-      credentials: group.credentialUsername && group.credentialPassword ? {
-        username: group.credentialUsername,
-        password: group.credentialPassword
-      } : null
-    };
-
-    response.status(200).json(subscriptionDetails);
-  } catch (error) {
-    console.error('Error fetching subscription details:', error);
-    response.status(500).json({ message: 'Error fetching subscription details' });
   }
 });
 
@@ -357,58 +346,6 @@ router.get('/leader/:groupId', async (request: Request, response: Response) => {
   }
 });
 
-router.get('/search-group/:userId/:groupName', async (request, response) => {
-  try {
-    const { userId, groupName } = request.params;
-
-    const groups = await prisma.groupMember.findMany({
-      where: {
-        userId: userId,
-        group: {
-          is: {
-            groupName: {
-              contains: groupName,
-              mode: 'insensitive'
-            }
-          }
-        }
-      },
-      select: {
-        group: true
-      }
-    })
-
-    //If user doesn't exist, give an empty list
-    if (groups.length === 0) {
-      return response.status(404).json({ groups: [] });
-    }
-    response.status(200).json({ groups });
-  } catch (error) {
-    console.log(error);
-    response.status(500).json({ message: 'Error searching group' });
-  }
-});
-
-//Get amount each member has to pay
-router.get('/amount-each/:groupId', async (request: Request, response: Response) => {
-  try {
-    const { groupId } = request.params;
-    if (!groupId) {
-      return response.status(400).json({ message: 'groupId are required' });
-    }
-    const group = await prisma.group.findFirst({
-      where: { id: groupId },
-    });
-    if (!group)
-      return response.status(404).json({ message: "No group found" });
-    response.status(200).json(group.amountEach);
-
-  } catch (error) {
-    console.error(error);
-    response.status(500).json({ message: 'Error getting amount' });
-  }
-});
-
 //Get the number of members in the group
 router.get('/total-mem/:groupId', async (request: Request, response: Response) => {
   try {
@@ -426,30 +363,6 @@ router.get('/total-mem/:groupId', async (request: Request, response: Response) =
   } catch (error) {
     console.error(error);
     response.status(500).json({ message: 'Error getting total number of members' });
-  }
-});
-
-
-//Show all pending invitations for a group
-router.get('/invitation/:groupId', async (request: Request, response: Response) => {
-  try {
-    const { groupId } = request.params;
-    if (!groupId) {
-      return response.status(400).json({ message: 'groupId are required' });
-    }
-    //Check if the user has already been invited to this group
-    const invitation = await prisma.groupInvitation.findMany({
-      where: { groupId, status: "pending" },
-      include: { user: true }
-    })
-    if (invitation.length == 0) {
-      return response.status(409).json({ message: 'No invitation sent' });
-    }
-    response.status(200).json(invitation);
-
-  } catch (error) {
-    console.error(error);
-    response.status(500).json({ message: 'Error getting invitation' });
   }
 });
 
