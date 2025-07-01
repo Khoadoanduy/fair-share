@@ -21,7 +21,6 @@ export default function AuthLayout() {
             headerTitle: () => null,
           }}
       />
-      
     </Stack>
 
   );
