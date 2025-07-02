@@ -9,11 +9,11 @@ router.get('/popular', async (_request: Request, response: Response) => {
   try {
     // Popular subscription IDs - these are real IDs from your seeded database
     const popularIds = [
-      '682ad9c177e31b2fc863065a', // Netflix
-      '682ad9c177e31b2fc8630668', // Spotify
-      '682ad9c177e31b2fc86306ae', // Amazon Prime
-      '682ad9c177e31b2fc8630669', // Apple Music
-      '682ad9c177e31b2fc86306a9'  // GrubHub
+      '6857e4917f41575000585d81', // Netflix
+      '6857e4917f41575000585d8f', // Spotify
+      '6857e4917f41575000585dd5', // Amazon Prime
+      '6857e4917f41575000585d90', // Apple Music
+      '6857e4917f41575000585dd0'  // GrubHub
     ];
     
     const popularSubscriptions = await prisma.subscription.findMany({

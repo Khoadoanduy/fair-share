@@ -1,5 +1,6 @@
 import express, { Request, Response, Router } from 'express';
 import prisma from '../prisma/client';
+import { getTimeAgoFromObjectId } from '../utils/timeUtils';
 
 const router: Router = express.Router();
 
@@ -55,44 +56,69 @@ router.get('/subscriptions/:userId', async (req: Request, res: Response) => {
                 }
             },
             include: {
-                user: {
-                    select: {
-                        id: true,
-                        firstName: true,
-                        lastName: true,
-                        username: true
-                    }
-                },
-                group: {
-                    select: {
-                        id: true,
-                        groupName: true,
-                        subscriptionName: true,
-                        amount: true,
-                        cycleDays: true,
-                        category: true,
-                        totalMem: true,
-                        amountEach: true,
-                        visibility: true
-                    }
+                user: true,
+                group: { 
+                    include: { 
+                        subscription: true 
+                    } 
                 }
             },
+            orderBy: {
+                id: 'desc' // Use id instead of createdAt
+            }
         });
 
-        // Filter for 'friends' visibility in JavaScript instead
-        const visibleFriendGroups = friendGroups.filter(item =>
-            item.group.visibility === 'friends'
-        );
+        // Filter out groups where user has been invited BEFORE mapping
+        const eligibleGroups = [];
+        for (const item of friendGroups) {
+            // Check if current user has been invited to this group
+            const existingInvitation = await prisma.groupInvitation.findFirst({
+                where: {
+                    userId: userId,
+                    groupId: item.group.id,
+                    type: 'invitation'
+                }
+            });
+
+            // Only include groups where user has NOT been invited
+            if (!existingInvitation) {
+                eligibleGroups.push(item);
+            }
+        }
 
         // Format for feed display
-        const feed = visibleFriendGroups.map((item: any) => ({
-            id: item.id,
-            friend: item.user,
-            group: item.group,
-            message: `${item.user.firstName} has subscribed to ${item.group.subscriptionName}. Want to join?`
+        const feed = await Promise.all(eligibleGroups.map(async (item) => {
+            // Skip if item or required properties are null
+            if (!item || !item.user || !item.group) {
+                return null;
+            }
+
+            // Check if current user has already requested to join this group
+            const existingRequest = await prisma.groupInvitation.findFirst({
+                where: {
+                    userId: userId,
+                    groupId: item.group.id,
+                    type: 'join_request'
+                }
+            });
+
+            return {
+                id: item.id,
+                friend: item.user,
+                group: {
+                    ...item.group,
+                    timeAgo: getTimeAgoFromObjectId(item.id)
+                },
+                message: `${item.user.firstName} has subscribed to ${item.group.subscriptionName}. Want to join?`,
+                hasRequested: !!existingRequest,
+                requestStatus: existingRequest?.status || null
+            };
         }));
 
-        res.json(feed);
+        // Filter out null values
+        const validFeed = feed.filter(item => item !== null);
+
+        res.json(validFeed);
     } catch (error) {
         console.error('Error fetching subscription feed:', error);
         res.status(500).json({ error: 'Failed to fetch subscription feed' });

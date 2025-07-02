@@ -268,39 +268,59 @@ router.get('/invitation/:groupId', async (request: Request, response: Response) 
   }
 });
 
-router.get('/search-group/:userId/:groupName', async (request, response) => {
+// Get subscription details for a group
+router.get('/:groupId/subscription-details', async (request: Request, response: Response) => {
   try {
-    const { userId, groupName } = request.params;
+    const { groupId } = request.params;
 
-    const groups = await prisma.groupMember.findMany({
-      where: {
-        userId: userId,
-        group: {
-          is: {
-            groupName: {
-              contains: groupName,
-              mode: 'insensitive'
-            }
+    // Validate ObjectID format
+    if (!groupId || groupId.length !== 24 || !/^[0-9a-fA-F]{24}$/.test(groupId)) {
+      return response.status(400).json({ message: 'Invalid group ID format' });
+    }
+
+    const group = await prisma.group.findUnique({
+      where: { id: groupId },
+      include: {
+        subscription: {
+          select: {
+            id: true,
+            name: true,
+            logo: true,
+            category: true,
+            domain: true
           }
         }
-      },
-      select: {
-        group: true
       }
-    })
+    });
 
-    //If user doesn't exist, give an empty list
-    if (groups.length === 0) {
-      return response.status(404).json({ groups: [] });
+    if (!group) {
+      return response.status(404).json({ message: 'Group not found' });
     }
-    response.status(200).json({ groups });
+
+    const subscriptionDetails = {
+      id: group.id,
+      groupName: group.groupName,
+      subscriptionName: group.subscriptionName,
+      planName: group.planName,
+      amount: group.amount,
+      cycle: group.cycle,
+      currency: 'USD',
+      nextPaymentDate: '', // Left blank as requested
+      subscription: group.subscription,
+      credentials: group.credentialUsername && group.credentialPassword ? {
+        username: group.credentialUsername,
+        password: group.credentialPassword
+      } : null
+    };
+
+    response.status(200).json(subscriptionDetails);
   } catch (error) {
-    console.log(error);
-    response.status(500).json({ message: 'Error searching group' });
+    console.error('Error fetching subscription details:', error);
+    response.status(500).json({ message: 'Error fetching subscription details' });
   }
 });
 
-//Get amount each member has to pay
+// Get amount each member has to pay
 router.get('/amount-each/:groupId', async (request: Request, response: Response) => {
   try {
     const { groupId } = request.params;
@@ -319,7 +339,27 @@ router.get('/amount-each/:groupId', async (request: Request, response: Response)
     response.status(500).json({ message: 'Error getting amount' });
   }
 });
-    
+
+//Get the number of members in the group
+router.get('/total-mem/:groupId', async (request: Request, response: Response) => {
+  try {
+    const { groupId } = request.params;
+    if (!groupId) {
+      return response.status(400).json({ message: 'groupId are required' });
+    }
+    const group = await prisma.group.findFirst({
+      where: { id: groupId },
+    })
+    if (!group)
+      return response.status(404).json({ message: "No group found" });
+    response.status(200).json(group.totalMem);
+
+  } catch (error) {
+    console.error(error);
+    response.status(500).json({ message: 'Error getting total number of members' });
+  }
+});
+
 //Get group leader
 router.get('/leader/:groupId', async (request: Request, response: Response) => {
   try {
@@ -346,46 +386,75 @@ router.get('/leader/:groupId', async (request: Request, response: Response) => {
   }
 });
 
-//Get the number of members in the group
-router.get('/total-mem/:groupId', async (request: Request, response: Response) => {
+// Check user role in group
+router.get('/:groupId/user-role/:userId', async (request: Request, response: Response) => {
   try {
-    const { groupId } = request.params;
-    if (!groupId) {
-      return response.status(400).json({ message: 'groupId are required' });
-    }
-    const group = await prisma.group.findFirst({
-      where: { id: groupId },
-    })
-    if (!group)
-      return response.status(404).json({ message: "No group found" });
-    response.status(200).json(group.totalMem);
+    const { groupId, userId } = request.params;
 
+    const member = await prisma.groupMember.findFirst({
+      where: { groupId, userId }
+    });
+
+    if (!member) {
+      return response.status(404).json({ message: 'User not found in group' });
+    }
+
+    response.status(200).json({ role: member.userRole });
   } catch (error) {
-    console.error(error);
-    response.status(500).json({ message: 'Error getting total number of members' });
+    console.error('Error checking user role:', error);
+    response.status(500).json({ message: 'Error checking user role' });
   }
 });
 
-//Show all pending invitations for a group
-router.get('/invitation/:groupId', async (request: Request, response: Response) => {
+// Get subscription details for a group
+router.get('/:groupId/subscription-details', async (request: Request, response: Response) => {
   try {
     const { groupId } = request.params;
-    if (!groupId) {
-      return response.status(400).json({ message: 'groupId are required' });
-    }
-    //Check if the user has already been invited to this group
-    const invitation = await prisma.groupInvitation.findMany({
-      where: { groupId, status: "pending" },
-      include: { user: true }
-    })
-    if (invitation.length == 0) {
-      return response.status(200).json([]);
-    }
-    response.status(200).json(invitation);
 
+    // Validate ObjectID format
+    if (!groupId || groupId.length !== 24 || !/^[0-9a-fA-F]{24}$/.test(groupId)) {
+      return response.status(400).json({ message: 'Invalid group ID format' });
+    }
+
+    const group = await prisma.group.findUnique({
+      where: { id: groupId },
+      include: {
+        subscription: {
+          select: {
+            id: true,
+            name: true,
+            logo: true,
+            category: true,
+            domain: true
+          }
+        }
+      }
+    });
+
+    if (!group) {
+      return response.status(404).json({ message: 'Group not found' });
+    }
+
+    const subscriptionDetails = {
+      id: group.id,
+      groupName: group.groupName,
+      subscriptionName: group.subscriptionName,
+      planName: group.planName,
+      amount: group.amount,
+      cycle: group.cycle,
+      currency: 'USD',
+      nextPaymentDate: '', // Left blank as requested
+      subscription: group.subscription,
+      credentials: group.credentialUsername && group.credentialPassword ? {
+        username: group.credentialUsername,
+        password: group.credentialPassword
+      } : null
+    };
+
+    response.status(200).json(subscriptionDetails);
   } catch (error) {
-    console.error(error);
-    response.status(500).json({ message: 'Error getting invitation' });
+    console.error('Error fetching subscription details:', error);
+    response.status(500).json({ message: 'Error fetching subscription details' });
   }
 });
 

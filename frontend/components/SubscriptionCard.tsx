@@ -3,14 +3,14 @@ import { View, Text, Image, StyleSheet, Pressable } from "react-native";
 import { Ionicons } from '@expo/vector-icons';
 
 interface SubscriptionCardProps {
-  group: {
+  group?: {
     id: string;
     groupName: string;
     subscriptionName: string;
     planName?: string;
-    amountEach: number;
-    cycle: string;
-    category: string;
+    amountEach?: number;
+    cycle?: string;
+    category?: string;
     logo?: string;
     isPersonal?: boolean;
     totalMem?: number;
@@ -18,82 +18,101 @@ interface SubscriptionCardProps {
     showNegativeAmount?: boolean;
     timestamp?: string;
   };
-  onPress: () => void;
+  logo?: any; // fallback for simple usage
+  subscriptionName?: string;
+  amountEach?: number;
+  cycle?: string;
+  isShared?: boolean;
+  category?: string;
+  onPress?: () => void;
 }
 
-// Function to format the relative date for next payment
+// Helper to format relative date
 const formatRelativeDate = (dateString: string) => {
+  if (!dateString) return '';
   const date = new Date(dateString);
   const now = new Date();
   const diff = date.getTime() - now.getTime();
   const days = Math.ceil(diff / (1000 * 3600 * 24));
-
-  if (days < 0) {
-    return "now";
-  } else if (days === 0) {
-    return "today";
-  } else if (days === 1) {
-    return "tomorrow";
-  } else {
-    return `in ${days} days`;
-  }
+  if (days < 0) return "now";
+  if (days === 0) return "today";
+  if (days === 1) return "tomorrow";
+  return `in ${days} days`;
 };
 
-const SubscriptionCard: React.FC<SubscriptionCardProps> = ({ group, onPress }) => {
-  return (
-    <Pressable style={styles.subscriptionCard} onPress={onPress}>
-      {/* Use real logo or fallback to placeholder */}
-      {group.logo ? (
-        <Image source={{ uri: group.logo }} style={styles.subscriptionLogo} />
+const SubscriptionCard: React.FC<SubscriptionCardProps> = (props) => {
+  const group = props.group;
+  const logo = group?.logo || props.logo;
+  const subscriptionName = group?.subscriptionName || props.subscriptionName;
+  const planName = group?.planName;
+  const amountEach = group?.amountEach !== undefined ? group.amountEach : props.amountEach;
+  const cycle = group?.cycle || props.cycle;
+  const category = group?.category || props.category;
+  const isPersonal = group?.isPersonal;
+  const isShared = props.isShared !== undefined ? props.isShared : !isPersonal;
+  const totalMem = group?.totalMem;
+  const endDate = group?.endDate;
+  const onPress = props.onPress;
+
+  const CardContent = (
+    <View style={styles.subscriptionCard}>
+      {/* Logo or fallback */}
+      {logo ? (
+        typeof logo === 'string' ? (
+          <Image source={{ uri: logo }} style={styles.subscriptionLogo} />
+        ) : (
+          <Image source={logo} style={styles.subscriptionLogo} />
+        )
       ) : (
         <View style={styles.logoPlaceholder}>
-          <Text style={styles.logoText}>{group.subscriptionName.charAt(0)}</Text>
+          <Text style={styles.logoText}>{subscriptionName ? subscriptionName.charAt(0) : '?'}</Text>
         </View>
       )}
-
       <View style={styles.subscriptionDetails}>
-        <Text style={styles.subscriptionName}>{group.subscriptionName}</Text>
-        {group.planName && (
-          <Text style={styles.planName}>{group.planName}</Text>
-        )}
-
+        {subscriptionName && <Text style={styles.subscriptionName}>{subscriptionName}</Text>}
+        {planName && <Text style={styles.planName}>{planName}</Text>}
         <View style={styles.tagsContainer}>
-          {/* Show correct type tag */}
-          <View style={[styles.tag, { backgroundColor: group.isPersonal ? '#6C63FF' : '#FEC260' }]}>
-            <Text style={[styles.tagText, { color: group.isPersonal ? 'white' : 'black' }]}>
-              {group.isPersonal ? 'Personal' : 'Shared'}
-            </Text>
-          </View>
-
-          {/* Show category tag */}
-          {group.category && (
+          {/* Type tag */}
+          {isPersonal !== undefined && (
+            <View style={[styles.tag, { backgroundColor: isPersonal ? '#6C63FF' : '#FEC260' }]}>
+              <Text style={[styles.tagText, { color: isPersonal ? 'white' : 'black' }]}>
+                {isPersonal ? 'Personal' : 'Shared'}
+              </Text>
+            </View>
+          )}
+          {category && (
             <View style={[styles.tag, { backgroundColor: '#10B981' }]}>
-              <Text style={[styles.tagText, { color: 'white' }]}>{group.category}</Text>
+              <Text style={[styles.tagText, { color: 'white' }]}>{category}</Text>
             </View>
           )}
         </View>
       </View>
-
       <View style={styles.subscriptionRight}>
-        <Text style={styles.price}>${group.amountEach.toFixed(2)}</Text>
-        <View style={styles.cycleContainer}>
-          <Ionicons name="refresh-outline" size={14} color="#6B7280" />
-          <Text style={styles.billingCycle}>{group.cycle}</Text>
-        </View>
-
-        {/* Show member count for shared subscriptions */}
-        {!group.isPersonal && group.totalMem && (
-          <Text style={styles.memberCount}>{group.totalMem} members</Text>
+        {amountEach !== undefined && amountEach !== null ? (
+          <Text style={styles.price}>${amountEach.toFixed(2)}</Text>
+        ) : null}
+        {cycle && (
+          <View style={styles.cycleContainer}>
+            <Ionicons name="refresh-outline" size={14} color="#6B7280" />
+            <Text style={styles.billingCycle}>{cycle}</Text>
+          </View>
         )}
-
+        {/* Show member count for shared subscriptions */}
+        {isPersonal === false && totalMem && (
+          <Text style={styles.memberCount}>{totalMem} members</Text>
+        )}
         {/* Show next payment for groups with endDate */}
-        {!group.isPersonal && group.endDate && (
-          <Text style={styles.nextPaymentText}>
-            Due {formatRelativeDate(group.endDate)}
-          </Text>
+        {isPersonal === false && endDate && (
+          <Text style={styles.nextPaymentText}>Due {formatRelativeDate(endDate)}</Text>
         )}
       </View>
-    </Pressable>
+    </View>
+  );
+
+  return onPress ? (
+    <Pressable onPress={onPress}>{CardContent}</Pressable>
+  ) : (
+    CardContent
   );
 };
 
@@ -164,7 +183,7 @@ const styles = StyleSheet.create({
   },
   price: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#111827',
     marginBottom: 4,
   },

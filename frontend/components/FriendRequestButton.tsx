@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { StyleSheet, ActivityIndicator, View, Text, TouchableOpacity } from 'react-native';
 import axios from 'axios';
+import { Ionicons } from '@expo/vector-icons';
 import CustomButton from './CustomButton';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
@@ -69,7 +70,11 @@ const FriendRequestButton = ({
       {actionLoadingIds && actionLoadingIds[item.id] ? (
         <ActivityIndicator size="small" color="white" />
       ) : (
-        <Text style={styles.inviteText}>{requested ? "Requested" : "Invite"}</Text>
+        <Ionicons
+          name="person-add"
+          size={18}
+          color="white"
+        />
       )}
     </TouchableOpacity>
   );
@@ -85,7 +90,7 @@ const styles = StyleSheet.create({
     minWidth: 100,
   },
   buttonActive: {
-    backgroundColor: '#4353FD', 
+    backgroundColor: '#4A3DE3', 
   },
   buttonRequested: {
     backgroundColor: '#E2E8F0', 
@@ -106,13 +111,14 @@ const styles = StyleSheet.create({
     color: '#9EA2AE',
   },
   inviteButton: {
-    backgroundColor: '#4353FD',
+    backgroundColor: '#4A3DE3',
     borderRadius: 8,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    minWidth: 100,
+    minWidth: 44,
+    minHeight: 36,
   },
   inviteText: {
     color: 'white',
