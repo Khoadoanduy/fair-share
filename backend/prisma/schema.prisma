@@ -67,10 +67,11 @@ model Group {
   credentialPassword String?
   amountEach         Float?
   totalMem           Int
+  subscriptionType   String @default("shared") // "shared" or "personal"
+  personalType       String? @default("existing") // "existing" or "virtual" (only for personal)
   visibility         String   @default("friends")
 }
 
-//junction table between User and Group
 model GroupMember {
   id       String @id @default(auto()) @map("_id") @db.ObjectId
   user     User   @relation(fields: [userId], references: [id])
