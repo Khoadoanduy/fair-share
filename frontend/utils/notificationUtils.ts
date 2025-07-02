@@ -4,9 +4,6 @@ import * as Device from 'expo-device';
 import { Platform } from 'react-native';
 import { useUser } from '@clerk/clerk-expo';
 import axios from "axios";
-// import dotenv from 'dotenv';
-
-// dotenv.config();
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL
 
@@ -19,16 +16,15 @@ Notifications.setNotificationHandler({
   }),
 });
 
-export function usePushNotifications() {
-  const { user } = useUser();
+export function usePushNotifications(userId: string) {
   const [expoPushToken, setExpoPushToken] = useState('');
 
   useEffect(() => {
-    if (!user?.id) return;
+    if (!userId) return;
 
     // Register push notifications when component mounts
     registerForPushNotificationsAsync();
-  }, [user?.id]);
+  }, [userId]);
 
   const registerForPushNotificationsAsync = async () => {
     if (!Device.isDevice) {
@@ -57,19 +53,19 @@ export function usePushNotifications() {
       setExpoPushToken(token);
 
       // Register token with backend
-      await registerTokenWithBackend(token);
+      await registerTokenWithBackend(userId, token);
 
     } catch (error) {
       console.error('Error registering for push notifications:', error);
     }
   };
 
-  const registerTokenWithBackend = async (token: string) => {
+  const registerTokenWithBackend = async (userId: string, token: string) => {
     try {
-    console.log('Registering token for user:', user?.id);
+    console.log('Registering token for user:', userId);
     console.log('Token:', token);
         const response = await axios.post(`${API_URL}/api/notifications/register`, {
-                clerkId: user?.id,
+                id: userId,
                 token: token
             })
 

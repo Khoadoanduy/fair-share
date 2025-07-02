@@ -1,7 +1,7 @@
-
 import express, { Request, Response, Router, response } from 'express';
 import { User } from '@prisma/client';
 import prisma from '../prisma/client';
+import { getTimeAgoFromObjectId } from '../utils/timeUtils';
 
 const router: Router = express.Router();
 
@@ -16,21 +16,21 @@ router.get('/', async function (request, response) {
         if (!user) {
             return response.status(430).send("User not found");
         }
-        response.json(user);
+        return response.json(user);
     } catch (error) {
         console.error("Error retrieving user:", error);
         response.status(500).send("Internal Server Error");
     }
 });
 
-router.put('/:clerkID', async function(request, response) {
+router.put('/:clerkID', async function (request, response) {
     const clerkID = request.params.clerkID as string;
     const { phoneNumber, dateOfBirth, customerId } = request.body;
 
     try {
         const updated = await prisma.user.update({
             where: { clerkId: clerkID },
-            data: { 
+            data: {
                 phoneNumber: phoneNumber || undefined,
                 dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : undefined,
                 customerId: customerId || undefined,
@@ -42,7 +42,7 @@ router.put('/:clerkID', async function(request, response) {
         response.status(500).json({ error: 'Failed to update user' });
     }
 });
-router.put('/:clerkID/:customerId', async function(request, response) {
+router.put('/:clerkID/:customerId', async function (request, response) {
     const clerkID = request.params.clerkID as string;
     const cusomter = request.params.customerId as string;
     console.log(cusomter)
@@ -50,7 +50,7 @@ router.put('/:clerkID/:customerId', async function(request, response) {
     try {
         const updated = await prisma.user.update({
             where: { clerkId: clerkID },
-            data: { 
+            data: {
                 customerId: cusomter ? cusomter : undefined, // Set cusomterId only if it's provided in the request body
             },
         });
@@ -66,51 +66,137 @@ router.get('/invitation/:userId', async (request: Request, response: Response) =
     try {
         const { userId } = request.params;
         if (!userId) {
-            return response.status(400).json({ message: 'userId are required' });
+            return response.status(400).json({ message: 'userId is required' });
         }
-        //Check if the user has already been invited to this group
-        const invitation = await prisma.groupInvitation.findMany({
-            where: { userId, status: "pending", type: "invitation" },
+
+        // Get all pending invitations for this user (only received invitations, not sent requests)
+        const invitations = await prisma.groupInvitation.findMany({
+            where: {
+                userId,
+                status: "pending",
+                type: "invitation"
+            },
             include: {
                 group: {
                     include: {
                         subscription: true
                     }
                 }
+            },
+            orderBy: {
+                createdAt: 'desc'
             }
-        })
-        if (invitation.length == 0) {
-          return response.json({ message: 'No invitation sent' });
-        }
-        response.status(200).json(invitation);
+        });
+
+        response.status(200).json(invitations);
 
     } catch (error) {
-        console.error(error);
-        response.status(500).json({ message: 'Error getting invitation' });
+        console.error('Error fetching invitations:', error);
+        response.status(500).json({ message: 'Error fetching invitations' });
     }
 });
 
-//Show all user's groups
+//Show all user's groups (with optional subscriptionType filter)
 router.get('/groups/:userId', async (request: Request, response: Response) => {
     try {
         const { userId } = request.params;
+        const { subscriptionType } = request.query;
         if (!userId) {
             return response.status(400).json({ message: 'userId are required' });
         }
-        //Check if the user has already been invited to this group
+        // Get user's groups with subscription info
         const allGroups = await prisma.groupMember.findMany({
-          where: { userId },
-          include: { group: true }
-        })
-        
-        if (allGroups.length == 0) {
-          return response.json({ message: 'No group found' });
+            where: { userId },
+            include: {
+                user: {
+                    select: {
+                        id: true,
+                        firstName: true,
+                        lastName: true,
+                        username: true
+                    }
+                },
+                group: {
+                    select: {
+                        id: true,
+                        groupName: true,
+                        subscriptionName: true,
+                        amount: true,
+                        cycleDays: true,
+                        category: true,
+                        totalMem: true,
+                        amountEach: true,
+                        subscription: {
+                            select: {
+                                logo: true
+                            }
+                        }
+                    }
+                }
+            },
+            orderBy: {
+                id: 'desc'
+            }
+        });
+
+        if (allGroups.length === 0) {
+            return response.json([]);
         }
-        response.status(200).json(allGroups);
+
+        // Format for feed-like display
+        const formattedGroups = allGroups.map(item => ({
+            id: item.id,
+            friend: item.user, // Current user is the "friend" in this case
+            group: {
+                ...item.group,
+                timeAgo: getTimeAgoFromObjectId(item.id)
+            },
+            message: item.userRole === 'leader'
+                ? `You created ${item.group.subscriptionName} group`
+                : `You joined ${item.group.subscriptionName} group`,
+            userRole: item.userRole
+        }));
+
+        response.status(200).json(formattedGroups);
 
     } catch (error) {
         console.error(error);
         response.status(500).json({ message: 'Error getting groups' });
+    }
+});
+
+// Get all join requests sent by a specific user
+router.get('/requests-sent/:userId', async (request: Request, response: Response) => {
+    try {
+        const { userId } = request.params;
+        if (!userId) {
+            return response.status(400).json({ message: 'userId is required' });
+        }
+
+        // Get all join requests sent by the user with group details
+        const sentRequests = await prisma.groupInvitation.findMany({
+            where: {
+                userId,
+                status: "pending",
+                type: 'join_request'
+            },
+            include: {
+                group: {
+                    include: {
+                        subscription: true
+                    }
+                }
+            },
+            orderBy: {
+                createdAt: 'desc'
+            }
+        });
+
+        response.status(200).json(sentRequests);
+
+    } catch (error) {
+        console.error('Error fetching sent requests:', error);
+        response.status(500).json({ message: 'Error fetching sent requests' });
     }
 });
 

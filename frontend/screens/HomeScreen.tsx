@@ -1,76 +1,183 @@
 import {
   View,
   Text,
-  Image,
   StyleSheet,
   SafeAreaView,
   ScrollView,
-  Alert,
+  ActivityIndicator,
+  Pressable,
 } from "react-native";
-import { router } from "expo-router";
 import { useUser } from "@clerk/clerk-expo";
-import PaymentMethod from "@/components/PaymentMethod";
 import { useUserState } from "@/hooks/useUserState";
-import { useEffect } from "react";
-import CustomButton from "@/components/CustomButton";
-import { Redirect } from "expo-router";
+import { useEffect, useState, useMemo } from "react";
 import { useAppDispatch } from "@/redux/hooks";
-import { fetchUserData } from "@/redux/slices/userSlice";
 import { usePushNotifications } from "@/utils/notificationUtils";
+import SubscriptionCard from "@/components/SubscriptionCard";
+import axios from "axios";
+import { sub } from "date-fns";
+import { formatRelativeDate, getDaysRemaining } from "@/utils/dateUtils";
+import Feather from "@expo/vector-icons/Feather";
 
-// Set to true to show the Redux debugger, false to hide it
-const SHOW_REDUX_DEBUGGER = true;
+type GroupData = {
+  subscription: {
+    id: string;
+    groupName: string;
+    subscriptionName: string;
+    amountEach: number;
+    cycle: string;
+    category: string;
+    logo: string;
+    nextPaymentDate: string;
+  };
+};
 
 export default function HomeScreen() {
-  const { user } = useUser();
-  const dispatch = useAppDispatch();
-  const { name, hasPayment, userId, stripeCustomerId, isSignedIn } =
-    useUserState();
+  const API_URL = process.env.EXPO_PUBLIC_API_URL;
+  const { name, userId } = useUserState();
+  const [subscriptions, setSubscriptions] = useState<GroupData[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  usePushNotifications();
+  usePushNotifications(userId || '');
 
-  const handleForceRefresh = async () => {
-    if (user?.id) {
+
+  useEffect(() => {
+    const fetchGroups = async () => {
+      if (!userId) return;
       try {
-        await dispatch(fetchUserData(user.id)).unwrap();
-        Alert.alert("Success", "Data refreshed successfully!");
+        setLoading(true);
+        const response = await axios.get(
+          `${API_URL}/api/user/groups/${userId}`
+        );
+        setSubscriptions(response.data);
       } catch (error) {
-        Alert.alert("Error", "Failed to refresh data");
+        console.error("Error fetching groups:", error);
+      } finally {
+        setLoading(false);
       }
-    }
-  };
+    };
+    fetchGroups();
+  }, [userId]);
 
-  const handleNext = () => {
-    router.push("/(collectpayment)/CollectPayment");
+  const hasSubscriptions = subscriptions.length > 0;
+
+  const totalAmount = useMemo(() => {
+    if (!hasSubscriptions) return 0;
+    return subscriptions.reduce(
+      (sum, subscription) => sum + subscription.amountEach,
+      0
+    );
+  }, [subscriptions]);
+
+  const getUpcomingRenewals = () => {
+    if (!hasSubscriptions) return [];
+
+    const today = new Date();
+    const oneWeekFromNow = new Date();
+    oneWeekFromNow.setDate(today.getDate() + 7);
+
+    return subscriptions.filter((subscription) => {
+      const renewalDate = new Date(subscription.endDate);
+      return renewalDate >= today && renewalDate <= oneWeekFromNow;
+    });
   };
+  const totalAmountOfUpcomingRenewals = useMemo(() => {
+    if (!hasSubscriptions) return 0;
+
+    return getUpcomingRenewals().reduce(
+      (sum, subscription) => sum + subscription.amountEach,
+      0
+    );
+  }, [subscriptions]);
 
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView>
-        <View style={styles.content}>
-          {isSignedIn ? (
-            <>
-              <Image
-                source={{ uri: user?.imageUrl }}
-                style={styles.profileImage}
-              />
-              <Text style={styles.welcomeText}>Welcome, {name}</Text>
-              <Text style={styles.subtitle}>
-                What would you like to do today?
+        <Pressable style={styles.content}>
+          <Text style={styles.welcomeText}>Welcome, {name}</Text>
+
+          {loading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#4A3DE3" />
+              <Text style={styles.loadingText}>Loading subscriptions...</Text>
+            </View>
+          ) : !hasSubscriptions ? (
+            <View style={styles.emptyStateContainer}>
+              <View style={styles.emptyIconContainer}>
+                <Feather name="inbox" size={48} color="#6B7280" />
+              </View>
+              <Text style={styles.emptyStateTitle}>No Subscriptions Yet</Text>
+              <Text style={styles.emptyStateText}>
+                Start by creating or joining a subscription group
               </Text>
-            </>
+            </View>
           ) : (
             <>
-              <Text style={styles.welcomeText}>Hi, {name}</Text>
-              <Text style={styles.welcomeText}>Welcome to Fair Share</Text>
-              <Text style={styles.subtitle}>
-                The easiest way to split expenses with friends and family
-              </Text>
+              <Pressable style={styles.summaryBox}>
+                <Pressable style={styles.cycleSelector}>
+                  <Text style={styles.cycleText}>Monthly</Text>
+                  <Text style={styles.cycleArrow}>›</Text>
+                </Pressable>
+
+                <Text style={styles.totalAmount}>
+                  ${totalAmount.toFixed(2)}
+                </Text>
+
+                <View style={styles.statsContainer}>
+                  <View style={styles.statBox}>
+                    <Text style={styles.statTitle}>Active subscriptions</Text>
+                    <View style={styles.iconContainer}>
+                      <Feather name="check-circle" size={24} color="black" />
+                    </View>
+                    <View style={styles.statValueContainer}>
+                      <Text style={styles.statValue}>
+                        {subscriptions.length}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.statBox}>
+                    <Text style={styles.statTitle}>Upcoming Renewals</Text>
+                    <View style={styles.iconContainer}>
+                      <Feather name="clock" size={24} color="black" />
+                    </View>
+                    <View style={styles.statValueContainer}>
+                      <Text style={styles.statValue}>
+                        {getUpcomingRenewals().length}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              </Pressable>
+
+              {getUpcomingRenewals().length > 0 && (
+                <View style={styles.upcomingRenewalsSection}>
+                  <View style={styles.headerContainer}>
+                    <View style={styles.titleGroup}>
+                      <Text style={styles.sectionTitle}>Upcoming Renewals</Text>
+                      <View style={styles.verticalSeparator} />
+                    </View>
+                    <Text style={styles.upcomingAmount}>
+                      ${totalAmountOfUpcomingRenewals.toFixed(2)}
+                    </Text>
+                  </View>
+                  <View style={styles.upcomingRenewalsList}>
+                    {getUpcomingRenewals().map((subscription, index) => (
+                      <SubscriptionCard
+                        key={`renewal-${index}`}
+                        logo={{ uri: subscription.logo }}
+                        subscriptionName={subscription.groupName}
+                        cycle={subscription.cycle}
+                        amountEach={subscription.amountEach}
+                        isShared
+                        category={subscription.category}
+                      />
+                    ))}
+                  </View>
+                </View>
+              )}
             </>
           )}
-        </View>
-        <CustomButton text="Refresh Data" onPress={handleForceRefresh} />
-        <CustomButton text="Next - Create personal card" onPress={handleNext} />
+        </Pressable>
       </ScrollView>
     </SafeAreaView>
   );
@@ -82,25 +189,148 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
   },
   content: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
     padding: 20,
-    gap: 15,
-  },
-  profileImage: {
-    height: 100,
-    aspectRatio: 1,
-    borderRadius: 100,
+    marginBottom: 0,
+    gap: 10,
   },
   welcomeText: {
     fontSize: 24,
-    fontWeight: "bold",
-    textAlign: "center",
+    fontWeight: "700",
+    color: "#111827",
   },
   subtitle: {
     fontSize: 16,
-    color: "#666",
+    color: "#6B7280",
+    marginBottom: 8,
+  },
+  loadingContainer: {
+    padding: 20,
+    alignItems: "center",
+  },
+  loadingText: {
+    marginTop: 12,
+    color: "#6B7280",
+    fontSize: 14,
+  },
+  subscriptionsList: {
+    paddingHorizontal: 20,
+  },
+  emptyStateContainer: {
+    padding: 20,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  emptyIconContainer: {
+    marginBottom: 16,
+  },
+  emptyStateTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#111827",
+    marginBottom: 8,
+  },
+  emptyStateText: {
+    fontSize: 14,
+    color: "#6B7280",
     textAlign: "center",
+  },
+  summaryBox: {
+    backgroundColor: "#F4F3FF",
+    borderRadius: 16,
+    padding: 16,
+    marginVertical: 16,
+  },
+  cycleSelector: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  cycleText: {
+    color: "#4A3DE3",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  cycleArrow: {
+    color: "#4A3DE3",
+    fontSize: 20,
+    marginLeft: 4,
+  },
+  totalAmount: {
+    fontSize: 32,
+    fontWeight: "700",
+    color: "#111827",
+    marginVertical: 8,
+  },
+  statsContainer: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 8,
+  },
+  statBox: {
+    flex: 1,
+    backgroundColor: "#FCFBFF",
+    borderRadius: 12,
+    padding: 8,
+  },
+  statTitle: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "black",
+    marginBottom: 4,
+    paddingRight: 32, // Add padding to prevent text overlap with icon
+  },
+  statValueContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  statValue: {
+    fontSize: 24,
+    fontWeight: "600",
+    color: "#4A3DE3",
+  },
+  iconContainer: {
+    position: "absolute",
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    right: 8,
+    top: 8,
+  },
+  checkIcon: {
+    color: "#FFFFFF",
+    fontSize: 14,
+  },
+  clockIcon: {
+    color: "#FFFFFF",
+    fontSize: 14,
+  },
+  upcomingRenewalsSection: {
+    paddingHorizontal: 20,
+  },
+  headerContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  titleGroup: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#111827",
+  },
+  verticalSeparator: {
+    width: 1,
+    height: 24, // Fixed height to match text
+    backgroundColor: "#ccc",
+    marginLeft: 12,
+  },
+  upcomingAmount: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#111827",
   },
 });

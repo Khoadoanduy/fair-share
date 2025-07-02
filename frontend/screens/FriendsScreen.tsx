@@ -1,254 +1,389 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ActivityIndicator, FlatList, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ActivityIndicator, FlatList, RefreshControl, Alert } from 'react-native';
 import { useAuth } from '@clerk/clerk-expo';
 import axios from 'axios';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from "expo-router";
 import { useFocusEffect } from '@react-navigation/native';
+import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
+import SubscriptionCard from '../components/SubscriptionCard';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useUserState } from '@/hooks/useUserState';
+import { useAppDispatch } from '@/redux/hooks';
+import { fetchUserData } from '@/redux/slices/userSlice';
+
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
-interface FriendActivity {
+interface GroupData {
   id: string;
-  friend: {
+  groupName: string;
+  subscriptionName: string;
+  amount: number;
+  cycleDays: number;
+  category: string;
+  totalMem: number;
+  amountEach: number;
+  subscription?: {
     id: string;
-    firstName: string;
-    lastName: string;
-    username: string;
-  };
-  group: {
-    id: string;
-    groupName: string;
-    subscriptionName: string;
-    amount: number;
-    cycleDays: number;
+    name: string;
+    logo: string;
     category: string;
   };
-  message: string;
+  timeAgo: string;
 }
 
-// Get initials from name
-const getInitials = (firstName: string, lastName: string) => {
-  return `${firstName[0]}${lastName[0]}`.toUpperCase();
-};
+interface Friend {
+  id: string;
+  firstName: string;
+  lastName: string;
+  username: string;
+}
 
-// Generate avatar color based on user ID
-const getAvatarColor = (userId: string) => {
-  const colors = ['#FF5733', '#33A8FF', '#9333FF', '#33FF57', '#FF33F5', '#33FFF5'];
-  const index = userId.charCodeAt(0) % colors.length;
-  return colors[index];
-};
+interface FriendActivity {
+  id: string;
+  friend: Friend;
+  group: GroupData;
+  message: string;
+  hasRequested: boolean;
+  requestStatus: string | null;
+}
 
-// Convert cycle days to readable format
-const formatCycle = (cycleDays: number) => {
-  if (cycleDays === 30 || cycleDays === 31) return 'monthly';
-  if (cycleDays === 365) return 'yearly';
-  if (cycleDays === 7) return 'weekly';
-  return `${cycleDays} days`;
-};
+interface UserGroup {
+  id: string;
+  friend: Friend;
+  group: GroupData;
+  message: string;
+  userRole: string;
+}
 
 export default function FriendsScreen() {
   const { userId: clerkId } = useAuth();
-  const [mongoUserId, setMongoUserId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  
-  // Friend activity states
+  const dispatch = useAppDispatch();
+  const { userId: mongoUserId, loading: userLoading } = useUserState();
+  const [activeTab, setActiveTab] = useState<'feed' | 'postings'>('feed');
+
+  // Friend activity states (My feed tab)
   const [activities, setActivities] = useState<FriendActivity[]>([]);
   const [feedLoading, setFeedLoading] = useState(true);
   const [feedError, setFeedError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
+  // User groups states (My postings tab)
+  const [userGroups, setUserGroups] = useState<UserGroup[]>([]);
+  const [groupsLoading, setGroupsLoading] = useState(false);
+  const [groupsError, setGroupsError] = useState<string | null>(null);
+
+  // Track hidden/deleted postings
+  const [hiddenPostings, setHiddenPostings] = useState<Set<string>>(new Set());
+
+  // Join request loading states
+  const [joiningGroups, setJoiningGroups] = useState<Set<string>>(new Set());
+
+  // Load hidden postings from AsyncStorage
+  const loadHiddenPostings = async () => {
+    try {
+      const hiddenIds = await AsyncStorage.getItem(`hiddenPostings_${clerkId}`);
+      if (hiddenIds) {
+        setHiddenPostings(new Set(JSON.parse(hiddenIds)));
+      }
+    } catch (error) {
+      console.error('Error loading hidden postings:', error);
+    }
+  };
+
+  // Save hidden postings to AsyncStorage
+  const saveHiddenPostings = async (hiddenIds: Set<string>) => {
+    try {
+      await AsyncStorage.setItem(`hiddenPostings_${clerkId}`, JSON.stringify([...hiddenIds]));
+    } catch (error) {
+      console.error('Error saving hidden postings:', error);
+    }
+  };
+
   useEffect(() => {
     if (clerkId) {
-      setLoading(true);
-      axios.get(`${API_URL}/api/user?clerkID=${clerkId}`)
-        .then(res => {
-          setMongoUserId(res.data.id);
-          // Start fetching activities once we have the mongoUserId
-          fetchFriendActivities(res.data.id);
-        })
-        .catch(err => console.error(err))
-        .finally(() => setLoading(false));
+      // Load hidden postings from storage first
+      loadHiddenPostings();
+      // Fetch user data through Redux
+      dispatch(fetchUserData(clerkId));
     }
-  }, [clerkId]);
+  }, [clerkId, dispatch]);
 
-  // Auto-refresh activities every 30 seconds
+  // Fetch data when mongoUserId becomes available
+  useEffect(() => {
+    if (mongoUserId) {
+      fetchData(mongoUserId);
+    }
+  }, [mongoUserId]);
+
+  // Auto-refresh activities every 30 seconds for active tab only
   useEffect(() => {
     if (!mongoUserId) return;
 
     const interval = setInterval(() => {
-      fetchFriendActivitiesQuietly(mongoUserId);
+      fetchData(mongoUserId, false);
     }, 30000);
 
     return () => clearInterval(interval);
   }, [mongoUserId]);
 
-  // Refresh when screen comes into focus
+  // Refresh when screen comes into focus or tab changes
   useFocusEffect(
     useCallback(() => {
       if (mongoUserId) {
-        fetchFriendActivitiesQuietly(mongoUserId);
+        fetchData(mongoUserId, false);
       }
     }, [mongoUserId])
   );
 
-  const fetchFriendActivities = async (userId: string) => {
-    try {
-      setFeedLoading(true);
-      setFeedError(null);
-      const response = await axios.get(`${API_URL}/api/feed/subscriptions/${userId}`);
+  // Refresh when tab changes
+  useEffect(() => {
+    if (mongoUserId) {
+      fetchData(mongoUserId, true);
+    }
+  }, [activeTab, mongoUserId]);
 
-      if (Array.isArray(response.data)) {
-        setActivities(response.data);
-      } else {
+  const fetchData = useCallback(async (userId: string, showLoading = true) => {
+    if (activeTab === 'feed') {
+      try {
+        if (showLoading) {
+          setFeedLoading(true);
+          setFeedError(null);
+        }
+        const response = await axios.get(`${API_URL}/api/feed/subscriptions/${userId}`);
+        setActivities(Array.isArray(response.data) ? response.data : []);
+      } catch (err) {
+        console.error('Error fetching friend activities:', err);
+        if (showLoading) setFeedError('Failed to load friend activities');
         setActivities([]);
+      } finally {
+        if (showLoading) setFeedLoading(false);
       }
-    } catch (err) {
-      console.error('Error fetching friend activities:', err);
-      setFeedError('Failed to load friend activities');
-      setActivities([]);
-    } finally {
-      setFeedLoading(false);
-    }
-  };
-
-  // Quiet refresh without showing loading spinner
-  const fetchFriendActivitiesQuietly = async (userId: string) => {
-    try {
-      const response = await axios.get(`${API_URL}/api/feed/subscriptions/${userId}`);
-
-      if (Array.isArray(response.data)) {
-        setActivities(response.data);
+    } else {
+      try {
+        if (showLoading) {
+          setGroupsLoading(true);
+          setGroupsError(null);
+        }
+        const response = await axios.get(`${API_URL}/api/user/groups/${userId}`);
+        const allGroups = Array.isArray(response.data) ? response.data : [];
+        // Filter out hidden postings
+        const visibleGroups = allGroups.filter((group: UserGroup) => !hiddenPostings.has(group.group.id));
+        setUserGroups(visibleGroups);
+      } catch (err) {
+        console.error('Error fetching user groups:', err);
+        if (showLoading) setGroupsError('Failed to load your groups');
+        setUserGroups([]);
+      } finally {
+        if (showLoading) setGroupsLoading(false);
       }
-    } catch (err) {
-      console.error('Error quietly fetching activities:', err);
     }
-  };
+  }, [activeTab, hiddenPostings]);
 
-  // Manual refresh for pull-to-refresh
   const handleManualRefresh = async () => {
     if (!mongoUserId) return;
-    
     setRefreshing(true);
-    try {
-      const response = await axios.get(`${API_URL}/api/feed/subscriptions/${mongoUserId}`);
+    await fetchData(mongoUserId, false);
+    setRefreshing(false);
+  };
 
-      if (Array.isArray(response.data)) {
-        setActivities(response.data);
+  const handleJoinRequest = async (groupId: string, groupName: string) => {
+    if (!mongoUserId) return;
+
+    setJoiningGroups(prev => new Set(prev).add(groupId));
+
+    try {
+      // Use the new join request endpoint
+      await axios.post(`${API_URL}/api/invite/request/${groupId}/${mongoUserId}`);
+
+      // Update local state immediately
+      setActivities(prevActivities =>
+        prevActivities.map(activity =>
+          activity.group.id === groupId
+            ? { ...activity, hasRequested: true, requestStatus: 'pending' }
+            : activity
+        )
+      );
+
+      Alert.alert(
+        'Request Sent!',
+        `Your request to join "${groupName}" has been sent to the group leader.`,
+        [{ text: 'OK' }]
+      );
+
+      // Refresh the feed to update status
+      fetchData(mongoUserId, false);
+    } catch (err: any) {
+      console.error('Error sending join request:', err);
+
+      let errorMessage = 'Failed to send join request. Please try again.';
+      if (err.response?.status === 409) {
+        errorMessage = 'You have already requested to join this group or are already a member.';
       }
-    } catch (err) {
-      console.error('Error refreshing activities:', err);
+
+      Alert.alert('Error', errorMessage, [{ text: 'OK' }]);
     } finally {
-      setRefreshing(false);
+      setJoiningGroups(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(groupId);
+        return newSet;
+      });
     }
+  };
+
+  const handleDeletePosting = async (groupId: string, groupName: string) => {
+    if (!mongoUserId) return;
+
+    // Add to hidden postings and save to storage
+    const newHiddenPostings = new Set(hiddenPostings).add(groupId);
+    setHiddenPostings(newHiddenPostings);
+    await saveHiddenPostings(newHiddenPostings);
+
+    // Remove the posting from local state immediately
+    setUserGroups(prevGroups => prevGroups.filter(group => group.group.id !== groupId));
+
+    Alert.alert(
+      'Posting Removed',
+      `"${groupName}" has been removed from your postings. The group still exists and other members are not affected.`,
+      [{ text: 'OK' }]
+    );
   };
 
   const renderActivityItem = ({ item }: { item: FriendActivity }) => (
-    <View style={styles.card}>
-      <View style={styles.header}>
-        <View style={[styles.avatar, { backgroundColor: getAvatarColor(item.friend.id) }]}>
-          <Text style={styles.initials}>
-            {getInitials(item.friend.firstName, item.friend.lastName)}
-          </Text>
-        </View>
-        <View style={styles.headerText}>
-          <Text style={styles.name}>
-            {item.friend.firstName} {item.friend.lastName}
-          </Text>
-          <Text style={styles.username}>
-            @{item.friend.username || item.friend.firstName.toLowerCase()}
-          </Text>
-        </View>
-      </View>
+    <SubscriptionCard
+      mode="feed"
+      friend={item.friend}
+      group={item.group}
+      message={item.message}
+      hasRequested={item.hasRequested}
+      onJoinRequest={handleJoinRequest}
+      isJoining={joiningGroups.has(item.group.id)}
+    />
+  );
 
-      <Text style={styles.activity}>
-        joined <Text style={styles.highlight}>{item.group.subscriptionName}</Text> in group{' '}
-        <Text style={styles.highlight}>{item.group.groupName}</Text>
-      </Text>
+  const renderUserGroupItem = ({ item }: { item: UserGroup }) => (
+    <SubscriptionCard
+      mode="postings"
+      friend={item.friend}
+      group={item.group}
+      message={item.message}
+      userRole={item.userRole}
+      onDeletePosting={handleDeletePosting}
+    />
+  );
 
-      <View style={styles.footer}>
-        <View style={styles.subscriptionInfo}>
-          <Ionicons name="calendar-outline" size={14} color="#666" />
-          <Text style={styles.infoText}>{formatCycle(item.group.cycleDays)}</Text>
-        </View>
-        <View style={styles.subscriptionInfo}>
-          <Ionicons name="cash-outline" size={14} color="#666" />
-          <Text style={styles.infoText}>${item.group.amount.toFixed(2)}</Text>
-        </View>
-        <View style={styles.subscriptionInfo}>
-          <Ionicons name="pricetag-outline" size={14} color="#666" />
-          <Text style={styles.infoText}>{item.group.category}</Text>
-        </View>
-      </View>
+  // Reusable loading component
+  const renderLoadingState = (message: string) => (
+    <View style={styles.feedLoadingContainer}>
+      <ActivityIndicator color="#4A3DE3" />
+      <Text style={styles.loadingText}>{message}</Text>
     </View>
   );
 
+  // Reusable error component
+  const renderErrorState = (error: string) => (
+    <View style={styles.errorContainer}>
+      <Text style={styles.errorText}>{error}</Text>
+    </View>
+  );
+
+  // Reusable empty state component
+  const renderEmptyState = (icon: string, title: string, subtitle: string) => (
+    <View style={styles.emptyContainer}>
+      <Ionicons name={icon as any} size={48} color="#ccc" />
+      <Text style={styles.emptyText}>{title}</Text>
+      <Text style={styles.emptySubtext}>{subtitle}</Text>
+    </View>
+  );
+
+  // Reusable FlatList component
+  const renderList = (data: any[], renderItem: any) => (
+    <FlatList
+      data={data}
+      keyExtractor={item => item.id}
+      renderItem={renderItem}
+      showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={handleManualRefresh}
+          colors={['#4A3DE3']}
+          tintColor="#4A3DE3"
+        />
+      }
+      style={styles.feedList}
+      contentContainerStyle={{ paddingBottom: 20 }}
+    />
+  );
+
   const renderFeedContent = () => {
-    if (feedLoading) {
-      return (
-        <View style={styles.feedLoadingContainer}>
-          <ActivityIndicator color="#4353FD" />
-          <Text style={styles.loadingText}>Loading friend activities...</Text>
-        </View>
-      );
-    }
-
-    if (feedError) {
-      return (
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>{feedError}</Text>
-        </View>
-      );
-    }
-
+    if (feedLoading) return renderLoadingState('Loading friend activities...');
+    if (feedError) return renderErrorState(feedError);
     if (activities.length === 0) {
-      return (
-        <Text style={styles.emptyText}>No friend activity yet</Text>
+      return renderEmptyState(
+        'people-outline',
+        'No friend activity yet',
+        'When your friends join new groups, you\'ll see them here'
       );
     }
 
-    return (
-      <FlatList
-        data={activities}
-        keyExtractor={item => item.id}
-        renderItem={renderActivityItem}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={handleManualRefresh}
-            colors={['#4353FD']}
-            tintColor="#4353FD"
-          />
-        }
-        style={styles.feedList}
-      />
-    );
+    return renderList(activities, renderActivityItem);
+  };
+
+  const renderPostingsContent = () => {
+    if (groupsLoading) return renderLoadingState('Loading your groups...');
+    if (groupsError) return renderErrorState(groupsError);
+    if (userGroups.length === 0) {
+      return renderEmptyState(
+        'add-circle-outline',
+        'No groups yet',
+        'Create your first group to start sharing subscriptions'
+      );
+    }
+
+    return renderList(userGroups, renderUserGroupItem);
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
-        <TouchableOpacity
-          style={styles.friendsButton}
-          onPress={() => router.push('/(friends)/friend-list')}
-        >
-          <Ionicons name="people" size={20} color="#4353FD" />
-          <Text style={styles.buttonText}>View My Friends</Text>
-          <Ionicons name="chevron-forward" size={20} color="#999" />
-        </TouchableOpacity>
+        {/* Header */}
+        <View style={styles.header}>
+          <View style={styles.headerPlaceholder} />
+          <Text style={styles.headerTitle}>Feed</Text>
+          <TouchableOpacity onPress={() => router.push('/(friends)/friend-list')}>
+            <FontAwesome5 name="user-friends" size={24} color="#4A3DE3" />
+          </TouchableOpacity>
+        </View>
 
-        <Text style={styles.heading}>Friend Activity</Text>
-        
-        {loading ? (
-          <View style={styles.feedLoadingContainer}>
-            <ActivityIndicator color="#4353FD" />
-            <Text style={styles.loadingText}>Loading user data...</Text>
-          </View>
+        {/* Tab Navigation */}
+        <View style={styles.tabContainer}>
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'feed' && styles.activeTab]}
+            onPress={() => setActiveTab('feed')}
+          >
+            <Text style={[styles.tabText, activeTab === 'feed' && styles.activeTabText]}>
+              My feed
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'postings' && styles.activeTab]}
+            onPress={() => setActiveTab('postings')}
+          >
+            <Text style={[styles.tabText, activeTab === 'postings' && styles.activeTabText]}>
+              My postings
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Content */}
+        {userLoading ? (
+          renderLoadingState('Loading user data...')
         ) : mongoUserId ? (
-          renderFeedContent()
+          activeTab === 'feed' ? renderFeedContent() : renderPostingsContent()
         ) : (
-          <Text style={styles.emptyText}>Failed to load user data</Text>
+          renderErrorState('Failed to load user data')
         )}
       </View>
     </SafeAreaView>
@@ -263,6 +398,45 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     padding: 15
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  headerPlaceholder: {
+    width: 24, // Same width as the icon to balance the layout
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#4A3DE3',
+  },
+  tabContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#f0f0f0',
+    borderRadius: 8,
+    padding: 4,
+    marginBottom: 20,
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 6,
+    alignItems: 'center',
+  },
+  activeTab: {
+    backgroundColor: '#4A3DE3',
+  },
+  tabText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#666',
+  },
+  activeTabText: {
+    color: '#fff',
   },
   feedLoadingContainer: {
     padding: 20,
@@ -280,101 +454,26 @@ const styles = StyleSheet.create({
     color: '#ff4444',
     textAlign: 'center',
   },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 40,
+  },
   emptyText: {
     textAlign: 'center',
     color: '#666',
-    padding: 20,
-  },
-  friendsButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: 'white',
-    padding: 15,
-    borderRadius: 10,
-    marginBottom: 20,
-    shadowOpacity: 0.1,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  buttonText: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#4353FD',
-    flex: 1,
-    marginLeft: 10
+    marginTop: 16,
   },
-  heading: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 15
+  emptySubtext: {
+    textAlign: 'center',
+    color: '#999',
+    fontSize: 14,
+    marginTop: 8,
   },
   feedList: {
     flex: 1,
-  },
-  card: {
-    backgroundColor: 'white',
-    borderRadius: 12,
-    padding: 15,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 10,
-  },
-  initials: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  headerText: {
-    flex: 1,
-  },
-  name: {
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
-  username: {
-    color: '#666',
-    fontSize: 13,
-  },
-  activity: {
-    fontSize: 14,
-    lineHeight: 20,
-    marginBottom: 10,
-  },
-  highlight: {
-    fontWeight: '600',
-    color: '#4353FD',
-  },
-  footer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 5,
-  },
-  subscriptionInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginRight: 15,
-  },
-  infoText: {
-    fontSize: 13,
-    color: '#666',
-    marginLeft: 4,
   },
 });

@@ -8,6 +8,8 @@ import {
   ActivityIndicator,
   Alert,
   TouchableOpacity,
+  Pressable,
+  Image, // Add this import
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import axios from "axios";
@@ -16,6 +18,9 @@ import CustomButton from "@/components/CustomButton";
 import { formatPaymentDate, getDaysRemaining } from "@/utils/dateUtils";
 import VirtualCardDisplay from "@/components/VirtualCardDisplay";
 import { useUserState } from "@/hooks/useUserState";
+import GroupMembers from "@/components/GroupMember";
+import SubscriptionCard from "@/components/SubscriptionCard";
+import GroupHeader from "@/components/GroupHeader";
 
 // Define the Group type
 type GroupMember = {
@@ -30,7 +35,7 @@ type GroupMember = {
   };
 };
 
-type Group = {
+interface Group {
   id: string;
   groupName: string;
   subscriptionName: string;
@@ -46,7 +51,16 @@ type Group = {
   members: GroupMember[];
   daysUntilNextPayment: number;
   nextPaymentDate: string;
+  visibility?: string; // Add to the Group interface
   virtualCardId?: string;
+  logo?: string;
+  subscription?: {
+    id: string;
+    name: string;
+    logo: string;
+    category: string;
+    domain: string;
+  }; // Add this field
 };
 
 type VirtualCard = {
@@ -60,6 +74,7 @@ type VirtualCard = {
   type: string;
   currency: string;
 };
+
 
 export default function GroupDetailsScreen() {
   const API_URL = process.env.EXPO_PUBLIC_API_URL;
@@ -105,7 +120,6 @@ export default function GroupDetailsScreen() {
         setLoading(false);
       }
     };
-
     if (groupId && userId) {
       fetchGroupDetails();
     }
@@ -117,10 +131,12 @@ export default function GroupDetailsScreen() {
     });
   };
 
+  console.log(group);
+
   // Add this near the other handler functions, before the return statement
   const handleSubscriptionDetails = () => {
     router.push({
-      pathname: "/(group)/SubscriptionDetails",
+      pathname: "/(group)/subscriptionDetails",
       params: { groupId },
     });
   };
@@ -149,71 +165,40 @@ export default function GroupDetailsScreen() {
 
   const daysRemaining = getDaysRemaining(group.nextPaymentDate);
 
-  // Update the JSX for the info cards
-  const InfoCard = ({
-    label,
-    value,
-    icon,
-  }: {
-    label: string;
-    value: string;
-    icon: string;
-  }) => (
-    <View style={styles.infoCard}>
-      <View style={styles.labelContainer}>
-        <Text style={styles.infoLabel}>{label}</Text>
-        <Ionicons name={icon} size={24} color="#000" />
-      </View>
-      <View style={styles.infoValueContainer}>
-        <Text style={styles.infoValue}>{value}</Text>
-      </View>
-    </View>
-  );
-
-  return (
+    return (
     <SafeAreaView style={styles.container}>
+      {/* Add this header */}
+      <View style={styles.header}>
+        <Pressable onPress={() => router.back()}>
+          <Ionicons name="chevron-back" size={24} color="#4A3DE3" />
+        </Pressable>
+        <Text style={styles.title}>Group Details</Text>
+        <View style={{ width: 24 }} />
+      </View>
+
       <ScrollView
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
       >
         {/* Top Info Card */}
-        <View style={styles.topCard}>
-          <View style={styles.lockContainer}>
-            <Ionicons name="lock-closed-outline" size={24} color="#4353ED" />
-            <Text style={styles.groupName}>{group.groupName}</Text>
-          </View>
-
-          <View style={styles.infoCardsContainer}>
-            <InfoCard
-              label="Your share"
-              value={`$${group.amountEach.toFixed(2)}`}
-              icon="pie-chart-outline"
-            />
-            <InfoCard
-              label="Payment in"
-              value={`${daysRemaining} days`}
-              icon="time-outline"
-            />
-          </View>
-        </View>
+        <GroupHeader
+          groupName={group.groupName}
+          amountEach={group.amountEach.toFixed(2)}
+          daysUntilNextPayment={group.daysUntilNextPayment}
+          showShare={true}
+          showPayment={true}
+        />
 
         {/* Service Card */}
         <View style={styles.serviceCard}>
-          <View style={styles.serviceHeader}>
-            <View style={styles.serviceLeft}>
-              <View style={styles.serviceInfo}>
-                <Text style={styles.serviceName}>{group.subscriptionName}</Text>
-                <View style={styles.categoryBadge}>
-                  <Text style={styles.categoryText}>{group.category}</Text>
-                </View>
-              </View>
-            </View>
-            <View style={styles.serviceRight}>
-              <Text style={styles.servicePriceAmount}>${group.amount}</Text>
-              <Text style={styles.servicePriceCycle}>monthly</Text>
-            </View>
-          </View>
-
+          <SubscriptionCard
+              logo={{uri: group.subscription?.logo}}
+              subscriptionName={group.subscriptionName}
+              amountEach={group.amountEach}
+              cycle={group.cycle}
+              isShared={true} // or item.isShared if available
+              category={group.category}
+          />
           <TouchableOpacity
             style={styles.detailsRow}
             onPress={handleSubscriptionDetails}
@@ -226,100 +211,29 @@ export default function GroupDetailsScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Subscription Details */}
 
         {/* Members Section */}
-        <View style={styles.membersSection}>
-          <View style={styles.membersSectionHeader}>
-            <Text style={styles.membersTitle}>Members</Text>
-            <TouchableOpacity
-              style={styles.addButton}
-              onPress={handleInviteMembers}
-            >
-              <Ionicons name="add" size={20} color="#007AFF" />
-            </TouchableOpacity>
-          </View>
-
-          {group.members.map((member, index) => (
-            <View key={member.id} style={styles.memberRow}>
-              <View
-                style={[
-                  styles.memberAvatar,
-                  { backgroundColor: getAvatarColor(index) },
-                ]}
-              >
-                <Text style={styles.memberInitials}>
-                  {member.user.firstName.charAt(0).toUpperCase()}
-                </Text>
-              </View>
-              <View style={styles.memberInfo}>
-                <View style={styles.memberNameContainer}>
-                  <Text style={styles.memberName}>
-                    {member.user.firstName} {member.user.lastName}
-                  </Text>
-                  {member.userRole === "leader" && (
-                    <View style={styles.leaderBadge}>
-                      <Text style={styles.leaderText}>Leader</Text>
-                    </View>
-                  )}
-                </View>
-                <Text style={styles.memberUsername}>
-                  {member.user.username}
-                </Text>
-              </View>
-              <Text style={styles.memberAmount}>${group.amountEach.toFixed(2)}</Text>
-            </View>
-          ))}
-        </View>
-
-        {/* Virtual Card Section */}
-        {virtualCard ? (
-          <View style={styles.virtualCardSection}>
-            <Text style={styles.sectionTitle}>Virtual Card</Text>
-            <VirtualCardDisplay
-              cardBrand={virtualCard.brand}
-              last4={virtualCard.last4}
-              expMonth={virtualCard.expMonth}
-              expYear={virtualCard.expYear}
-              cardholderName={virtualCard.cardholderName}
+        {groupId && userId && (
+          <GroupMembers 
+            groupId={groupId as string} 
+            userId={userId} 
+              showAmountEach={true}
+              showEstimatedText={false}
+              showInvitations={false}
+              showHeader={true}
             />
-          </View>
-        ) : (
-          leader && (
-            <TouchableOpacity
-              style={styles.createVirtualCardButton}
-              onPress={async () => {
-                try {
-                  const response = await axios.post(
-                    `${API_URL}/api/virtualCard/create-for-group`,
-                    {
-                      groupId,
-                      leaderId: userId,
-                    }
-                  );
-
-                  if (response.data.success) {
-                    // Refresh the page to show the new virtual card
-                    const cardResponse = await axios.get(
-                      `${API_URL}/api/virtualCard/group/${groupId}`
-                    );
-                    setVirtualCard(cardResponse.data);
-                    Alert.alert("Success", "Virtual card created successfully");
-                  }
-                } catch (error) {
-                  console.error("Error creating virtual card:", error);
-                  Alert.alert("Error", "Failed to create virtual card");
-                }
-              }}
-            >
-              <Ionicons name="card-outline" size={24} color="#4A3DE3" />
-              <Text style={styles.createVirtualCardText}>
-                Create Virtual Card
-              </Text>
-            </TouchableOpacity>
-          )
         )}
 
+        <View style={styles.virtualCardSection}>
+          <Text style={styles.sectionTitle}>Virtual Card</Text>
+          <VirtualCardDisplay
+            cardBrand={virtualCard?.brand}
+            last4={virtualCard?.last4}
+            expMonth={virtualCard?.expMonth}
+            expYear={virtualCard?.expYear}
+            cardholderName={virtualCard?.cardholderName}
+          />
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -397,13 +311,16 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 16,
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 20,
   },
-  backButton: {
-    padding: 4,
+  title: {
+    fontSize: 20,
+    fontWeight: "600",
+    color: "#4A3DE3",
   },
   topCard: {
     backgroundColor: "#4A3DE31A",
@@ -425,6 +342,18 @@ const styles = StyleSheet.create({
     color: "#4A3DE3",
     marginLeft: 12,
     textAlign: "center", // Add this
+  },
+  visibilityBadge: {
+    backgroundColor: "#E0E7FF",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginLeft: 8,
+  },
+  visibilityText: {
+    fontSize: 12,
+    color: "#4A3DE3",
+    fontWeight: "500",
   },
   infoCardsContainer: {
     flexDirection: "row",
@@ -483,11 +412,31 @@ const styles = StyleSheet.create({
     alignItems: "center",
     flex: 1,
   },
+  serviceLogo: {
+    width: 50,
+    height: 50,
+    borderRadius: 30,
+    marginRight: 12,
+  },
+  logoPlaceholder: {
+    width: 50,
+    height: 50,
+    borderRadius: 30,
+    backgroundColor: '#4A3DE3',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  logoText: {
+    color: 'white',
+    fontSize: 28,
+    fontWeight: '600',
+  },
   serviceInfo: {
     flex: 1,
   },
   serviceName: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: "600",
     color: "#000",
     marginBottom: 8,
@@ -508,7 +457,7 @@ const styles = StyleSheet.create({
     alignItems: "flex-end",
   },
   servicePriceAmount: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: "600",
     color: "#000",
   },

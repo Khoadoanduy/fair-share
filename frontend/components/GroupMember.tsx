@@ -91,7 +91,6 @@ const GroupMembers: React.FC<Props> = ({
   const [group, setGroup] = useState<Group | null>(null);
   const [confirmationStatus, setConfirmationStatus] = useState<Record<string, boolean>>({});
 
-
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -100,7 +99,6 @@ const GroupMembers: React.FC<Props> = ({
           axios.get(`${API_URL}/api/group/${groupId}`),
           axios.get(`${API_URL}/api/groupMember/${groupId}/${userId}`)
         ]);
-
         setMembers(groupRes.data.members);
         setGroup(groupRes.data);
         setIsLeader(roleRes.data.isLeader);
@@ -110,8 +108,7 @@ const GroupMembers: React.FC<Props> = ({
             const confirmations = await Promise.all(
               groupRes.data.members.map(async (member: GroupMember) => {
                 const res = await axios.get(`${API_URL}/api/cfshare/check-status/${groupId}/${member.userId}`);
-                console.log(res.data);
-                return { userId: member.userId, status: res.data };
+                return { userId: member.userId, status: res.data}; 
               })
             );
 
@@ -164,7 +161,6 @@ const GroupMembers: React.FC<Props> = ({
       </View>
     );
   }
-  console.log(invitations);
   return (
     <ScrollView style={styles.container}>
       {showHeader &&

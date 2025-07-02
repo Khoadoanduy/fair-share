@@ -12,6 +12,7 @@ import groupRoute from './routes/group';
 import subscriptionRouter from './routes/subscription';
 import groupMemberRoute from './routes/groupMember'
 import virtualCardRoute from './routes/virtualCard';
+import webhookRoute from './routes/webhook';
 import notificationsRoute from './routes/notifications';
 import confirmShare from './routes/confirmShare';
 import cors from 'cors';  // Add this
@@ -27,6 +28,7 @@ app.use(express.json());
 // Mount webhook router
 app.use(cors());
 app.use('/', webhookRouter);
+app.use('/stripe', webhookRoute);
 
 app.use('/api/stripe-customer', customerRoutes);
 app.use('/api/stripe-payment', paymentRoutes);

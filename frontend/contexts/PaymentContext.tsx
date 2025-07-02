@@ -1,7 +1,8 @@
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth, useUser } from '@clerk/clerk-expo';
-const API_URL = process.env.EXPO_PUBLIC_API_URL;
+
+const API_URL = process.env.EXPO_PUBLIC_API_URL
 
 type PaymentContextType = {
     hasPaymentMethod: boolean;

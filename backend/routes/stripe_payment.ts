@@ -1,9 +1,5 @@
-// import dotenv from 'dotenv';
+import { group } from 'console';
 import express, { Request, Response, Router } from 'express';
-
-
-// Initialize environment variables
-// dotenv.config();
 
 // Initialize Stripe with secret key
 const stripe = require('stripe')(
@@ -16,6 +12,7 @@ const router: Router = express.Router();
 router.post('/charge-user', async function (request, response) {
   try {
       const customerStripeID = request.body.customerStripeID;
+      const groupId = request.body.groupId;
       if (!customerStripeID) {
           return response.status(400).json({ error: 'Customer Stripe ID is required' });
       }
@@ -40,6 +37,9 @@ router.post('/charge-user', async function (request, response) {
           payment_method: paymentMethod.id,
           off_session: true,
           confirm: true,
+          metadata: {
+            groupId: groupId
+          }
         });
 
       response.json({
@@ -53,5 +53,27 @@ router.post('/charge-user', async function (request, response) {
         response.status(500).json({err});
       }
   });
+
+router.get('/transactions', async function (request, response) {
+  try {
+      const customerStripeID = request.query.customerStripeID;
+      if (!customerStripeID) {
+          return response.status(400).json({ error: 'Customer Stripe ID is required' });
+      }
+
+      const transactions = await stripe.paymentIntents.list({
+          limit: 20,
+          customer: customerStripeID,
+      });
+
+      response.json(transactions.data);
+  } catch (err) {
+      // Log for debugging
+      console.error('Error fetching Stripe transactions:', err);
+
+      // Send back the Stripe (or other) error message
+      response.status(500).json({ err });
+  }
+});
     
 export default router;

@@ -1,54 +1,119 @@
 import React from "react";
-import { View, Text, Image, StyleSheet } from "react-native";
+import { View, Text, Image, StyleSheet, Pressable } from "react-native";
+import { Ionicons } from '@expo/vector-icons';
 
 interface SubscriptionCardProps {
-  logo?: any;
+  group?: {
+    id: string;
+    groupName: string;
+    subscriptionName: string;
+    planName?: string;
+    amountEach?: number;
+    cycle?: string;
+    category?: string;
+    logo?: string;
+    isPersonal?: boolean;
+    totalMem?: number;
+    endDate?: string; 
+    showNegativeAmount?: boolean;
+    timestamp?: string;
+  };
+  logo?: any; // fallback for simple usage
   subscriptionName?: string;
   amountEach?: number;
   cycle?: string;
   isShared?: boolean;
   category?: string;
   amount?: number;
+  onPress?: () => void;
 }
 
-const SubscriptionCard: React.FC<SubscriptionCardProps> = ({
-  logo,
-  subscriptionName,
-  amountEach,
-  cycle,
-  isShared,
-  category,
-}) => {
-  return (
+// Helper to format relative date
+const formatRelativeDate = (dateString: string) => {
+  if (!dateString) return '';
+  const date = new Date(dateString);
+  const now = new Date();
+  const diff = date.getTime() - now.getTime();
+  const days = Math.ceil(diff / (1000 * 3600 * 24));
+  if (days < 0) return "now";
+  if (days === 0) return "today";
+  if (days === 1) return "tomorrow";
+  return `in ${days} days`;
+};
+
+const SubscriptionCard: React.FC<SubscriptionCardProps> = (props) => {
+  const group = props.group;
+  const logo = group?.logo || props.logo;
+  const subscriptionName = group?.subscriptionName || props.subscriptionName;
+  const planName = group?.planName;
+  const amountEach = group?.amountEach !== undefined ? group.amountEach : props.amountEach;
+  const cycle = group?.cycle || props.cycle;
+  const category = group?.category || props.category;
+  const isPersonal = group?.isPersonal;
+  const isShared = props.isShared !== undefined ? props.isShared : !isPersonal;
+  const totalMem = group?.totalMem;
+  const endDate = group?.endDate;
+  const onPress = props.onPress;
+
+  const CardContent = (
     <View style={styles.subscriptionCard}>
-      {logo && <Image source={logo} style={styles.subscriptionLogo} />}
+      {/* Logo or fallback */}
+      {logo ? (
+        typeof logo === 'string' ? (
+          <Image source={{ uri: logo }} style={styles.subscriptionLogo} />
+        ) : (
+          <Image source={logo} style={styles.subscriptionLogo} />
+        )
+      ) : (
+        <View style={styles.logoPlaceholder}>
+          <Text style={styles.logoText}>{subscriptionName ? subscriptionName.charAt(0) : '?'}</Text>
+        </View>
+      )}
       <View style={styles.subscriptionDetails}>
         {subscriptionName && <Text style={styles.subscriptionName}>{subscriptionName}</Text>}
+        {planName && <Text style={styles.planName}>{planName}</Text>}
         <View style={styles.tagsContainer}>
-          {isShared && (
-            <View style={[styles.tag, { backgroundColor: '#FEC260' }]}>
-              <Text style={styles.tagText}>Shared</Text>
+          {/* Type tag */}
+          {isPersonal !== undefined && (
+            <View style={[styles.tag, { backgroundColor: isPersonal ? '#6C63FF' : '#FEC260' }]}>
+              <Text style={[styles.tagText, { color: isPersonal ? 'white' : 'black' }]}>
+                {isPersonal ? 'Personal' : 'Shared'}
+              </Text>
             </View>
           )}
           {category && (
             <View style={[styles.tag, { backgroundColor: '#10B981' }]}>
-              <Text style={styles.tagText}>{category}</Text>
+              <Text style={[styles.tagText, { color: 'white' }]}>{category}</Text>
             </View>
           )}
         </View>
       </View>
-      {(amountEach !== undefined || cycle) && (
-        <View style={styles.subscriptionRight}>
-          {amountEach !== undefined && <Text style={styles.price}>${amountEach}</Text>}
-          {cycle && (
-            <View style={styles.cycleContainer}>
-              <Image source={require('../assets/refresh-cw.png')} style={styles.refreshIcon} />
-              <Text style={styles.billingCycle}>{cycle}</Text>
-            </View>
-          )}
-        </View>
-      )}
+      <View style={styles.subscriptionRight}>
+        {amountEach !== undefined && amountEach !== null ? (
+          <Text style={styles.price}>${amountEach.toFixed(2)}</Text>
+        ) : null}
+        {cycle && (
+          <View style={styles.cycleContainer}>
+            <Ionicons name="refresh-outline" size={14} color="#6B7280" />
+            <Text style={styles.billingCycle}>{cycle}</Text>
+          </View>
+        )}
+        {/* Show member count for shared subscriptions */}
+        {isPersonal === false && totalMem && (
+          <Text style={styles.memberCount}>{totalMem} members</Text>
+        )}
+        {/* Show next payment for groups with endDate */}
+        {isPersonal === false && endDate && (
+          <Text style={styles.nextPaymentText}>Due {formatRelativeDate(endDate)}</Text>
+        )}
+      </View>
     </View>
+  );
+
+  return onPress ? (
+    <Pressable onPress={onPress}>{CardContent}</Pressable>
+  ) : (
+    CardContent
   );
 };
 
@@ -72,6 +137,20 @@ const styles = StyleSheet.create({
     marginRight: 16,
     borderRadius: 8,
   },
+  logoPlaceholder: {
+    width: 40,
+    height: 40,
+    marginRight: 16,
+    borderRadius: 8,
+    backgroundColor: '#4A3DE3',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  logoText: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: '600',
+  },
   subscriptionDetails: {
     flex: 1,
   },
@@ -80,6 +159,11 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: 4,
     color: '#111827',
+  },
+  planName: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 4,
   },
   tagsContainer: {
     flexDirection: 'row',
@@ -109,14 +193,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
   },
-  refreshIcon: {
-    width: 14,
-    height: 14,
-    tintColor: '#6B7280',
-  },
   billingCycle: {
     fontSize: 12,
     color: '#6B7280',
+  },
+  memberCount: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginTop: 2,
+  },
+  nextPaymentText: {
+    fontSize: 12,
+    color: '#EF4444',
+    marginTop: 2,
   },
 });
 

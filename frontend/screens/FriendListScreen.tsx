@@ -1,18 +1,17 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput,
-  SafeAreaView, ActivityIndicator, RefreshControl
+  SafeAreaView, ActivityIndicator
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@clerk/clerk-expo';
+import { router } from 'expo-router';
 import axios from 'axios';
 import { debounce } from 'lodash';
 import FriendRequestButton from '@/components/FriendRequestButton';
 
-// Constants
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
-// Types
 interface User {
   id: string;
   firstName: string;
@@ -58,21 +57,26 @@ const friendApi = {
     axios.delete(`${API_URL}/api/friend/${userId}/${friendId}`)
 };
 
+// Helper function to get avatar color
+const getAvatarColor = (name: string) => {
+  const colors = ['#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#F97316', '#06B6D4'];
+  const index = name.charCodeAt(0) % colors.length;
+  return colors[index];
+};
+
 export default function FriendListScreen() {
-  // State
   const { userId: clerkId } = useAuth();
-  const [userId, setUserId] = useState<string | null>(null);
+  const [internalUserId, setInternalUserId] = useState<string | null>(null);
   const [friends, setFriends] = useState<Friend[]>([]);
   const [requests, setRequests] = useState<FriendRequest[]>([]);
   const [search, setSearch] = useState('');
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [searching, setSearching] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
   const [actionLoadingIds, setActionLoadingIds] = useState<{ [key: string]: boolean }>({});
   const [friendsLoading, setFriendsLoading] = useState(true);
   const [requestsLoading, setRequestsLoading] = useState(true);
-  const prevClerkIdRef = useRef<string | null>(null);
+  const [showSearchResults, setShowSearchResults] = useState(false);
 
   // Initialize user data
   useEffect(() => {
@@ -83,8 +87,10 @@ export default function FriendListScreen() {
         setLoading(true);
         const { data: userData } = await axios.get(`${API_URL}/api/user?clerkID=${clerkId}`);
 
-        setUserId(userData.id);
-        await loadFriendsData(userData.id);
+        if (userData?.id) {
+          setInternalUserId(userData.id);
+          await loadFriendsData(userData.id);
+        }
       } catch (err) {
         console.error("Error initializing:", err);
       } finally {
@@ -96,7 +102,7 @@ export default function FriendListScreen() {
   }, [clerkId]);
 
   // Load friends and requests data
-  const loadFriendsData = async (id = userId) => {
+  const loadFriendsData = async (id = internalUserId) => {
     if (!id) return;
 
     // Load friends with caching
@@ -127,14 +133,14 @@ export default function FriendListScreen() {
   // Search functionality
   const debouncedSearch = useCallback(
     debounce(async (query: string) => {
-      if (!query?.trim() || !userId) {
+      if (!query?.trim() || !internalUserId) {
         setSearchResults([]);
         return;
       }
 
       setSearching(true);
       try {
-        const { data } = await friendApi.searchUsers(query, userId);
+        const { data } = await friendApi.searchUsers(query, internalUserId);
 
         const resultsWithStatus = data.map((user: User) => ({
           ...user,
@@ -151,17 +157,18 @@ export default function FriendListScreen() {
         setSearching(false);
       }
     }, 300),
-    [userId, friends, requests]
+    [internalUserId, friends, requests]
   );
 
   const handleSearchChange = (text: string) => {
     setSearch(text);
+    setShowSearchResults(text.length > 0);
     debouncedSearch(text);
   };
 
   // Friend invitation management
   const handleSendInvitation = async (recipientId: string) => {
-    if (!userId) return;
+    if (!internalUserId) return;
 
     setActionLoadingIds(prev => ({ ...prev, [recipientId]: true }));
     setSearchResults(prev =>
@@ -171,14 +178,14 @@ export default function FriendListScreen() {
     try {
       // Clean up any existing invitations
       try {
-        await friendApi.removeAllInvitations(userId, recipientId);
+        await friendApi.removeAllInvitations(internalUserId, recipientId);
         await new Promise(resolve => setTimeout(resolve, 300));
       } catch (error) {
         // Continue even if cleanup fails
       }
 
       // Send new invitation
-      await friendApi.sendInvitation(userId, recipientId);
+      await friendApi.sendInvitation(internalUserId, recipientId);
     } catch (error) {
       // Only revert UI status if needed
       if (!axios.isAxiosError(error) ||
@@ -236,26 +243,19 @@ export default function FriendListScreen() {
   };
 
   const handleRemoveFriend = async (friendId: string) => {
-    if (!userId) return;
+    if (!internalUserId) return;
 
     setActionLoadingIds(prev => ({ ...prev, [friendId]: true }));
     const removedFriend = friends.find(f => f.id === friendId);
     setFriends(prev => prev.filter(f => f.id !== friendId));
 
     try {
-      await friendApi.removeFriend(userId, friendId);
+      await friendApi.removeFriend(internalUserId, friendId);
     } catch (error) {
       if (removedFriend) setFriends(prev => [...prev, removedFriend]);
     } finally {
       setActionLoadingIds(prev => ({ ...prev, [friendId]: false }));
     }
-  };
-
-  // Refresh handler
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await loadFriendsData();
-    setRefreshing(false);
   };
 
   // Render search bar
@@ -264,15 +264,22 @@ export default function FriendListScreen() {
       <Ionicons name="search" size={20} color="#666" />
       <TextInput
         style={styles.searchInput}
-        placeholder="Search"
+        placeholder="Search by username"
+        placeholderTextColor="#9CA3AF"
         value={search}
         onChangeText={handleSearchChange}
         returnKeyType="search"
       />
-      {search.length > 0 && (
-        <TouchableOpacity onPress={() => { setSearch(''); setSearchResults([]); }}>
+      {search.length > 0 ? (
+        <TouchableOpacity onPress={() => {
+          setSearch('');
+          setSearchResults([]);
+          setShowSearchResults(false);
+        }}>
           <Ionicons name="close-circle" size={18} color="#999" />
         </TouchableOpacity>
+      ) : (
+        <Ionicons name="chevron-down" size={18} color="#999" />
       )}
     </View>
   );
@@ -283,18 +290,26 @@ export default function FriendListScreen() {
 
     if (searchResults.length > 0) {
       return (
-        <View style={styles.resultsCard}>
+        <View style={styles.searchDropdown}>
+          <Text style={styles.suggestedLabel}>Suggested</Text>
           <FlatList
             data={searchResults}
             keyExtractor={item => item.id}
             renderItem={({ item }) => (
-              <View style={styles.userItem}>
-                <View>
-                  <Text style={styles.userName}>{item.firstName} {item.lastName}</Text>
-                  {item.username && <Text style={styles.userHandle}>{item.username}</Text>}
+              <View style={styles.searchResultItem}>
+                <View style={styles.searchResultLeft}>
+                  <View style={styles.avatarContainer}>
+                    <Text style={styles.avatarText}>
+                      {item.firstName[0]}{item.lastName[0]}
+                    </Text>
+                  </View>
+                  <View style={styles.searchResultInfo}>
+                    <Text style={styles.searchResultName}>{item.firstName} {item.lastName}</Text>
+                    {item.username && <Text style={styles.searchResultHandle}>@{item.username}</Text>}
+                  </View>
                 </View>
                 <FriendRequestButton
-                  senderId={userId || ''}
+                  senderId={internalUserId || ''}
                   recipientId={item.id}
                   item={item}
                   actionLoadingIds={actionLoadingIds}
@@ -310,7 +325,7 @@ export default function FriendListScreen() {
 
     if (search) {
       return (
-        <View style={styles.resultsCard}>
+        <View style={styles.searchDropdown}>
           <Text style={styles.emptyResults}>No results found</Text>
         </View>
       );
@@ -319,124 +334,12 @@ export default function FriendListScreen() {
     return null;
   };
 
-  // Render friend requests
-  const renderFriendRequests = () => (
-    <View style={styles.sectionContainer}>
-      <Text style={styles.sectionTitle}>Friend Requests</Text>
-
-      {requestsLoading ? (
-        Array(2).fill(0).map((_, i) => (
-          <View key={i} style={[styles.userItem, styles.skeletonItem]}>
-            <View style={styles.skeletonText} />
-            <View style={styles.skeletonButton} />
-          </View>
-        ))
-      ) : requests.length > 0 ? (
-        <FlatList
-          data={requests}
-          keyExtractor={item => item.id}
-          renderItem={({ item }) => (
-            <View style={styles.userItem}>
-              <View>
-                <Text style={styles.userName}>
-                  {item.sender.firstName} {item.sender.lastName}
-                </Text>
-                {item.sender.username && (
-                  <Text style={styles.userHandle}>{item.sender.username}</Text>
-                )}
-              </View>
-              <View style={styles.requestButtons}>
-                <TouchableOpacity
-                  style={styles.declineButton}
-                  onPress={() => handleDecline(item.id)}
-                  disabled={actionLoadingIds[item.id]}
-                >
-                  {actionLoadingIds[item.id] ? (
-                    <ActivityIndicator size="small" color="#FF4B55" />
-                  ) : (
-                    <Text style={styles.declineText}>Decline</Text>
-                  )}
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.inviteButton}
-                  onPress={() => handleAccept(item.id)}
-                  disabled={actionLoadingIds[item.id]}
-                >
-                  {actionLoadingIds[item.id] ? (
-                    <ActivityIndicator size="small" color="#fff" />
-                  ) : (
-                    <Text style={styles.inviteText}>Accept</Text>
-                  )}
-                </TouchableOpacity>
-              </View>
-            </View>
-          )}
-        />
-      ) : (
-        <Text style={styles.emptyResults}>No friend requests</Text>
-      )}
-    </View>
-  );
-
-  // Render friends list
-  const renderFriendsList = () => (
-    <View style={styles.sectionContainer}>
-      <Text style={styles.sectionTitle}>My Friends</Text>
-
-      {friendsLoading ? (
-        Array(3).fill(0).map((_, i) => (
-          <View key={i} style={[styles.userItem, styles.skeletonItem]}>
-            <View style={styles.skeletonText} />
-            <View style={styles.skeletonCircle} />
-          </View>
-        ))
-      ) : friends.length > 0 ? (
-        <FlatList
-          data={friends}
-          keyExtractor={item => item.id}
-          renderItem={({ item }) => (
-            <View style={styles.userItem}>
-              <View>
-                <Text style={styles.userName}>
-                  {item.firstName} {item.lastName}
-                </Text>
-                {item.username && (
-                  <Text style={styles.userHandle}>{item.username}</Text>
-                )}
-              </View>
-              <TouchableOpacity
-                onPress={() => handleRemoveFriend(item.id)}
-                disabled={actionLoadingIds[item.id]}
-                style={styles.removeButton}
-              >
-                {actionLoadingIds[item.id] ? (
-                  <ActivityIndicator size="small" color="#FF4B55" />
-                ) : (
-                  <Ionicons name="trash-outline" size={20} color="#FF4B55" />
-                )}
-              </TouchableOpacity>
-            </View>
-          )}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              colors={['#4A3DE3']}
-            />
-          }
-        />
-      ) : (
-        <Text style={styles.emptyResults}>No friends yet</Text>
-      )}
-    </View>
-  );
-
   // Periodically check for new friend requests
   useEffect(() => {
-    if (!userId) return;
+    if (!internalUserId) return;
 
     const intervalId = setInterval(() => {
-      friendApi.getFriendRequests(userId)
+      friendApi.getFriendRequests(internalUserId)
         .then(res => {
           if (JSON.stringify(res.data) !== JSON.stringify(requests)) {
             setRequests(res.data);
@@ -446,96 +349,365 @@ export default function FriendListScreen() {
     }, 30000);
 
     return () => clearInterval(intervalId);
-  }, [userId, requests]);
+  }, [internalUserId, requests]);
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
-        <Text style={styles.title}>Add friends</Text>
-        <Text style={styles.subtitle}>Send friend requests to connect with others</Text>
+      {!clerkId ? (
+        <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+          <ActivityIndicator size="large" color="#4A3DE3" />
+        </View>
+      ) : (
+        <>
+          {/* Header */}
+          <View style={styles.header}>
+            <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+              <Ionicons name="chevron-back" size={24} color="#4A3DE3" />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>Friends</Text>
+            <View style={styles.headerPlaceholder} />
+          </View>
 
-        {renderSearchBar()}
-        {renderSearchResults()}
+          <View style={styles.content}>
+            {/* Add friends section */}
+            <View style={styles.sectionCard}>
+              <Text style={styles.addFriendsTitle}>Add friends</Text>
+              {renderSearchBar()}
+              {renderSearchResults()}
+            </View>
 
-        {!search && (
-          <>
-            {renderFriendRequests()}
-            {renderFriendsList()}
-          </>
-        )}
-      </View>
+            {!showSearchResults && (
+              <>
+                {/* Your friends section */}
+                <View style={styles.sectionCard}>
+                  <View style={styles.sectionHeader}>
+                    <Text style={styles.sectionTitle}>Your friends</Text>
+                    <Text style={styles.sectionCount}>{friends.length} friends</Text>
+                  </View>
+
+                  {friendsLoading ? (
+                    Array(3).fill(0).map((_, i) => (
+                      <View key={i} style={[styles.userItem, styles.skeletonItem]}>
+                        <View style={styles.skeletonAvatar} />
+                        <View style={styles.skeletonText} />
+                      </View>
+                    ))
+                  ) : friends.length > 0 ? (
+                    <FlatList
+                      data={friends}
+                      keyExtractor={item => item.id}
+                      renderItem={({ item }) => (
+                        <View style={styles.userItem}>
+                          <View style={styles.userLeft}>
+                            <View style={[styles.avatar, { backgroundColor: getAvatarColor(item.firstName) }]}>
+                              <Text style={styles.avatarText}>
+                                {item.firstName[0]}{item.lastName[0]}
+                              </Text>
+                            </View>
+                            <View style={styles.userInfo}>
+                              <Text style={styles.userName}>
+                                {item.firstName} {item.lastName}
+                              </Text>
+                              {item.username && (
+                                <Text style={styles.userHandle}>{item.username}</Text>
+                              )}
+                            </View>
+                          </View>
+                          <TouchableOpacity
+                            style={styles.removeButton}
+                            onPress={() => handleRemoveFriend(item.id)}
+                            disabled={actionLoadingIds[item.id]}
+                          >
+                            {actionLoadingIds[item.id] ? (
+                              <ActivityIndicator size="small" color="white" />
+                            ) : (
+                              <Ionicons name="person-remove" size={18} color="white" />
+                            )}
+                          </TouchableOpacity>
+                        </View>
+                      )}
+                    />
+                  ) : (
+                    <Text style={styles.emptyText}>No friends yet</Text>
+                  )}
+                </View>
+
+                {/* Requests section */}
+                <View style={styles.sectionCard}>
+                  <View style={styles.sectionHeader}>
+                    <Text style={styles.sectionTitle}>Requests</Text>
+                    <Text style={styles.sectionCount}>{requests.length} requests</Text>
+                  </View>
+
+                  {requestsLoading ? (
+                    Array(2).fill(0).map((_, i) => (
+                      <View key={i} style={[styles.userItem, styles.skeletonItem]}>
+                        <View style={styles.skeletonAvatar} />
+                        <View style={styles.skeletonText} />
+                        <View style={styles.skeletonButton} />
+                      </View>
+                    ))
+                  ) : requests.length > 0 ? (
+                    <FlatList
+                      data={requests}
+                      keyExtractor={item => item.id}
+                      renderItem={({ item }) => (
+                        <View style={styles.userItem}>
+                          <View style={styles.userLeft}>
+                            <View style={[styles.avatar, { backgroundColor: getAvatarColor(item.sender.firstName) }]}>
+                              <Text style={styles.avatarText}>
+                                {item.sender.firstName[0]}{item.sender.lastName[0]}
+                              </Text>
+                            </View>
+                            <View style={styles.userInfo}>
+                              <Text style={styles.userName}>
+                                {item.sender.firstName} {item.sender.lastName}
+                              </Text>
+                              {item.sender.username && (
+                                <Text style={styles.userHandle}>{item.sender.username}</Text>
+                              )}
+                            </View>
+                          </View>
+                          <View style={styles.requestButtons}>
+                            <TouchableOpacity
+                              style={styles.declineButton}
+                              onPress={() => handleDecline(item.id)}
+                              disabled={actionLoadingIds[item.id]}
+                            >
+                              {actionLoadingIds[item.id] ? (
+                                <ActivityIndicator size="small" color="#667085" />
+                              ) : (
+                                <Text style={styles.declineText}>Decline</Text>
+                              )}
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                              style={styles.acceptButton}
+                              onPress={() => handleAccept(item.id)}
+                              disabled={actionLoadingIds[item.id]}
+                            >
+                              {actionLoadingIds[item.id] ? (
+                                <ActivityIndicator size="small" color="#fff" />
+                              ) : (
+                                <Text style={styles.acceptText}>Accept</Text>
+                              )}
+                            </TouchableOpacity>
+                          </View>
+                        </View>
+                      )}
+                    />
+                  ) : (
+                    <Text style={styles.emptyText}>No requests</Text>
+                  )}
+                </View>
+              </>
+            )}
+          </View>
+        </>
+      )}
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
-  content: { flex: 1, padding: 20 },
-  title: {
-    fontSize: 30,
-    fontWeight: 'bold',
-    textAlign: 'center',
+  container: {
+    flex: 1,
+    backgroundColor: '#f8f9fa'
+  },
+
+  // Header styles
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 15,
+    backgroundColor: '#fff',
+  },
+  backButton: {
+    padding: 5,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '600',
     color: '#4A3DE3',
-    marginBottom: 10,
   },
-  subtitle: {
-    fontSize: 16,
-    color: '#777',
-    textAlign: 'center',
-    marginBottom: 30,
+  headerPlaceholder: {
+    width: 34,
   },
+
+  content: {
+    flex: 1,
+    padding: 16
+  },
+
+  // Section card styles
+  sectionCard: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 20,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+
+  sectionHeader: {
+    marginBottom: 16,
+  },
+
+  // Add friends section
+  addFriendsTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#000',
+    marginBottom: 15,
+  },
+
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F2F2F2',
+    backgroundColor: '#F9FAFB',
     borderRadius: 25,
-    paddingHorizontal: 15,
-    height: 50,
+    paddingHorizontal: 16,
+    height: 48,
     marginBottom: 15,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
-  searchInput: { flex: 1, marginLeft: 10, fontSize: 16 },
+  searchInput: {
+    flex: 1,
+    marginLeft: 10,
+    fontSize: 16,
+    color: '#1F2937'
+  },
   loading: { marginTop: 20 },
-  resultsCard: {
+  searchDropdown: {
     backgroundColor: 'white',
-    borderRadius: 12,
-    padding: 5,
+    borderRadius: 16,
+    padding: 0,
     marginTop: 10,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowRadius: 8,
+    elevation: 3,
+    overflow: 'hidden',
+  },
+  suggestedLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#666',
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+    backgroundColor: 'white',
+  },
+  searchResultItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: 'white',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  searchResultLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  avatarContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#4A3DE3',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  avatarText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+
+  avatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  searchResultInfo: {
+    flex: 1,
+  },
+  searchResultName: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#1A1A1A',
+    lineHeight: 20,
+  },
+  searchResultHandle: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 2,
+    lineHeight: 18,
   },
   userItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    paddingVertical: 12,
   },
+
+  userLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  userInfo: {
+    marginLeft: 12,
+  },
+
   userName: { fontWeight: '500', fontSize: 16 },
   userHandle: { fontSize: 14, color: '#777', marginTop: 2 },
   emptyResults: { textAlign: 'center', padding: 15, color: '#777' },
-  sectionContainer: {
-    backgroundColor: 'white',
-    borderRadius: 12,
-    padding: 5,
-    marginTop: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
+
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
-    padding: 15,
-    paddingBottom: 10,
-    color: '#333',
+    color: '#000',
+    marginBottom: 4,
   },
-  removeButton: { padding: 10 },
+  sectionCount: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 0,
+  },
+
+  removeButton: { 
+    backgroundColor: '#4A3DE3',
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 44,
+    minHeight: 36,
+  },
+
+  emptyText: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+    fontStyle: 'italic',
+  },
+
   skeletonItem: { opacity: 0.7 },
   skeletonText: {
     width: 120,
@@ -549,25 +721,35 @@ const styles = StyleSheet.create({
     backgroundColor: '#E0E0E0',
     borderRadius: 5,
   },
+  skeletonAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#E0E0E0',
+  },
   skeletonCircle: {
     width: 30,
     height: 30,
     borderRadius: 15,
     backgroundColor: '#E0E0E0',
   },
+
   requestButtons: { flexDirection: 'row', gap: 8 },
   declineButton: {
-    backgroundColor: '#F3F4F6',
-    borderRadius: 5,
+    backgroundColor: '#F9FAFB',
+    borderRadius: 8,
     paddingVertical: 8,
     paddingHorizontal: 15,
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
   },
-  declineText: { color: '#FF4B55', fontWeight: '500' },
-  inviteButton: {
+  declineText: { color: '#4A3DE3', fontWeight: '500' },
+
+  acceptButton: {
     backgroundColor: '#4A3DE3',
-    borderRadius: 5,
+    borderRadius: 8,
     paddingVertical: 8,
     paddingHorizontal: 15,
   },
-  inviteText: { color: '#FFFFFF', fontWeight: '500' },
+  acceptText: { color: '#FFFFFF', fontWeight: '500' },
 });

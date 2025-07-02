@@ -16,8 +16,19 @@ const InviteButton = ({ userId, groupId }: InviteButtonProps) => {
   const handleInvite = async () => {
     if (invited) return;
     try {
+      console.log("here");
       const response = await axios.post(`${API_URL}/api/invite/${groupId}/${userId}`, {
         type: "invitation"
+      });
+      console.log(userId, groupId);
+      const notificationResponse = await axios.post(`${API_URL}/api/notifications/send`, {
+        mongoIds: [userId],
+        title: 'Group Invitation',
+        body: `You have been invited to join a group.`,
+        data: {
+          type: 'group_invite',
+          groupId,
+        },
       });
       console.log('Invitation sent:', response.data);
       setInvited(true);
