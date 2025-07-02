@@ -61,7 +61,6 @@ const GroupMembers: React.FC<Props> = ({ groupId, userId, showAmountEach, showEs
   const [invitations, setInvitations] = useState<Invitation[]>([])
   const [confirmationStatus, setConfirmationStatus] = useState<Record<string, boolean>>({});
 
-
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -71,7 +70,6 @@ const GroupMembers: React.FC<Props> = ({ groupId, userId, showAmountEach, showEs
           axios.get(`${API_URL}/api/groupMember/${groupId}/${userId}`),
           axios.get(`${API_URL}/api/group/invitation/${groupId}`)
         ]);
-
         setMembers(groupRes.data.members);
         setGroup(groupRes.data);
         setIsLeader(roleRes.data.isLeader);
@@ -81,8 +79,7 @@ const GroupMembers: React.FC<Props> = ({ groupId, userId, showAmountEach, showEs
           try {
             const confirmations = await Promise.all(
               groupRes.data.members.map(async (member: GroupMember) => {
-                const res = await axios.get(`${API_URL}/api/cfshare/${groupId}/${member.userId}`);
-                console.log(res.data);
+                const res = await axios.get(`${API_URL}/api/cfshare/check-status/${groupId}/${member.userId}`);
                 return { userId: member.userId, status: res.data}; 
               })
             );
@@ -136,7 +133,6 @@ const GroupMembers: React.FC<Props> = ({ groupId, userId, showAmountEach, showEs
       </View>
     );
   }
-  console.log(invitations);
   return (
     <ScrollView style={styles.container}>
       {showHeader && 
@@ -173,10 +169,11 @@ const GroupMembers: React.FC<Props> = ({ groupId, userId, showAmountEach, showEs
               </View>
               {showEstimatedText && <Text style={styles.estimate}>Estimated</Text>}
               {requestConfirmSent && <Text style={styles.price}>${group.amountEach}</Text>}
+              {requestConfirmSent && <Text style={styles.price}>${group.amountEach}</Text>}
             </View>
             <View style={styles.amountEach}>
               <Text style={styles.username}>{member.user.username}</Text>
-              {showAmountEach && group && <Text style={styles.price}>${group.amountEach}</Text>}
+              {showAmountEach && group && <Text style={styles.price}>${group.amountEach.toFixed(2)}</Text>}
               {requestConfirmSent && (
                 <Text
                   style={[
@@ -216,6 +213,17 @@ const GroupMembers: React.FC<Props> = ({ groupId, userId, showAmountEach, showEs
                 </Text>
               </View>
               <View style={styles.info}>
+        {invitations.length > 0 ? (
+          invitations.map((invitation, index) => (
+            <View key={invitation.id} style={styles.memberRow}>
+              <View
+                style={[styles.avatar, { backgroundColor: "#4A3DE3" }]}
+              >
+                <Text style={styles.initials}>
+                  {invitation.user.firstName.charAt(0).toUpperCase()}
+                </Text>
+              </View>
+              <View style={styles.info}>
                 <View style={styles.nameRow}>
                   <Text style={styles.name}>
                     {invitation.user.firstName} {invitation.user.lastName}
@@ -224,8 +232,17 @@ const GroupMembers: React.FC<Props> = ({ groupId, userId, showAmountEach, showEs
                 <Text style={styles.username}>{invitation.user.username}</Text>
               </View>
               <CustomButton 
+              </View>
+              <CustomButton 
                 text="Invited"
                 style={styles.buttonInvited}
+                textStyle={styles.textInvited}
+              />
+            </View>
+          ))
+        ) : (
+          <></>
+        )}
                 textStyle={styles.textInvited}
               />
             </View>

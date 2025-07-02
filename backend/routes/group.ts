@@ -366,4 +366,27 @@ router.get('/total-mem/:groupId', async (request: Request, response: Response) =
   }
 });
 
+//Show all pending invitations for a group
+router.get('/invitation/:groupId', async (request: Request, response: Response) => {
+  try {
+    const { groupId } = request.params;
+    if (!groupId) {
+      return response.status(400).json({ message: 'groupId are required' });
+    }
+    //Check if the user has already been invited to this group
+    const invitation = await prisma.groupInvitation.findMany({
+      where: { groupId, status: "pending" },
+      include: { user: true }
+    })
+    if (invitation.length == 0) {
+      return response.status(200).json([]);
+    }
+    response.status(200).json(invitation);
+
+  } catch (error) {
+    console.error(error);
+    response.status(500).json({ message: 'Error getting invitation' });
+  }
+});
+
 export default router
