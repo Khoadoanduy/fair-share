@@ -13,8 +13,6 @@ router.post('/charge-user', async function (request, response) {
   try {
       const customerStripeID = request.body.customerStripeID;
       const groupId = request.body.groupId;
-      const description = JSON.stringify({groupId});
-      const parsed = JSON.parse(description);
       if (!customerStripeID) {
           return response.status(400).json({ error: 'Customer Stripe ID is required' });
       }
@@ -39,7 +37,9 @@ router.post('/charge-user', async function (request, response) {
           payment_method: paymentMethod.id,
           off_session: true,
           confirm: true,
-          metadata: parsed
+          metadata: {
+            groupId: groupId
+          }
         });
 
       response.json({
