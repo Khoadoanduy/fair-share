@@ -8,7 +8,7 @@ import BackButton from '@/components/BackButton';
 import { Ionicons } from '@expo/vector-icons';
 import AcceptInvitationButton from '@/components/AcceptInvitationButton';
 import DeclineInvitationButton from '@/components/DeclineInvitationButton';
-import GroupCard from '@/components/GroupCard';
+import SubscriptionCard from '@/components/SubscriptionCard';
 
 interface Subscription {
   id: string;
@@ -206,27 +206,27 @@ export default function AllInvitations() {
               const status = responseStatus[groupId];
               const isDisabled = status === 'accepted' || status === 'declined';
 
-              return (
-                <View key={index} style={styles.card}>
-                  <Text style={styles.text}>
-                    {groupLeader} has invited you to join {invite.groupName}!
-                  </Text>
-                  <GroupCard
-                    logo={{ uri: invite.group.subscription?.logo }}
-                    subscriptionName={invite.group.subscriptionName}
-                    cycle={invite.group.cycle}
-                    isShared={true}
-                    category={invite.group.category}
+          return (
+            <View key={index} style={styles.card}>
+              <Text style={styles.text}>
+                {groupLeader} has invited you to join {invite.groupName}!
+              </Text>
+              <SubscriptionCard
+                logo={{ uri: invite.group.subscription?.logo }}
+                subscriptionName={invite.group.subscriptionName}
+                cycle={invite.group.cycle}
+                isShared={true}
+                category={invite.group.category}
+              />
+              <View style={styles.buttonContainer}>
+                {status !== 'declined' && (
+                  <AcceptInvitationButton
+                    userId={userId!}
+                    groupId={groupId}
+                    disabled={status !== undefined}
+                    onResponse={() => handleInvitationResponse(groupId, 'accepted')}
                   />
-                  <View style={styles.buttonContainer}>
-                    {status !== 'declined' && (
-                      <AcceptInvitationButton
-                        userId={userId!}
-                        groupId={groupId}
-                        disabled={status !== undefined}
-                        onResponse={() => handleInvitationResponse(groupId, 'accepted')}
-                      />
-                    )}
+                )}
 
                     {status !== 'accepted' && (
                       <DeclineInvitationButton
@@ -259,7 +259,7 @@ export default function AllInvitations() {
                 </Text>
                 <Text style={styles.timeText}>{timeAgo}</Text>
                 <Text style={styles.senderText}>{user?.firstName} {user?.lastName}</Text>
-                <GroupCard
+                <SubscriptionCard
                   logo={{ uri: request.group.subscription?.logo }}
                   subscriptionName={request.group.subscriptionName}
                   cycle={request.group.cycle}

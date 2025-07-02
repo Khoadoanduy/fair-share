@@ -1,6 +1,9 @@
 import dotenv from 'dotenv';
 import express, { Request, Response, Router } from 'express';
+import { SubscriptionVerifier } from '../utils/verifier';
+import prisma from '../prisma/client';
 
+const subscriptionVerifier = new SubscriptionVerifier(process.env.OPENAI_KEY!);
 
 // Initialize environment variables
 dotenv.config();
@@ -23,8 +26,43 @@ router.post('/webhook', async (request: Request, response: Response) => {
             console.log('Payment Intent Succeeded:', paymentIntent);
             break;
         case 'issuing_authorization.request':
-            response.writeHead(200, {"Stripe-Version": "2025-03-31.basil", "Content-Type": "application/json"});
-            return response.end(JSON.stringify({ approved: true }));
+            const authorization = event.data.object;
+            const merchantData = {
+                category: authorization.merchant_data.category,
+                category_code: authorization.merchant_data.category_code,
+                city: authorization.merchant_data.city,
+                country: authorization.merchant_data.country,
+                name: authorization.merchant_data.name,
+                network_id: authorization.merchant_data.network_id,
+                postal_code: authorization.merchant_data.postal_code,
+                state: authorization.merchant_data.state,
+            };
+
+            const expectedSubscription = await prisma.group.findUnique({
+                where: {
+                    virtualCardId: authorization.card.id,
+                },
+                select: {
+                    subscriptionName: true,
+                },
+            });
+
+            console.log('Expected Subscription:', expectedSubscription?.subscriptionName);
+
+
+            // Verification
+            const result = await subscriptionVerifier.verifyWithGPT(
+                merchantData, 
+                expectedSubscription?.subscriptionName || ''
+            );
+            
+            const approved = result.status === 'MATCH' && result.confidence >= 70;
+            
+            response.writeHead(200, {
+                "Stripe-Version": "2025-03-31.basil", 
+                "Content-Type": "application/json"
+            });
+            return response.end(JSON.stringify({ approved }));
         default:
             console.warn(`Unhandled event type ${event.type}`);
     }

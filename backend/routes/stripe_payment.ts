@@ -29,6 +29,7 @@ router.post('/charge-user', async function (request, response) {
       const amount = Math.round((preAmount + stripeFixedFee) / (1 - stripeFeePercentage));
       const paymentMethods = await stripe.customers.listPaymentMethods(customerStripeID);
       const paymentMethod = paymentMethods.data[0];
+      const subscription = request.body.subscription;
 
       const paymentIntent = await stripe.paymentIntents.create({
           amount: amount,
@@ -40,6 +41,7 @@ router.post('/charge-user', async function (request, response) {
           payment_method: paymentMethod.id,
           off_session: true,
           confirm: true,
+          description: subscription
         });
 
       response.json({
