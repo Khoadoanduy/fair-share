@@ -111,6 +111,7 @@ export default function SubscriptionScreen() {
       params: { groupName }
     });
   };
+  
   const calculateTotalDays = (dayValue: string, cycle: string): number => {
     // Parse the day value - handle decimal numbers
     const parsedDay = parseFloat(dayValue) || 1;
