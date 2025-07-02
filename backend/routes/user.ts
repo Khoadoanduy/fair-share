@@ -1,4 +1,3 @@
-
 import express, { Request, Response, Router, response } from 'express';
 import { User } from '@prisma/client';
 import prisma from '../prisma/client';
@@ -16,7 +15,7 @@ router.get('/', async function (request, response) {
         if (!user) {
             return response.status(430).send("User not found");
         }
-        response.json(user);
+        return response.json(user);
     } catch (error) {
         console.error("Error retrieving user:", error);
         response.status(500).send("Internal Server Error");
@@ -90,24 +89,37 @@ router.get('/invitation/:userId', async (request: Request, response: Response) =
     }
 });
 
-//Show all user's groups
+//Show all user's groups (with optional subscriptionType filter)
 router.get('/groups/:userId', async (request: Request, response: Response) => {
     try {
         const { userId } = request.params;
+        const { subscriptionType } = request.query;
         if (!userId) {
             return response.status(400).json({ message: 'userId are required' });
         }
-        //Check if the user has already been invited to this group
         const allGroups = await prisma.groupMember.findMany({
           where: { userId },
-          include: { group: true }
+          include: { 
+            group :{
+                include: {
+                    subscription : {
+                        select: {
+                            logo: true
+                        }
+                    }
+                }
+            }
+          }
         })
-        
+        const formattedGroups = allGroups.map(member => ({
+            ...member.group, 
+            logo: member.group.subscription?.logo,
+            subscription: undefined
+          }));
         if (allGroups.length == 0) {
           return response.json({ message: 'No group found' });
         }
-        response.status(200).json(allGroups);
-
+        response.status(200).json(formattedGroups);
     } catch (error) {
         console.error(error);
         response.status(500).json({ message: 'Error getting groups' });

@@ -12,7 +12,7 @@ import axios from 'axios';
 import { useAuth } from '@clerk/clerk-expo';
 import { useRouter } from 'expo-router';
 import { useUserState } from '@/hooks/useUserState';
-import GroupCard from '@/components/GroupCard';
+import SubscriptionCard from '@/components/SubscriptionCard';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
@@ -191,7 +191,7 @@ const HistoryScreen = () => {
 
     return (
       <View key={transaction.id}>
-        <GroupCard
+        <SubscriptionCard
           logo={transaction.logo ? { uri: transaction.logo } : null}
           subscriptionName={name}
           amountEach={amount}

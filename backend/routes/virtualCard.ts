@@ -126,7 +126,7 @@ router.post('/create', async function (request, response) {
 
         response.json({
             success: true,
-            card: card.id,
+            card: card,
             cardholder: cardholderId
         });
 
