@@ -21,7 +21,7 @@ const calculateDaysBetween = (startDate: Date, endDate: Date): number => {
 // Create group (add subscriptionType and personalType, backward compatible)
 router.post('/create', async (request: Request, response: Response) => {
   try {
-    const { groupName, subscriptionName, subscriptionId, planName, amount, cycle, category, cycleDays, userId, subscriptionType, personalType } = request.body;
+    const { groupName, subscriptionName, subscriptionId, planName, amount, cycle, category, cycleDays, userId, subscriptionType, personalType, visibility } = request.body;
 
     if (!groupName || !subscriptionName || !amount || !userId) {
       return response.status(400).json({ message: 'Missing required fields' });
@@ -364,51 +364,6 @@ router.get('/total-mem/:groupId', async (request: Request, response: Response) =
     console.error(error);
     response.status(500).json({ message: 'Error getting total number of members' });
   }
-});
-
-//Get group details
-router.get('/:groupId', async (request: Request, response: Response) => {
-    try {
-        const { groupId } = request.params;
-        if (!groupId) {
-            return response.status(400).json({ message: 'groupId is required' });
-        }
-        const group = await prisma.group.findUnique({
-            where: { id: groupId },
-            include: {
-                members: {
-                    include: {
-                        user: true
-                    }
-                },
-                subscription: true
-            }
-        });
-        
-        if (!group) {
-            return response.status(404).json({ message: 'Group not found' });
-        }
-        
-        // Calculate days until next payment
-        let daysUntilNextPayment = 0;
-        let nextPaymentDate = null;
-        
-        if (group.endDate) {
-            nextPaymentDate = group.endDate;
-            const today = new Date();
-            const diffTime = Math.abs(nextPaymentDate.getTime() - today.getTime());
-            daysUntilNextPayment = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        }
-        
-        response.status(200).json({
-            ...group,
-            daysUntilNextPayment,
-            nextPaymentDate
-        });
-    } catch (error) {
-        console.error(error);
-        response.status(500).json({ message: 'Error getting group details' });
-    }
 });
 
 //Show all pending invitations for a group

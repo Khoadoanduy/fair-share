@@ -98,7 +98,6 @@ const GroupMembers: React.FC<Props> = ({ groupId, userId, showAmountEach, showEs
         await fetchConfirmations();
       } catch (err) {
         console.error("Failed to fetch members or role", err.response);
-        console.error("Failed to fetch members or role", err.response);
         setError("Failed to load members");
       } finally {
         setLoading(false);
