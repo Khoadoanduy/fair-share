@@ -10,12 +10,14 @@ type GroupHeaderProps = {
   showShare?: boolean;
   showPayment?: boolean;
 };
+
+
 const GroupHeader: React.FC<GroupHeaderProps> = ({
   groupName,
   amountEach,
   daysUntilNextPayment,
-  showShare,
-  showPayment,
+  showShare = true,
+  showPayment = false,
 }) => {
   return (
     <View style={styles.topCard}>
@@ -31,7 +33,7 @@ const GroupHeader: React.FC<GroupHeaderProps> = ({
               <Ionicons name="pie-chart-outline" size={20} color="#000" />
             </View>
             <View style={styles.infoValueContainer}>
-                {showShare ? <Text style={styles.infoValue}>${amountEach}</Text> : <View style={styles.placeholderBox} />}
+                {showShare ? <Text style={styles.infoValue}>{amountEach}</Text> : <View style={styles.placeholderBox} />}
             </View>
         </View>
         
@@ -41,7 +43,7 @@ const GroupHeader: React.FC<GroupHeaderProps> = ({
               <Ionicons name="time-outline" size={20} color="#000" />
             </View>
             <Text style={styles.infoValueContainer}>
-              {daysUntilNextPayment? <Text style={styles.infoValue}>{daysUntilNextPayment} days</Text> : <View style={styles.placeholderBox} />}
+              {daysUntilNextPayment? <Text style={styles.infoValue}>{daysUntilNextPayment}</Text> : <View style={styles.placeholderBox} />}
             </Text>
           </View>
         </View>

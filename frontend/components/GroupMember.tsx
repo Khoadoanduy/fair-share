@@ -98,6 +98,7 @@ const GroupMembers: React.FC<Props> = ({ groupId, userId, showAmountEach, showEs
         await fetchConfirmations();
       } catch (err) {
         console.error("Failed to fetch members or role", err.response);
+        console.error("Failed to fetch members or role", err.response);
         setError("Failed to load members");
       } finally {
         setLoading(false);
@@ -169,6 +170,7 @@ const GroupMembers: React.FC<Props> = ({ groupId, userId, showAmountEach, showEs
               </View>
               {showEstimatedText && <Text style={styles.estimate}>Estimated</Text>}
               {requestConfirmSent && <Text style={styles.price}>${group.amountEach}</Text>}
+              {requestConfirmSent && <Text style={styles.price}>${group.amountEach}</Text>}
             </View>
             <View style={styles.amountEach}>
               <Text style={styles.username}>{member.user.username}</Text>
@@ -212,6 +214,17 @@ const GroupMembers: React.FC<Props> = ({ groupId, userId, showAmountEach, showEs
                 </Text>
               </View>
               <View style={styles.info}>
+        {invitations.length > 0 ? (
+          invitations.map((invitation, index) => (
+            <View key={invitation.id} style={styles.memberRow}>
+              <View
+                style={[styles.avatar, { backgroundColor: "#4A3DE3" }]}
+              >
+                <Text style={styles.initials}>
+                  {invitation.user.firstName.charAt(0).toUpperCase()}
+                </Text>
+              </View>
+              <View style={styles.info}>
                 <View style={styles.nameRow}>
                   <Text style={styles.name}>
                     {invitation.user.firstName} {invitation.user.lastName}
@@ -220,8 +233,17 @@ const GroupMembers: React.FC<Props> = ({ groupId, userId, showAmountEach, showEs
                 <Text style={styles.username}>{invitation.user.username}</Text>
               </View>
               <CustomButton 
+              </View>
+              <CustomButton 
                 text="Invited"
                 style={styles.buttonInvited}
+                textStyle={styles.textInvited}
+              />
+            </View>
+          ))
+        ) : (
+          <></>
+        )}
                 textStyle={styles.textInvited}
               />
             </View>
