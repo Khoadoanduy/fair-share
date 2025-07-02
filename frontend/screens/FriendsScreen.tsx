@@ -196,6 +196,16 @@ export default function FriendsScreen() {
     try {
       // Use the new join request endpoint
       await axios.post(`${API_URL}/api/invite/request/${groupId}/${mongoUserId}`);
+
+      // Update local state immediately
+      setActivities(prevActivities =>
+        prevActivities.map(activity =>
+          activity.group.id === groupId
+            ? { ...activity, hasRequested: true, requestStatus: 'pending' }
+            : activity
+        )
+      );
+
       Alert.alert(
         'Request Sent!',
         `Your request to join "${groupName}" has been sent to the group leader.`,
