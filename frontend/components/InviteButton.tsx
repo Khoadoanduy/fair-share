@@ -16,7 +16,9 @@ const InviteButton = ({ userId, groupId }: InviteButtonProps) => {
   const handleInvite = async () => {
     if (invited) return;
     try {
-      const response = await axios.post(`${API_URL}/api/invite/${groupId}/${userId}`);
+      const response = await axios.post(`${API_URL}/api/invite/${groupId}/${userId}`, {
+        type: "invitation"
+      });
       console.log('Invitation sent:', response.data);
       setInvited(true);
     } catch (error) {
@@ -28,11 +30,11 @@ const InviteButton = ({ userId, groupId }: InviteButtonProps) => {
     }
   };
 
-  return <CustomButton 
-            text={invited? "Invited" : "Invite"} 
-            onPress={handleInvite} 
-            style={[invited ? styles.buttonInvited : styles.buttonActive, styles.button]}
-            textStyle = {invited ? styles.textInvited : null}/>;
+  return <CustomButton
+    text={invited ? "Invited" : "Invite"}
+    onPress={handleInvite}
+    style={[invited ? styles.buttonInvited : styles.buttonActive, styles.button]}
+    textStyle={invited ? styles.textInvited : undefined} />;
 };
 
 const styles = StyleSheet.create({
@@ -44,10 +46,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   buttonActive: {
-    backgroundColor: '#4A3DE3', 
+    backgroundColor: '#4A3DE3',
   },
   buttonInvited: {
-    backgroundColor: '#E2E8F0', 
+    backgroundColor: '#E2E8F0',
   },
   textInvited: {
     color: '#9EA2AE',
