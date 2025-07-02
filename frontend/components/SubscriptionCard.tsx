@@ -14,7 +14,9 @@ interface SubscriptionCardProps {
     logo?: string;
     isPersonal?: boolean;
     totalMem?: number;
-    endDate?: string; // Added endDate to group object
+    endDate?: string; 
+    showNegativeAmount?: boolean;
+    timestamp?: string;
   };
   onPress: () => void;
 }
