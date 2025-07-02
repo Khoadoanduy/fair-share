@@ -11,16 +11,18 @@ const prisma = new PrismaClient();
 router.post('/:groupId/:userId', async (request: Request, response: Response) => {
     try {
         const { groupId, userId } = request.params;
+        const { type } = request.body || {};
         if (!groupId || !userId) {
             return response.status(400).json({ message: 'groupId and userId are required' });
         }
+        const invitationType = type || "invitation";
         //Check if the user has already been invited to this group
         const existingInvitation = await prisma.groupInvitation.findFirst({
           where: { 
             groupId, 
             userId, 
             status: { in: ['pending', 'accepted']} 
-          },
+          }
         })
         if (existingInvitation) {
           return response.status(409).json({ message: 'User already invited' });
@@ -30,7 +32,7 @@ router.post('/:groupId/:userId', async (request: Request, response: Response) =>
             groupId,
             userId,
             status: 'pending',
-            type: 'invitation' // Leader invites user
+            type: invitationType
           }
         })
         response.status(200).json({ message: 'Successful invitation' });

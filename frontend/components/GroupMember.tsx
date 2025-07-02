@@ -12,12 +12,29 @@ import axios from "axios";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import CustomButton from "./CustomButton";
+import AcceptInvitationButton from "./AcceptInvitationButton";
+import DeclineInvitationButton from "./DeclineInvitationButton";
 
 // Types
 type GroupMember = {
   id: string;
   userId: string;
   userRole: string;
+  user: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    username: string;
+  };
+};
+
+type JoinRequest = {
+  id: string;
+  groupId: string;
+  userId: string;
+  status: string;
+  type: string;
+  createdAt: string;
   user: {
     id: string;
     firstName: string;
@@ -34,6 +51,9 @@ type Props = {
   showInvitations?: boolean;
   showHeader?: boolean;
   requestConfirmSent?: boolean;
+  joinRequests?: JoinRequest[];
+  invitations?: Invitation[];
+  onJoinRequestResponse?: () => void;
 };
 
 type Group = {
@@ -50,7 +70,18 @@ type Invitation = {
   };
 }
 
-const GroupMembers: React.FC<Props> = ({ groupId, userId, showAmountEach, showEstimatedText, showInvitations, showHeader, requestConfirmSent }) => {
+const GroupMembers: React.FC<Props> = ({
+  groupId,
+  userId,
+  showAmountEach,
+  showEstimatedText,
+  showInvitations,
+  showHeader,
+  requestConfirmSent,
+  joinRequests = [],
+  invitations = [],
+  onJoinRequestResponse
+}) => {
   const API_URL = process.env.EXPO_PUBLIC_API_URL;
   const router = useRouter();
   const [members, setMembers] = useState<GroupMember[]>([]);
@@ -58,22 +89,19 @@ const GroupMembers: React.FC<Props> = ({ groupId, userId, showAmountEach, showEs
   const [error, setError] = useState<string | null>(null);
   const [isLeader, setIsLeader] = useState(false);
   const [group, setGroup] = useState<Group | null>(null);
-  const [invitations, setInvitations] = useState<Invitation[]>([])
   const [confirmationStatus, setConfirmationStatus] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const [groupRes, roleRes, invitationRes] = await Promise.all([
+        const [groupRes, roleRes] = await Promise.all([
           axios.get(`${API_URL}/api/group/${groupId}`),
-          axios.get(`${API_URL}/api/groupMember/${groupId}/${userId}`),
-          axios.get(`${API_URL}/api/group/invitation/${groupId}`)
+          axios.get(`${API_URL}/api/groupMember/${groupId}/${userId}`)
         ]);
         setMembers(groupRes.data.members);
         setGroup(groupRes.data);
         setIsLeader(roleRes.data.isLeader);
-        setInvitations(invitationRes.data);
         setError(null);
         const fetchConfirmations = async () => {
           try {
@@ -97,7 +125,7 @@ const GroupMembers: React.FC<Props> = ({ groupId, userId, showAmountEach, showEs
 
         await fetchConfirmations();
       } catch (err) {
-        console.error("Failed to fetch members or role", err.response);
+        console.error("Failed to fetch members or role", err);
         setError("Failed to load members");
       } finally {
         setLoading(false);
@@ -135,7 +163,7 @@ const GroupMembers: React.FC<Props> = ({ groupId, userId, showAmountEach, showEs
   }
   return (
     <ScrollView style={styles.container}>
-      {showHeader && 
+      {showHeader &&
         <View style={styles.header}>
           <Text style={styles.title}>Members</Text>
           {isLeader && (
@@ -168,12 +196,11 @@ const GroupMembers: React.FC<Props> = ({ groupId, userId, showAmountEach, showEs
                 )}
               </View>
               {showEstimatedText && <Text style={styles.estimate}>Estimated</Text>}
-              {requestConfirmSent && <Text style={styles.price}>${group.amountEach}</Text>}
-              {requestConfirmSent && <Text style={styles.price}>${group.amountEach}</Text>}
+              {requestConfirmSent && group && <Text style={styles.price}>${`${group.amountEach.toFixed(2)}`}</Text>}
             </View>
             <View style={styles.amountEach}>
               <Text style={styles.username}>{member.user.username}</Text>
-              {showAmountEach && group && <Text style={styles.price}>${group.amountEach.toFixed(2)}</Text>}
+              {showAmountEach && group && <Text style={styles.price}>${`${group.amountEach.toFixed(2)}`}</Text>}
               {requestConfirmSent && (
                 <Text
                   style={[
@@ -183,71 +210,92 @@ const GroupMembers: React.FC<Props> = ({ groupId, userId, showAmountEach, showEs
                 >
                   {confirmationStatus[member.userId] ? "Confirmed share" : "Waiting for confirmation"}
                 </Text>
-              )}        
+              )}
             </View>
           </View>
         </View>
       ))}
       {isLeader && showInvitations && (
         <>
-        <CustomButton
-          text="Set shares & request confirmation"
-          onPress={() => {
-                    router.push({
-                      pathname: "/(group)/setMemberShares",
-                      params: { groupId },
-                    });
-                  }}
-          size="large"
-          fullWidth
-        />
-        <Text style={styles.textInvitation}>Pending invites</Text>
-        {invitations.length > 0 ? (
-          invitations.map((invitation, index) => (
-            <View key={invitation.id} style={styles.memberRow}>
-              <View
-                style={[styles.avatar, { backgroundColor: "#4A3DE3" }]}
-              >
-                <Text style={styles.initials}>
-                  {invitation.user.firstName.charAt(0).toUpperCase()}
-                </Text>
-              </View>
-              <View style={styles.info}>
-        {invitations.length > 0 ? (
-          invitations.map((invitation, index) => (
-            <View key={invitation.id} style={styles.memberRow}>
-              <View
-                style={[styles.avatar, { backgroundColor: "#4A3DE3" }]}
-              >
-                <Text style={styles.initials}>
-                  {invitation.user.firstName.charAt(0).toUpperCase()}
-                </Text>
-              </View>
-              <View style={styles.info}>
-                <View style={styles.nameRow}>
-                  <Text style={styles.name}>
-                    {invitation.user.firstName} {invitation.user.lastName}
+          <CustomButton
+            text="Set shares & request confirmation"
+            onPress={() => {
+              router.push({
+                pathname: "/(group)/setMemberShares",
+                params: { groupId },
+              });
+            }}
+            size="large"
+            fullWidth
+          />
+          <Text style={styles.textInvitation}>Pending invites</Text>
+          {invitations.length > 0 ? (
+            invitations.map((invitation, index) => (
+              <View key={invitation.id} style={styles.memberRow}>
+                <View
+                  style={[styles.avatar, { backgroundColor: "#4A3DE3" }]}
+                >
+                  <Text style={styles.initials}>
+                    {invitation.user.firstName.charAt(0).toUpperCase()}
                   </Text>
                 </View>
-                <Text style={styles.username}>{invitation.user.username}</Text>
+                <View style={styles.info}>
+                  <View style={styles.nameRow}>
+                    <Text style={styles.name}>
+                      {invitation.user.firstName} {invitation.user.lastName}
+                    </Text>
+                  </View>
+                  <Text style={styles.username}>{invitation.user.username}</Text>
+                </View>
+                <CustomButton
+                  text="Invited"
+                  style={styles.buttonInvited}
+                  textStyle={styles.textInvited}
+                />
               </View>
-              <CustomButton 
-                text="Invited"
-                style={styles.buttonInvited}
-                textStyle={styles.textInvited}
-              />
-          ))
-        ) : (
-          <></>
-        )}
-                textStyle={styles.textInvited}
-              />
-            </View>
-          ))
-        ) : (
-          <></>
-        )}
-      </>
+            ))
+          ) : (
+            <></>
+          )}
+
+          {/* Pending Requests Section - Only show for leaders */}
+          {isLeader && joinRequests.length > 0 && (
+            <>
+              <Text style={styles.textInvitationRequests}>Pending requests</Text>
+              {joinRequests.map((request, index) => (
+                <View key={request.id} style={styles.memberRow}>
+                  <View
+                    style={[styles.avatar, { backgroundColor: "#FF6B35" }]}
+                  >
+                    <Text style={styles.initials}>
+                      {request.user?.firstName?.charAt(0)?.toUpperCase() || 'U'}
+                    </Text>
+                  </View>
+                  <View style={styles.info}>
+                    <View style={styles.nameRow}>
+                      <Text style={styles.name}>
+                        {request.user?.firstName || 'Unknown'} {request.user?.lastName || 'User'}
+                      </Text>
+                    </View>
+                    <Text style={styles.username}>{request.user?.username || 'No username'}</Text>
+                  </View>
+                  <View style={styles.requestButtons}>
+                    <DeclineInvitationButton
+                      userId={request.userId}
+                      groupId={groupId}
+                      onResponse={onJoinRequestResponse}
+                    />
+                    <AcceptInvitationButton
+                      userId={request.userId}
+                      groupId={groupId}
+                      onResponse={onJoinRequestResponse}
+                    />
+                  </View>
+                </View>
+              ))}
+            </>
+          )}
+        </>
       )}
     </ScrollView>
   );
@@ -290,7 +338,9 @@ const styles = StyleSheet.create({
   memberRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 12,
+    marginBottom: 28,
+    marginLeft: 10,
+    marginRight: 10,
   },
   avatar: {
     width: 40,
@@ -372,12 +422,26 @@ const styles = StyleSheet.create({
   },
   textInvitation: {
     color: "#64748B",
-    margin: 12,
+    marginTop: 16,
+    marginBottom: 16,
+    marginLeft: 0,
+    marginRight: 12,
+    fontWeight: 500,
+    fontSize: 16,
+  },
+  textInvitationRequests: {
+    color: "#64748B",
+    marginBottom: 16,
+    marginLeft: 0,
+    marginRight: 12,
     fontWeight: 500,
     fontSize: 16,
   },
   buttonInvited: {
-    backgroundColor: '#E2E8F0', 
+    backgroundColor: '#E2E8F0',
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
   },
   textInvited: {
     color: '#9EA2AE',
@@ -391,5 +455,27 @@ const styles = StyleSheet.create({
   waitingText: {
     color: "#FBBF24",
     fontSize: 12
-  }
+  },
+  requestButtons: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  buttonDecline: {
+    backgroundColor: '#F3F4F6',
+    flex: 1,
+  },
+  buttonAccept: {
+    backgroundColor: '#4F46E5',
+    flex: 1,
+  },
+  textDecline: {
+    color: '#4F46E5',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  textAccept: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
+  },
 });
