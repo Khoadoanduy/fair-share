@@ -38,7 +38,8 @@ export default function CustomSubscriptionScreen() {
     defaultValues: {
       currency: 'USD',
       cycle: 'monthly',
-      day: '1'
+      day: '1',
+      planName: 'standard'
     }
   });
   const dayValue = watch('day');
@@ -158,6 +159,21 @@ export default function CustomSubscriptionScreen() {
     { label: 'EUR (€)', value: 'EUR' },
     { label: 'JPY (¥)', value: 'JPY' },
   ];
+  const categoryOptions: DropdownOption[] = [
+    { label: 'Streaming', value: 'streaming' },
+    { label: 'Music', value: 'music' },
+    { label: 'Gaming', value: 'gaming' },
+    { label: 'Productivity', value: 'productivity' },
+    { label: 'Cloud Storage', value: 'cloud_storage' },
+    { label: 'Fitness', value: 'fitness' },
+  ];
+  const planNameOptions: DropdownOption[] = [
+    { label: 'Standard Plan', value: 'standard' },
+    { label: 'Premium Plan', value: 'premium' },
+    { label: 'Family Plan', value: 'family' },
+    { label: 'Student Plan', value: 'student' },
+    { label: 'Other', value: 'other' },
+  ]
 
   // Close dropdown when clicking outside
   const handleOutsideClick = () => {

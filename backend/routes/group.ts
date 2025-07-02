@@ -21,7 +21,7 @@ const calculateDaysBetween = (startDate: Date, endDate: Date): number => {
 // Create group (add subscriptionType and personalType, backward compatible)
 router.post('/create', async (request: Request, response: Response) => {
   try {
-    const { groupName, subscriptionName, subscriptionId, planName, amount, cycle, category, cycleDays, userId, subscriptionType, personalType } = request.body;
+    const { groupName, subscriptionName, subscriptionId, planName, amount, cycle, category, cycleDays, userId, subscriptionType, personalType, visibility } = request.body;
 
     if (!groupName || !subscriptionName || !amount || !userId) {
       return response.status(400).json({ message: 'Missing required fields' });
