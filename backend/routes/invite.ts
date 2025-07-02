@@ -19,8 +19,8 @@ router.post('/:groupId/:userId', async (request: Request, response: Response) =>
           where: { 
             groupId, 
             userId, 
-            status: { in: ['pending', 'accepted']} },
-
+            status: { in: ['pending', 'accepted']} 
+          },
         })
         if (existingInvitation) {
           return response.status(409).json({ message: 'User already invited' });
@@ -163,6 +163,45 @@ router.post('/request/:groupId/:userId', async (request: Request, response: Resp
   } catch (error) {
     console.error('Error creating join request:', error);
     response.status(500).json({ message: 'Error sending join request' });
+  }
+});
+
+// Cancel a join request (user cancels their own request)
+router.delete('/cancel/:groupId/:userId', async (request: Request, response: Response) => {
+  try {
+    const { groupId, userId } = request.params;
+    if (!groupId || !userId) {
+      return response.status(400).json({ message: 'groupId and userId are required' });
+    }
+
+    // Find the join request and verify it belongs to the user
+    const joinRequest = await prisma.groupInvitation.findFirst({
+      where: {
+        groupId,
+        userId,
+        type: 'join_request',
+        status: 'pending' // Only allow canceling pending requests
+      }
+    });
+
+    if (!joinRequest) {
+      return response.status(404).json({
+        message: 'Join request not found or cannot be canceled'
+      });
+    }
+
+    // Delete the join request
+    await prisma.groupInvitation.delete({
+      where: { id: joinRequest.id }
+    });
+
+    response.status(200).json({
+      message: 'Join request canceled successfully'
+    });
+
+  } catch (error) {
+    console.error('Error canceling join request:', error);
+    response.status(500).json({ message: 'Error canceling join request' });
   }
 });
 

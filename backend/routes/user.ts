@@ -66,27 +66,33 @@ router.get('/invitation/:userId', async (request: Request, response: Response) =
     try {
         const { userId } = request.params;
         if (!userId) {
-            return response.status(400).json({ message: 'userId are required' });
+            return response.status(400).json({ message: 'userId is required' });
         }
-        //Get all pending invitations for this user
-        const invitation = await prisma.groupInvitation.findMany({
-            where: { userId, status: "pending" },
+
+        // Get all pending invitations for this user (only received invitations, not sent requests)
+        const invitations = await prisma.groupInvitation.findMany({
+            where: {
+                userId,
+                status: "pending",
+                type: "invitation"
+            },
             include: {
                 group: {
                     include: {
                         subscription: true
                     }
                 }
+            },
+            orderBy: {
+                createdAt: 'desc'
             }
-        })
-        if (invitation.length == 0) {
-            return response.json({ message: 'No invitation sent' });
-        }
-        response.status(200).json(invitation);
+        });
+
+        response.status(200).json(invitations);
 
     } catch (error) {
-        console.error(error);
-        response.status(500).json({ message: 'Error getting invitation' });
+        console.error('Error fetching invitations:', error);
+        response.status(500).json({ message: 'Error fetching invitations' });
     }
 });
 
@@ -157,4 +163,40 @@ router.get('/groups/:userId', async (request: Request, response: Response) => {
         response.status(500).json({ message: 'Error getting groups' });
     }
 });
+
+// Get all join requests sent by a specific user
+router.get('/requests-sent/:userId', async (request: Request, response: Response) => {
+    try {
+        const { userId } = request.params;
+        if (!userId) {
+            return response.status(400).json({ message: 'userId is required' });
+        }
+
+        // Get all join requests sent by the user with group details
+        const sentRequests = await prisma.groupInvitation.findMany({
+            where: {
+                userId,
+                status: "pending",
+                type: 'join_request'
+            },
+            include: {
+                group: {
+                    include: {
+                        subscription: true
+                    }
+                }
+            },
+            orderBy: {
+                createdAt: 'desc'
+            }
+        });
+
+        response.status(200).json(sentRequests);
+
+    } catch (error) {
+        console.error('Error fetching sent requests:', error);
+        response.status(500).json({ message: 'Error fetching sent requests' });
+    }
+});
+
 export default router;

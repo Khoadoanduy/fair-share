@@ -17,11 +17,7 @@ export default function FriendsLayout() {
   return (
     <Stack
       screenOptions={{
-        headerShown: true,
-        headerShadowVisible: false,
-        headerStyle: { backgroundColor: "#fff" },
-        headerTitleStyle: { fontWeight: "bold" },
-        headerLeft: () => <BackButton />, // your custom back button
+        headerShown: false,
       }}
     >
       <Stack.Screen
@@ -29,6 +25,7 @@ export default function FriendsLayout() {
         options={{
           title: "",
           headerTitle: () => null,
+          headerShown: false,
         }}
       />
     </Stack>
