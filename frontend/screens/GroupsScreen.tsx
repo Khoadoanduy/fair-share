@@ -14,9 +14,10 @@ import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { useUser } from "@clerk/clerk-expo";
 import { Ionicons } from "@expo/vector-icons";
-import SubscriptionCard from '@/components/SubscriptionCard';
-import AddSubscriptionModal from '@/components/AddSubscriptionModal';
-import PersonalSubscriptionModal from '@/components/PersonalSubscriptionModal';
+import SubscriptionCard from "@/components/SubscriptionCard";
+import AddSubscriptionModal from "@/components/AddSubscriptionModal";
+import PersonalSubscriptionModal from "@/components/PersonalSubscriptionModal";
+import { useUserState } from "@/hooks/useUserState";
 
 interface Group {
   id: string;
@@ -44,15 +45,22 @@ export default function GroupsScreen() {
   const router = useRouter();
   const API_URL = process.env.EXPO_PUBLIC_API_URL;
   const { user } = useUser();
-  const [userId, setUserId] = useState<string | null>(null);
+  const { userId } = useUserState();
+  // const [userId, setUserId] = useState<string | null>(null);
   const [groups, setGroups] = useState<Group[]>([]);
   const [selectedFilter, setSelectedFilter] = useState("All");
   const [showAddModal, setShowAddModal] = useState(false);
   const [showPersonalModal, setShowPersonalModal] = useState(false);
-  const [buttonPosition, setButtonPosition] = useState<{ x: number, y: number, width: number, height: number } | null>(null);
+  const [buttonPosition, setButtonPosition] = useState<{
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  } | null>(null);
   const buttonRef = useRef<any>(null);
-  const clerkId = user?.id;
-  const [personalSubscriptions, setPersonalSubscriptions] = useState<PersonalSubscription[]>([]);
+  const [personalSubscriptions, setPersonalSubscriptions] = useState<
+    PersonalSubscription[]
+  >([]);
 
   interface PersonalSubscription {
     id: string;
@@ -90,79 +98,12 @@ export default function GroupsScreen() {
     router.push('/(group)/userGroups')
   }
 
-  const handleAddPress = () => {
-    if (buttonRef.current) {
-      buttonRef.current.measure((fx: number, fy: number, width: number, height: number, px: number, py: number) => {
-        setButtonPosition({ x: px, y: py, width, height });
-        setShowAddModal(true);
-      });
-    } else {
-      setShowAddModal(true);
-    }
-  };
-
-  const handlePersonalPress = () => {
-    setShowAddModal(false);
-    router.push('/(personal)/personalSubscriptionChoice');
-  };
-
-  const handleGroupPress = () => {
-    setShowAddModal(false);
-    router.push('/(group)/createGroupName');
-  };
-
-  const handleExistingSubscription = () => {
-    setShowPersonalModal(false);
-    router.push({
-      pathname: '/(personal)/personalSubscriptionInfo',
-      params: { subscriptionType: 'existing' }
-    });
-  };
-
-  const handleVirtualCardSubscription = () => {
-    setShowPersonalModal(false);
-    router.push({
-      pathname: '/(personal)/personalSubscriptionInfo',
-      params: { subscriptionType: 'virtual' }
-    });
-  };
-
-  useEffect(() => {
-    const fetchUserId = async () => {
-      try {
-        const response = await axios.get(`${API_URL}/api/user/`, {
-          params: { clerkID: clerkId },
-        });
-        setUserId(response.data.id);
-      } catch (error) {
-        console.error("Error fetching user data:", error);
-      }
-    };
-
-    if (clerkId) {
-      fetchUserId();
-    }
-  }, [clerkId]);
 
   const fetchGroups = async () => {
     if (!userId) return;
     try {
-      const response = await axios.get(`${API_URL}/api/user/groups/${userId}?subscriptionType=shared`);
-      const transformedGroups = response.data.map((item: any) => ({
-        id: item.group.id,
-        groupName: item.group.groupName,
-        subscriptionName: item.group.subscriptionName,
-        subscriptionId: item.group.subscriptionId,
-        planName: item.group.planName,
-        amountEach: item.group.amountEach,
-        cycle: item.group.cycle,
-        category: item.group.category,
-        logo: item.group.subscription?.logo || item.group.logo,
-        startDate: item.group.startDate,
-        endDate: item.group.endDate,
-        totalMem: item.group.totalMem,
-      }));
-      setGroups(transformedGroups);
+      const response = await axios.get(`${API_URL}/api/user/groups/${userId}`);
+      setGroups(response.data);
     } catch (error) {
       console.error("Error fetching groups:", error);
     }
@@ -171,9 +112,13 @@ export default function GroupsScreen() {
   const fetchPersonalSubscriptions = async () => {
     if (!userId) return;
     try {
-      const response = await axios.get(`${API_URL}/api/user/groups/${userId}?subscriptionType=personal`);
-      // Always set to array, even if backend returns object or undefined
-      setPersonalSubscriptions(Array.isArray(response.data) ? response.data : []);
+      const response = await axios.get(
+        `${API_URL}/api/user/groups/${userId}?subscriptionType=personal`
+      );
+      console.log(JSON.stringify(response.data));
+      setPersonalSubscriptions(
+        Array.isArray(response.data) ? response.data : []
+      );
     } catch (error) {
       console.error("Error fetching personal subscriptions:", error);
       setPersonalSubscriptions([]);
@@ -188,8 +133,7 @@ export default function GroupsScreen() {
   }, [userId]);
 
   const getDisplayData = () => {
-    // Add personal subscriptions (fix: map from sub.group)
-    const personalSubs = personalSubscriptions.map(sub => ({
+    const personalSubs = personalSubscriptions.map((sub) => ({
       id: sub.group.id,
       groupName: sub.group.groupName,
       subscriptionName: sub.group.subscriptionName,
@@ -197,17 +141,17 @@ export default function GroupsScreen() {
       amountEach: sub.group.amountEach,
       cycle: sub.group.cycle || "monthly",
       category: sub.group.category,
-      logo: sub.group.subscription?.logo ?? (sub.group.logo ?? undefined),
+      logo: sub.group.subscription?.logo ?? sub.group.logo ?? undefined,
       isPersonal: true,
       endDate: sub.group.endDate,
       totalMem: sub.group.totalMem,
     }));
 
     // Add group subscriptions with real logos
-    const groupSubs = groups.map(group => ({
+    const groupSubs = groups.map((group) => ({
       ...group,
-      logo: group.subscription?.logo ?? (group.logo ?? undefined),
-      isPersonal: false
+      logo: group.subscription?.logo ?? group.logo ?? undefined,
+      isPersonal: false,
     }));
 
     if (selectedFilter === "Personal") {
@@ -270,12 +214,15 @@ export default function GroupsScreen() {
             onPress={() => {
               if (item.isPersonal) {
                 router.push({
-                  pathname: '/(personal)/personalSubscriptionDetails',
-                  params: { groupId: item.id, fromManage: 'true' }
+                  pathname: "/(personal)/personalSubscriptionDetails",
+                  params: { groupId: item.id, fromManage: "true" },
                 });
               } else {
                 router.push({
-                  pathname: item.endDate === null ? "/(group)/newGroupDetails",
+                  pathname:
+                    item.endDate === null
+                      ? "/(group)/newGroupDetails"
+                      : "/(group)/groupDetails",
                   params: { groupId: item.id },
                 });
               }

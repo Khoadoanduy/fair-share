@@ -100,22 +100,26 @@ router.get('/groups/:userId', async (request: Request, response: Response) => {
         const allGroups = await prisma.groupMember.findMany({
           where: { userId },
           include: { 
-            group: {
-              include: {
-                subscription: true // Add this line to include subscription data
-              }
+            group :{
+                include: {
+                    subscription : {
+                        select: {
+                            logo: true
+                        }
+                    }
+                }
             }
           }
-        });
-        // Filter by subscriptionType if provided
-        const filteredGroups = subscriptionType
-          ? allGroups.filter(gm => gm.group && gm.group.subscriptionType === subscriptionType)
-          : allGroups;
-        if (filteredGroups.length == 0) {
+        })
+        const formattedGroups = allGroups.map(member => ({
+            ...member.group, 
+            logo: member.group.subscription?.logo,
+            subscription: undefined
+          }));
+        if (allGroups.length == 0) {
           return response.json({ message: 'No group found' });
         }
-        response.status(200).json(filteredGroups);
-
+        response.status(200).json(formattedGroups);
     } catch (error) {
         console.error(error);
         response.status(500).json({ message: 'Error getting groups' });
