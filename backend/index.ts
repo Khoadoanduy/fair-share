@@ -1,5 +1,5 @@
 import express from 'express';
-// import dotenv from 'dotenv';
+import dotenv from 'dotenv';
 import webhookRouter from './src/webhooks/clerk/route';
 import { authMiddleware, authErrorHandler } from './src/middleware';
 import paymentRoutes from './routes/stripe_payment';
@@ -14,9 +14,10 @@ import groupMemberRoute from './routes/groupMember'
 import virtualCardRoute from './routes/virtualCard';
 import webhookRoute from './routes/webhook';
 import notificationsRoute from './routes/notifications';
+import confirmShare from './routes/confirmShare';
 import cors from 'cors';  // Add this
 
-// dotenv.config();
+dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -39,6 +40,7 @@ app.use('/api/group', groupRoute);
 app.use('/api/groupMember', groupMemberRoute);
 app.use('/api/virtualCard', virtualCardRoute);
 app.use('/api/subscriptions', subscriptionRouter);
+app.use('/api/cfshare', confirmShare);
 app.use('/api/notifications', notificationsRoute);
 
 

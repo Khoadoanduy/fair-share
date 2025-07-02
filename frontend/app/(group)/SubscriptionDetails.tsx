@@ -87,7 +87,7 @@ export default function SubscriptionDetailsScreen() {
       setMongoUserId(mongoId);
 
       const [detailsResponse, roleResponse] = await Promise.all([
-        axios.get(`${API_URL}/api/group/${groupId}/subscription-details`),
+        axios.get(`${API_URL}/api/group/${groupId}`),
         axios.get(`${API_URL}/api/group/${groupId}/user-role/${mongoId}`),
       ]);
 
@@ -143,7 +143,7 @@ export default function SubscriptionDetailsScreen() {
         });
 
         const response = await axios.get(
-          `${API_URL}/api/group/${groupId}/subscription-details`
+          `${API_URL}/api/group/${groupId}`
         );
         setDetails(response.data);
 
@@ -196,15 +196,13 @@ export default function SubscriptionDetailsScreen() {
       <ScrollView style={styles.content}>
         {/* Header */}
         <View style={styles.header}>
+          <Pressable onPress={router.back}>
+            <Ionicons name="chevron-back" size={24} color="#4A3DE3" />
+          </Pressable>
           <Text style={styles.title}>Subscription details</Text>
-          {userRole === "leader" && (
-            <Pressable
-              style={styles.editButton}
-              onPress={() => setIsEditing(!isEditing)}
-            >
-              <Ionicons name="create-outline" size={24} color="#4A3DE3" />
-            </Pressable>
-          )}
+          <Pressable style={styles.editButton} onPress={() => setIsEditing(!isEditing)}>
+            <Ionicons name="create-outline" size={24} color="#4A3DE3" />
+          </Pressable>
         </View>
 
         {/* Subscription Card */}
@@ -217,19 +215,15 @@ export default function SubscriptionDetailsScreen() {
           ) : (
             <View style={styles.logoPlaceholder}>
               <Text style={styles.logoText}>
-                {details.subscriptionName.charAt(0)}
+                {details.subscriptionName?.charAt(0)}
               </Text>
             </View>
           )}
           <Text style={styles.serviceName}>{details.subscriptionName}</Text>
-          <Text style={styles.price}>${details.amount.toFixed(2)}</Text>
-          {details.subscription?.category && (
-            <View style={styles.categoryBadge}>
-              <Text style={styles.categoryText}>
-                {details.subscription.category}
-              </Text>
-            </View>
-          )}
+          <Text style={styles.price}>${details.amount}</Text>
+          <View style={styles.categoryBadge}>
+            <Text style={styles.categoryText}>{details.category}</Text>
+          </View>
         </View>
 
         {/* Account Credentials Section */}
@@ -370,10 +364,10 @@ export default function SubscriptionDetailsScreen() {
         </View>
 
         {/* Virtual Card Section */}
-        {virtualCard ? (
+        {virtualCard && (
           <View style={styles.section}>
             <View style={styles.virtualCardContainer}>
-              <Text style={styles.virtualCardTitle}>Virtual Card</Text>
+              <Text style={styles.sectionTitle}>Virtual Card</Text>
               <VirtualCardDisplay
                 cardBrand={virtualCard.brand}
                 last4={virtualCard.last4}
@@ -383,42 +377,6 @@ export default function SubscriptionDetailsScreen() {
               />
             </View>
           </View>
-        ) : (
-          userRole === "leader" && (
-            <View style={styles.section}>
-              <Pressable
-                style={styles.createVirtualCardButton}
-                onPress={async () => {
-                  try {
-                    const response = await axios.post(
-                      `${API_URL}/api/virtualCard/create-for-group`,
-                      {
-                        groupId,
-                        leaderId: mongoUserId,
-                      }
-                    );
-
-                    if (response.data.success) {
-                      // Refresh the page to show the new virtual card
-                      const cardResponse = await axios.get(
-                        `${API_URL}/api/virtualCard/group/${groupId}`
-                      );
-                      setVirtualCard(cardResponse.data);
-                      Alert.alert(
-                        "Success",
-                        "Virtual card created successfully"
-                      );
-                    }
-                  } catch (error) {
-                    console.error("Error creating virtual card:", error);
-                    Alert.alert("Error", "Failed to create virtual card");
-                  }
-                }}
-              >
-              
-              </Pressable>
-            </View>
-          )
         )}
       </ScrollView>
     </SafeAreaView>
@@ -439,21 +397,19 @@ const styles = StyleSheet.create({
   retryText: { color: "white", fontWeight: "500" },
   header: {
     flexDirection: "row",
-    justifyContent: "center", // Changed from space-between to center
+    justifyContent: "space-between", // Changed from space-between to center
     alignItems: "center",
     paddingHorizontal: 20,
     paddingTop: 10,
     paddingBottom: 20,
-    position: "relative", // Added to help position the edit button
   },
   title: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: "600",
-    textAlign: "center", // Added to ensure text is centered
+    color: "#4A3DE3",
   },
   editButton: {
-    position: "absolute",
-    right: 20, // Match the paddingHorizontal of the header
+    padding: 4,
   },
   subscriptionCard: {
     alignItems: "center",
@@ -500,8 +456,6 @@ const styles = StyleSheet.create({
     marginVertical: 8,
     borderWidth: 1,
     borderColor: "#F0F0F0",
-    // Remove the negative marginTop here too for consistency
-    // marginTop: -8, // Remove this line
   },
   editingHeader: {
     flexDirection: "row",
@@ -653,5 +607,14 @@ const styles = StyleSheet.create({
   paymentHistoryText: {
     fontSize: 16,
     fontWeight: "500",
+  },
+
+  // Updated virtual card container style
+  virtualCardContainer: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "#F0F0F0",
   },
 });

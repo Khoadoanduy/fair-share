@@ -19,11 +19,6 @@ export default function VirtualCardDisplay({
 }: VirtualCardDisplayProps) {
   return (
     <View style={styles.cardContainer}>
-      <View style={styles.cardHeader}>
-        <Text style={styles.virtualCardLabel}>Virtual Card</Text>
-        <Ionicons name="card-outline" size={24} color="#4A3DE3" />
-      </View>
-      
       <View style={styles.cardBody}>
         <Image
           source={
@@ -52,6 +47,8 @@ export default function VirtualCardDisplay({
             </Text>
           )}
         </View>
+        
+        <Ionicons name="card-outline" size={24} color="#4A3DE3" />
       </View>
     </View>
   );
@@ -65,21 +62,13 @@ const styles = StyleSheet.create({
     marginVertical: 8,
     borderWidth: 1,
     borderColor: '#E2E8F0',
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  virtualCardLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#4A3DE3',
+    minHeight: 120,
+    paddingTop: 24,
   },
   cardBody: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
+    flex: 1,
   },
   cardImage: {
     width: 50,
@@ -89,12 +78,13 @@ const styles = StyleSheet.create({
   },
   cardDetails: {
     flex: 1,
+    justifyContent: 'flex-start',
   },
   cardNumber: {
     fontSize: 16,
     fontWeight: '500',
     color: '#000',
-    marginBottom: 4,
+    marginBottom: 8,
   },
   cardDots: {
     letterSpacing: 1,
@@ -104,6 +94,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
     marginBottom: 4,
+    
   },
   cardholderName: {
     fontSize: 14,

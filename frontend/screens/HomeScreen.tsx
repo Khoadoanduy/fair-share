@@ -12,7 +12,7 @@ import { useUserState } from "@/hooks/useUserState";
 import { useEffect, useState, useMemo } from "react";
 import { useAppDispatch } from "@/redux/hooks";
 import { usePushNotifications } from "@/utils/notificationUtils";
-import GroupCard from "@/components/GroupCard";
+import SubscriptionCard from "@/components/SubscriptionCard";
 import axios from "axios";
 import { sub } from "date-fns";
 import { formatRelativeDate, getDaysRemaining } from "@/utils/dateUtils";
@@ -161,7 +161,7 @@ export default function HomeScreen() {
                   </View>
                   <View style={styles.upcomingRenewalsList}>
                     {getUpcomingRenewals().map((subscription, index) => (
-                      <GroupCard
+                      <SubscriptionCard
                         key={`renewal-${index}`}
                         logo={{ uri: subscription.logo }}
                         subscriptionName={subscription.groupName}
