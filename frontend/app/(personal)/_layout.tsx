@@ -2,8 +2,9 @@ import { Redirect, Stack } from "expo-router";
 import { useAuth } from "@clerk/clerk-expo";
 import { ActivityIndicator, View } from "react-native";
 import BackButton from "../../components/BackButton";
+import SkipButton from "../../components/SkipButton";
 
-export default function AuthLayout() {
+export default function PersonalLayout() {
   const { isSignedIn, isLoaded } = useAuth();
 
   if (!isLoaded) {
@@ -20,80 +21,64 @@ export default function AuthLayout() {
         headerShown: true,
         headerShadowVisible: false,
         headerStyle: { backgroundColor: "#fff" },
-        headerTitleStyle: { fontWeight: "bold", fontSize: 20, color: '#4A3DE3' },
-        headerLeft: () => <BackButton />, // your custom back button
+        headerTitleStyle: { fontWeight: "bold" },
+        headerLeft: () => <BackButton />,
       }}
     >
       <Stack.Screen
-        name="createGroupName"
+        name="personalSubscriptionChoice"
         options={{
           title: "",
           headerTitle: () => null,
         }}
       />
       <Stack.Screen
-        name="subscriptionInfo"
+        name="personalSubscriptionInfo"
         options={{
           title: "",
           headerTitle: () => null,
         }}
       />
       <Stack.Screen
-        name="customSubscription"
+        name="customPersonalSubscription"
         options={{
           title: "",
           headerTitle: () => null,
         }}
       />
       <Stack.Screen
-        name="inviteMember"
+        name="personalSubscriptionDetails"
         options={{
           title: "",
           headerTitle: () => null,
-        }}
-      />
-      <Stack.Screen
-        name="subscriptionDetails"
-        options={{
-          title: "",
-          headerTitle: () => null,
-          headerShown: false, // This removes the duplicate header
-        }}
-      />
-      <Stack.Screen
-        name="newGroupDetails"
-        options={{
-          title: "",
-          headerTitle: () => null,
-        }}
-      />
-      <Stack.Screen
-        name="userGroups"
-        options={{
           headerShown: false,
-          title: 'My Groups'
         }}
       />
       <Stack.Screen
-          name = "showAllInvitations"
-          options={{ title: "", 
-                    headerTitle: () => null,
-                    headerLeft: () => null,}}
-      />
-      <Stack.Screen
-          name="setMemberShares"
-          options={{
-            title: "Set member shares",
-            headerTitle: () => null,
-          }}
-      />
-      <Stack.Screen
-        name="groupDetails"
+        name="createVirtualCard"
         options={{
-          headerShown: false, // This removes the duplicate header
+          title: "",
+          headerTitle: () => null,
+        }}
+      />
+      <Stack.Screen
+        name="addAccountCredentials"
+        options={({ route }) => {
+          const params = route.params as any || {};
+          return {
+            title: "",
+            headerRight: () => (
+              <SkipButton
+                to="/(personal)/personalSubscriptionDetails"
+                params={{
+                  groupId: params.groupId,
+                  personalType: params.personalType,
+                }}
+              />
+            ),
+          };
         }}
       />
     </Stack>
-
   );
 }

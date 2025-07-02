@@ -12,10 +12,10 @@ import {
 import { useLocalSearchParams, useRouter } from "expo-router";
 import axios from "axios";
 import { Ionicons } from "@expo/vector-icons";
-import CustomButton from "@/components/CustomButton";
 import { useUserState } from "@/hooks/useUserState";
 import SubscriptionCard from "@/components/SubscriptionCard";
 import GroupMembers from "@/components/GroupMember";
+import GroupHeader from "@/components/GroupHeader";
 
 // Define the Group type
 type GroupMember = {
@@ -64,17 +64,21 @@ export default function GroupDetailsScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [leader, setIsLeader] = useState<boolean>(false);
+  const [confirmRequestSent, setConfirmRequestSent] = useState<boolean>(false);
   const { userId } = useUserState();
+
   useEffect(() => {
     const fetchGroupDetails = async () => {
       try {
         setLoading(true);
-        const [groupResponse, roleResponse] = await Promise.all([
+        const [groupResponse, roleResponse, requestSent] = await Promise.all([
           axios.get(`${API_URL}/api/group/${groupId}`),
           axios.get(`${API_URL}/api/groupMember/${groupId}/${userId}`),
+          axios.get(`${API_URL}/api/cfshare/${groupId}`)
         ]);
         setGroup(groupResponse.data);
         setIsLeader(roleResponse.data.isLeader);
+        setConfirmRequestSent(requestSent.data);
         setError(null);
       } catch (err) {
         console.error("Error fetching group details:", err);
@@ -127,24 +131,6 @@ export default function GroupDetailsScreen() {
   }
 
 
-  // Update the JSX for the info cards
-  const InfoCard = ({
-    label,
-    icon,
-  }) => (
-    <View style={styles.infoCard}>
-      <View style={styles.labelContainer}>
-        <Text style={styles.infoLabel}>{label}</Text>
-        <Ionicons name={icon} size={24} color="#000" />
-      </View>
-      <View style={styles.infoValueContainer}>
-        <View style={styles.placeholderBox} />
-      </View>
-    </View>
-  );
-
-  //const handleChargeMoney = router.push('/(group)/setMemberShares')
-
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView
@@ -152,23 +138,11 @@ export default function GroupDetailsScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* Top Info Card */}
-        <View style={styles.topCard}>
-          <View style={styles.lockContainer}>
-            <Ionicons name="lock-closed-outline" size={24} color="#4353ED" />
-            <Text style={styles.groupName}>{group.groupName}</Text>
-          </View>
-
-          <View style={styles.infoCardsContainer}>
-            <InfoCard
-              label="Your share"
-              icon="pie-chart-outline"
-            />
-            <InfoCard
-              label="Payment in"
-              icon="time-outline"
-            />
-          </View>
-        </View>
+        <GroupHeader
+          groupName={group.groupName}
+          showShare={false}
+          showPayment={false}
+        />
 
         {/* Service Card */}
         <View style={styles.serviceCard}>
@@ -195,7 +169,25 @@ export default function GroupDetailsScreen() {
 
         {/* Members Section */}
         {groupId && userId && (
-            <GroupMembers groupId={groupId as string} userId={userId} />
+          confirmRequestSent ?
+            <GroupMembers 
+              groupId={groupId as string} 
+              userId={userId} 
+              showAmountEach={false}
+              showEstimatedText={false}
+              showInvitations={false}
+              showHeader={true}
+              requestConfirmSent={true}
+            /> :
+            <GroupMembers 
+              groupId={groupId as string} 
+              userId={userId} 
+              showAmountEach={true}
+              showEstimatedText={true}
+              showInvitations={true}
+              showHeader={true}
+              requestConfirmSent={false}
+            />
         )}
       </ScrollView>
     </SafeAreaView>
@@ -263,40 +255,6 @@ const styles = StyleSheet.create({
     color: "#4A3DE3",
     marginLeft: 12,
     textAlign: "center", // Add this
-  },
-  infoCardsContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    gap: 16,
-  },
-  infoCard: {
-    flex: 1,
-    backgroundColor: "#FCFBFF",
-    borderRadius: 12,
-    padding: 10,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-  },
-  labelContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  infoLabel: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#000",
-  },
-  infoValueContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  infoValue: {
-    fontSize: 30,
-    fontWeight: "600",
-    color: "#4A3DE3",
   },
   serviceCard: {
     backgroundColor: "white",
@@ -371,139 +329,6 @@ const styles = StyleSheet.create({
     color: "#000",
     fontWeight: "500",
   },
-  membersSection: {
-    backgroundColor: "white",
-    marginHorizontal: 16,
-    marginBottom: 8,
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-  },
-  membersSectionHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  membersTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#000",
-  },
-  addButton: {
-    width: 24,
-    height: 24,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  memberRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 12,
-  },
-  memberAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 12,
-  },
-  memberInitials: {
-    color: "#FFF",
-    fontWeight: "600",
-    fontSize: 14,
-  },
-  memberInfo: {
-    flex: 1,
-  },
-  memberNameContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  memberName: {
-    fontSize: 16,
-    fontWeight: "500",
-    color: "#000",
-  },
-  leaderBadge: {
-    backgroundColor: "#4A3DE3", // Using the primary purple color
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 12,
-    marginLeft: 8,
-  },
-  leaderText: {
-    color: "#FFF",
-    fontSize: 10,
-    fontWeight: "600",
-  },
-  memberUsername: {
-    fontSize: 14,
-    color: "#64748B", // Using the subtitle color
-    marginTop: 2,
-  },
-  memberAmount: {
-    fontSize: 16,
-    fontWeight: "500",
-    color: "#000",
-  },
-  paymentMethodRow: {
-    backgroundColor: "#FFF",
-    marginHorizontal: 16,
-    marginBottom: 16,
-    borderTopLeftRadius: 12,
-    borderTopRightRadius: 12,
-    padding: 16,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-  },
-  paymentMethodTitle: {
-    fontSize: 16,
-    fontWeight: "500",
-    color: "#000",
-  },
-  creditCard: {
-    backgroundColor: "#C4C4C4",
-    marginHorizontal: 16,
-    marginBottom: 20,
-    borderRadius: 12,
-    height: 200,
-    padding: 16,
-    position: "relative",
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-  },
-  cardLogoContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    position: "absolute",
-    bottom: 16,
-    right: 16,
-  },
-  discoverText: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#FFF",
-    marginRight: 8,
-  },
-  itLogo: {
-    backgroundColor: "#FF6600",
-    borderRadius: 12,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    width: 24,
-    height: 18,
-  },
-  itText: {
-    fontSize: 12,
-    fontWeight: "bold",
-    color: "#FFF",
-  },
   nextButton: {
     backgroundColor: '#5E5AEF',
     borderRadius: 12,
@@ -515,6 +340,6 @@ const styles = StyleSheet.create({
     height: 30,
     backgroundColor: "#E5E7EB",
     borderRadius: 6,
-    },
+  },
 
 });

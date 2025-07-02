@@ -12,7 +12,6 @@ import axios from "axios";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import CustomButton from "./CustomButton";
-import InviteButton from "./InviteButton";
 
 // Types
 type GroupMember = {
@@ -30,6 +29,11 @@ type GroupMember = {
 type Props = {
   groupId: string;
   userId: string;
+  showAmountEach?: boolean;
+  showEstimatedText?: boolean;
+  showInvitations?: boolean;
+  showHeader?: boolean;
+  requestConfirmSent?: boolean;
 };
 
 type Group = {
@@ -46,7 +50,7 @@ type Invitation = {
   };
 }
 
-const GroupMembers: React.FC<Props> = ({ groupId, userId }) => {
+const GroupMembers: React.FC<Props> = ({ groupId, userId, showAmountEach, showEstimatedText, showInvitations, showHeader, requestConfirmSent }) => {
   const API_URL = process.env.EXPO_PUBLIC_API_URL;
   const router = useRouter();
   const [members, setMembers] = useState<GroupMember[]>([]);
@@ -55,12 +59,13 @@ const GroupMembers: React.FC<Props> = ({ groupId, userId }) => {
   const [isLeader, setIsLeader] = useState(false);
   const [group, setGroup] = useState<Group | null>(null);
   const [invitations, setInvitations] = useState<Invitation[]>([])
+  const [confirmationStatus, setConfirmationStatus] = useState<Record<string, boolean>>({});
+
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
-
         const [groupRes, roleRes, invitationRes] = await Promise.all([
           axios.get(`${API_URL}/api/group/${groupId}`),
           axios.get(`${API_URL}/api/groupMember/${groupId}/${userId}`),
@@ -72,10 +77,31 @@ const GroupMembers: React.FC<Props> = ({ groupId, userId }) => {
         setIsLeader(roleRes.data.isLeader);
         setInvitations(invitationRes.data);
         setError(null);
+        const fetchConfirmations = async () => {
+          try {
+            const confirmations = await Promise.all(
+              groupRes.data.members.map(async (member: GroupMember) => {
+                const res = await axios.get(`${API_URL}/api/cfshare/${groupId}/${member.userId}`);
+                console.log(res.data);
+                return { userId: member.userId, status: res.data}; 
+              })
+            );
+
+            const statusMap: Record<string, boolean> = {};
+            confirmations.forEach(({ userId, status }) => {
+              statusMap[userId] = status;
+            });
+
+            setConfirmationStatus(statusMap);
+          } catch (err) {
+            console.error("Failed to fetch confirmations", err);
+          }
+        };
+
+        await fetchConfirmations();
       } catch (err) {
-        console.error("Failed to fetch members or role", err);
+        console.error("Failed to fetch members or role", err.response);
         setError("Failed to load members");
-        Alert.alert("Error", "Could not load group members");
       } finally {
         setLoading(false);
       }
@@ -110,17 +136,19 @@ const GroupMembers: React.FC<Props> = ({ groupId, userId }) => {
       </View>
     );
   }
-
+  console.log(invitations);
   return (
     <ScrollView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Members</Text>
-        {isLeader && (
-          <TouchableOpacity style={styles.addButton} onPress={handleInvite}>
-            <Ionicons name="add" size={20} color="black" />
-          </TouchableOpacity>
-        )}
-      </View>
+      {showHeader && 
+        <View style={styles.header}>
+          <Text style={styles.title}>Members</Text>
+          {isLeader && (
+            <TouchableOpacity style={styles.addButton} onPress={handleInvite}>
+              <Ionicons name="add" size={20} color="black" />
+            </TouchableOpacity>
+          )}
+        </View>
+      }
 
       {members.map((member, index) => (
         <View key={member.id} style={styles.memberRow}>
@@ -143,48 +171,68 @@ const GroupMembers: React.FC<Props> = ({ groupId, userId }) => {
                   </View>
                 )}
               </View>
-              <Text style={styles.estimate}>Estimated</Text>
+              {showEstimatedText && <Text style={styles.estimate}>Estimated</Text>}
+              {requestConfirmSent && <Text style={styles.price}>${group.amountEach}</Text>}
             </View>
             <View style={styles.amountEach}>
               <Text style={styles.username}>{member.user.username}</Text>
-              <Text>${group?.amountEach.toFixed(2)}</Text>
+              {showAmountEach && group && <Text style={styles.price}>${group.amountEach}</Text>}
+              {requestConfirmSent && (
+                <Text
+                  style={[
+                    styles.estimate,
+                    confirmationStatus[member.userId] ? styles.confirmedText : styles.waitingText,
+                  ]}
+                >
+                  {confirmationStatus[member.userId] ? "Confirmed share" : "Waiting for confirmation"}
+                </Text>
+              )}        
             </View>
           </View>
         </View>
       ))}
-      {isLeader && (
+      {isLeader && showInvitations && (
         <>
         <CustomButton
           text="Set shares & request confirmation"
-          //onPress={handleChargeMoney}
+          onPress={() => {
+                    router.push({
+                      pathname: "/(group)/setMemberShares",
+                      params: { groupId },
+                    });
+                  }}
           size="large"
           fullWidth
         />
         <Text style={styles.textInvitation}>Pending invites</Text>
-        {invitations.map((invitation, index) => (
-          <View key={invitation.id} style={styles.memberRow}>
-            <View
-              style={[styles.avatar, { backgroundColor: "#4A3DE3" }]}
-            >
-              <Text style={styles.initials}>
-                {invitation.user.firstName.charAt(0).toUpperCase()}
-              </Text>
-            </View>
-            <View style={styles.info}>
+        {invitations.length > 0 ? (
+          invitations.map((invitation, index) => (
+            <View key={invitation.id} style={styles.memberRow}>
+              <View
+                style={[styles.avatar, { backgroundColor: "#4A3DE3" }]}
+              >
+                <Text style={styles.initials}>
+                  {invitation.user.firstName.charAt(0).toUpperCase()}
+                </Text>
+              </View>
+              <View style={styles.info}>
                 <View style={styles.nameRow}>
                   <Text style={styles.name}>
                     {invitation.user.firstName} {invitation.user.lastName}
                   </Text>
                 </View>
                 <Text style={styles.username}>{invitation.user.username}</Text>
-            </View>
-            <CustomButton 
+              </View>
+              <CustomButton 
                 text="Invited"
                 style={styles.buttonInvited}
-                textStyle = {styles.textInvited}
-            />
-          </View>
-        ))}
+                textStyle={styles.textInvited}
+              />
+            </View>
+          ))
+        ) : (
+          <></>
+        )}
       </>
       )}
     </ScrollView>
@@ -301,7 +349,12 @@ const styles = StyleSheet.create({
   },
   amountEach: {
     flexDirection: 'row',
-    justifyContent: 'space-between'
+    justifyContent: 'space-between',
+  },
+  price: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#111827',
   },
   textInvitation: {
     color: "#64748B",
@@ -317,4 +370,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
+  confirmedText: {
+    color: "#10B981",
+    fontSize: 12
+  },
+  waitingText: {
+    color: "#FBBF24",
+    fontSize: 12
+  }
 });
