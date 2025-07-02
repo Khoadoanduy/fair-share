@@ -29,13 +29,13 @@ type Subscription = {
   category: string;
 };
 
-export default function SubscriptionScreen() {
+export default function PersonalSubscriptionInfoScreen() {
   const API_URL = process.env.EXPO_PUBLIC_API_URL;
   const router = useRouter();
   const { userId } = useUserState();
-
-  // Add visibility to the destructured params
-  const { groupName, visibility } = useLocalSearchParams();
+  // Get personalType from navigation params (either 'existing' or 'virtual')
+  const { personalType } = useLocalSearchParams();
+  const subscriptionType = personalType; // Keep subscriptionType for consistency, but it's the same as personalType
   const { control, handleSubmit, setValue, watch } = useForm<FormatData>({
     defaultValues: {
       currency: 'USD',
@@ -44,7 +44,6 @@ export default function SubscriptionScreen() {
     }
   });
 
-  // Watch the day and cycle values to calculate total days
   const dayValue = watch('day');
   const cycleValue = watch('cycle');
 
@@ -55,12 +54,22 @@ export default function SubscriptionScreen() {
   const [suggestedSubscriptions, setSuggestedSubscriptions] = useState<Subscription[]>([]);
   const [selectedSubscription, setSelectedSubscription] = useState<Subscription | null>(null);
 
-  // Helper for dropdown state management
   const toggleDropdown = (dropdown: string) => {
     setActiveDropdown(activeDropdown === dropdown ? null : dropdown);
   };
 
   const isDropdownOpen = (dropdown: string) => activeDropdown === dropdown;
+
+  const calculateTotalDays = (dayValue: string, cycle: string): number => {
+    const parsedDay = parseFloat(dayValue) || 1;
+    const cycleDaysMap: { [key: string]: number } = {
+      'weekly': 7,
+      'monthly': 30,
+      'yearly': 365,
+    };
+    const baseDays = cycleDaysMap[cycle.toLowerCase()] || 30;
+    return Math.round(parsedDay * baseDays);
+  };
 
   // Load suggested subscriptions
   useEffect(() => {
@@ -107,36 +116,17 @@ export default function SubscriptionScreen() {
 
   const handleCreateCustomSubscription = () => {
     router.push({
-      pathname: '/(group)/customSubscription',
-      params: { groupName }
+      pathname: '/(personal)/customPersonalSubscription',
+      params: { personalType }
     });
   };
-  const calculateTotalDays = (dayValue: string, cycle: string): number => {
-    // Parse the day value - handle decimal numbers
-    const parsedDay = parseFloat(dayValue) || 1;
-    // Base days for each cycle
-    const cycleDaysMap: { [key: string]: number } = {
-      'weekly': 7,
-      'monthly': 30,
-      'yearly': 365,
-    };
-    const baseDays = cycleDaysMap[cycle.toLowerCase()] || 30;
-    // Calculate total days by multiplying base cycle days with the day value
-    const totalDays = Math.round(parsedDay * baseDays);
-    return totalDays;
-  };
 
-  // Get the current calculated days for display
-  const getCurrentCalculatedDays = (): number => {
-    return calculateTotalDays(dayValue || '1', cycleValue || 'monthly');
-  };
-
-  const handleCreateGroup = async (info: FormatData) => {
+  const handleCreatePersonalSubscription = async (info: FormatData) => {
     if (!info.subscriptionName || !info.planName || !info.amount || !info.cycle || !info.category) {
       Alert.alert('Missing Info', 'Please fill in all fields');
       return;
     }
-    // Validate day input
+
     const parsedDay = parseFloat(info.day);
     if (isNaN(parsedDay) || parsedDay <= 0) {
       Alert.alert('Invalid Input', 'Please enter a valid number for the payment frequency');
@@ -145,44 +135,42 @@ export default function SubscriptionScreen() {
 
     try {
       const cycleDays = calculateTotalDays(info.day, info.cycle);
-
+      // Use unified endpoint for group creation
       const response = await axios.post(`${API_URL}/api/group/create`, {
-        groupName,
-        userId: userId,
+        groupName: info.subscriptionName,
+        userId,
         subscriptionId: info.subscriptionId,
         subscriptionName: info.subscriptionName,
         planName: info.planName,
         amount: parseFloat(info.amount),
         cycle: info.cycle,
-        cycleDays: cycleDays,
+        cycleDays,
         paymentFrequency: parseFloat(info.day),
         category: info.category,
         logo: info.logo,
-        visibility: visibility || 'friends', 
-        userId: leaderId
+        subscriptionType: "personal",
+        personalType, // 'existing' or 'virtual'
       });
-
-      const groupId = response.data.groupId;
-
+      const nextRoute = personalType === 'virtual'
+        ? '/(personal)/createVirtualCard'
+        : '/(personal)/addAccountCredentials';
       router.push({
-        pathname: '/(group)/inviteMember',
-        params: { groupId: response.data.groupId },
+        pathname: nextRoute,
+        params: { groupId: response.data.groupId, personalType },
       });
     } catch (error) {
-      console.error(error);
-      Alert.alert('Error', 'Failed to create group');
+      Alert.alert('Error', 'Failed to create personal subscription');
     }
   };
 
-  // Dropdown options
   const categoryOptions: DropdownOption[] = [
     { label: 'Streaming', value: 'streaming' },
     { label: 'Music', value: 'music' },
     { label: 'Gaming', value: 'gaming' },
     { label: 'Productivity', value: 'productivity' },
     { label: 'Fitness', value: 'fitness' },
-    { label: 'Food Delivery', value: 'food delivery' }, 
-    { label: 'News', value: 'news' },                   
+    { label: 'Food Delivery', value: 'food delivery' },
+    { label: 'News', value: 'news' },
   ];
 
   const cycleOptions: DropdownOption[] = [
@@ -197,6 +185,12 @@ export default function SubscriptionScreen() {
     { label: 'JPY (¥)', value: 'JPY' },
   ];
 
+  const isVirtualFlow = subscriptionType === 'virtual';
+
+  // Calculate total steps and current step based on subscription type
+  const totalSteps = personalType === 'virtual' ? 4 : 3;
+  const currentStep = 2;
+
   return (
     <SafeAreaView style={styles.container}>
       {activeDropdown && (
@@ -208,8 +202,13 @@ export default function SubscriptionScreen() {
       )}
 
       <View style={styles.contentContainer}>
-        <Text style={styles.title}>Create new group</Text>
-        <Text style={styles.subtitle}>Next, enter some subscription details</Text>
+        <Text style={styles.title}>Add personal subscription</Text>
+        <Text style={styles.subtitle}>
+          {subscriptionType === 'virtual'
+            ? 'First, enter some subscription details'
+            : 'Next, enter some subscription details'
+          }
+        </Text>
 
         <View style={styles.formContainer}>
           {/* Subscription Search */}
@@ -315,7 +314,7 @@ export default function SubscriptionScreen() {
             )}
           />
 
-          {/* Payment every with enhanced calculation display */}
+          {/* Payment every */}
           <Text style={styles.label}>Payment every</Text>
           <View style={styles.rowContainer}>
             <CustomInput
@@ -404,12 +403,20 @@ export default function SubscriptionScreen() {
         </View>
       </View>
 
+      {/* Progress Dots - Dynamic based on subscription type */}
+      <View style={styles.dotsContainer}>
+        <View style={[styles.dot, styles.inactiveDot]} />
+        <View style={[styles.dot, styles.activeDot]} />
+        {isVirtualFlow && <View style={[styles.dot, styles.inactiveDot]} />}
+        <View style={[styles.dot, styles.inactiveDot]} />
+      </View>
+
       {/* Bottom section with dots and button */}
       <View style={styles.buttonContainer}>
-        <ProgressDots totalSteps={3} currentStep={2} />
+        <ProgressDots totalSteps={totalSteps} currentStep={currentStep} />
         <CustomButton
-          text="Next"
-          onPress={handleSubmit(handleCreateGroup)}
+          text={subscriptionType === 'virtual' ? "Next - Create virtual card" : "Next - Update account credentials"}
+          onPress={handleSubmit(handleCreatePersonalSubscription)}
           size="large"
           fullWidth
           style={styles.nextButton}
@@ -419,9 +426,8 @@ export default function SubscriptionScreen() {
   );
 }
 
-// Consolidated and simplified styles
+// Copy all styles from SubscriptionInfo.tsx exactly
 const styles = StyleSheet.create({
-  // Layout
   container: {
     flex: 1,
     backgroundColor: 'white',
@@ -446,15 +452,13 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0)',
     zIndex: 90,
   },
-
-  // Headers
   title: {
     fontSize: 24,
-    fontWeight: '700',
+    fontWeight: '600',
     marginBottom: 8,
     color: '#4A3DE3',
     alignSelf: 'center',
-    marginTop: -30
+    marginTop: -20
   },
   subtitle: {
     fontSize: 16,
@@ -469,21 +473,6 @@ const styles = StyleSheet.create({
     marginTop: 16,
     color: '#000',
   },
-
-  // Calculation display
-  calculationDisplay: {
-    marginTop: 8,
-    marginBottom: 8,
-    paddingLeft: 4,
-  },
-  calculationText: {
-    fontSize: 14,
-    color: '#4A3DE3',
-    fontWeight: '500',
-    fontStyle: 'italic',
-  },
-
-  // Rows and containers
   rowContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -492,7 +481,7 @@ const styles = StyleSheet.create({
   },
   buttonContainer: {
     position: 'absolute',
-    bottom: 0,
+    bottom: 35,
     left: 0,
     right: 0,
     paddingHorizontal: 20,
@@ -502,21 +491,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     width: '100%',
   },
-
-  // Inputs base styles
-  dropdownBase: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 12,
-    backgroundColor: '#F8FAFC',
-    height: 50,
-  },
-
-  // Input specific styles
   dropdownInput: {
     paddingVertical: 12,
   },
@@ -569,21 +543,6 @@ const styles = StyleSheet.create({
     marginBottom: 5,
     height: 50,
   },
-
-  // Dropdown menus
-  dropdownMenuBase: {
-    backgroundColor: 'white',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 12,
-    zIndex: 100,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    padding: 8,
-    elevation: 10,
-  },
   dropdownMenu: {
     position: 'absolute',
     top: 20,
@@ -599,8 +558,6 @@ const styles = StyleSheet.create({
     padding: 16,
     elevation: 10,
   },
-
-  // Dropdown content
   dropdownItem: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -611,10 +568,6 @@ const styles = StyleSheet.create({
   dropdownText: {
     fontSize: 16,
     color: '#333',
-  },
-  dropdownValue: {
-    fontSize: 16,
-    color: '#000',
   },
   dropdownHeader: {
     fontSize: 16,
@@ -627,8 +580,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#eee',
     marginVertical: 8,
   },
-
-  // Subscription search
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -673,8 +624,6 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     marginRight: 12,
   },
-
-  // Custom option
   customOption: {
     padding: 12,
     marginTop: 4,
@@ -712,5 +661,23 @@ const styles = StyleSheet.create({
     color: '#666',
     textAlign: 'center',
     padding: 12,
+  },
+  dotsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  dot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    marginHorizontal: 4,
+  },
+  activeDot: {
+    backgroundColor: '#4A3DE3',
+  },
+  inactiveDot: {
+    backgroundColor: '#E2E8F0',
   },
 });
