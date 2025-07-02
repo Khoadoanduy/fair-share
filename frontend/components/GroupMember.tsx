@@ -232,13 +232,10 @@ const GroupMembers: React.FC<Props> = ({ groupId, userId, showAmountEach, showEs
                 <Text style={styles.username}>{invitation.user.username}</Text>
               </View>
               <CustomButton 
-              </View>
-              <CustomButton 
                 text="Invited"
                 style={styles.buttonInvited}
                 textStyle={styles.textInvited}
               />
-            </View>
           ))
         ) : (
           <></>

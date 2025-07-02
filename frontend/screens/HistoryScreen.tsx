@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -7,11 +7,12 @@ import {
   TouchableOpacity,
   SafeAreaView,
   ActivityIndicator,
-  Image,
 } from 'react-native';
 import axios from 'axios';
 import { useAuth } from '@clerk/clerk-expo';
 import { useRouter } from 'expo-router';
+import { useUserState } from '@/hooks/useUserState';
+import SubscriptionCard from '@/components/SubscriptionCard';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
@@ -20,22 +21,52 @@ interface Transaction {
   amount: number;
   created: number;
   status: string;
-  currency?: string;
-  description?: string;
+  metadata?: {
+    groupId?: string;
+  };
+}
+
+interface Group {
+  id: string;
+  groupName: string;
+  subscriptionName: string;
+  subscriptionId?: string;
+  category: string;
+  logo?: string;
+  subscription?: {
+    logo?: string;
+    category?: string;
+  };
+  subscriptionType: 'shared' | 'personal';
+  totalMem: number;
+}
+
+interface EnrichedTransaction extends Transaction {
+  groupData?: Group;
+  subscriptionName?: string;
+  category?: string;
+  logo?: string | null;
+  isShared?: boolean;
 }
 
 interface GroupedTransactions {
-  [date: string]: Transaction[];
+  [date: string]: EnrichedTransaction[];
 }
+
+type FilterType = 'all' | 'personal' | 'shared';
 
 const HistoryScreen = () => {
   const router = useRouter();
   const { userId: clerkId } = useAuth();
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [transactions, setTransactions] = useState<EnrichedTransaction[]>([]);
   const [loading, setLoading] = useState(true);
-  const [logos, setLogos] = useState<{ [key: string]: string | null }>({});
+  const [filterType, setFilterType] = useState<FilterType>('all');
+  const [showCategoryFilters, setShowCategoryFilters] = useState(false);
+  const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [categories, setCategories] = useState<string[]>([]);
+  const user = useUserState();
 
-  const groupTransactionsByDate = (transactions: Transaction[]): GroupedTransactions => {
+  const groupTransactionsByDate = (transactions: EnrichedTransaction[]): GroupedTransactions => {
     const grouped: GroupedTransactions = {};
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -49,7 +80,7 @@ const HistoryScreen = () => {
         dateKey = 'Today';
       } else {
         const day = transactionDate.getDate();
-        const month = transactionDate.toLocaleDateString('en-US', { month: 'short' });
+        const month = transactionDate.toLocaleDateString('en-US', { month: 'long' });
         dateKey = `${day} ${month}`;
       }
 
@@ -77,20 +108,49 @@ const HistoryScreen = () => {
 
   const fetchTransactions = async () => {
     try {
-      const user = await axios.get(`${API_URL}/api/user`, {
-        params: { clerkID: clerkId },
-      });
-
-      if (!user.data.customerId) {
-        setLoading(false);
-        return;
-      }
-
       const transactionsResponse = await axios.get(`${API_URL}/api/stripe-payment/transactions`, {
-        params: { customerStripeID: user.data.customerId },
+        params: { customerStripeID: user.stripeCustomerId },
       });
 
-      setTransactions(transactionsResponse.data);
+      // Enrich transactions with group data
+      const enrichmentPromises = transactionsResponse.data.map(async (transaction: Transaction) => {
+        try {
+          if (transaction.metadata?.groupId) {
+            // Fetch group data including subscription relation
+            const res = await axios.get(`${API_URL}/api/group/${transaction.metadata.groupId}`);
+            const group: Group = res.data;
+            
+            return {
+              ...transaction,
+              groupData: group,
+              subscriptionName: group.subscriptionName,
+              category: group.subscription?.category || group.category,
+              logo: group.subscription?.logo || group.logo || null,
+              isShared: group.subscriptionType == "shared",
+            };
+          }
+        } catch (err) {
+          console.error(`Failed to fetch group data for transaction ${transaction.id}`, err);
+          // Return null to filter out later
+          return null;
+        }
+        
+        // Return null for transactions without groupId
+        return null;
+      });
+
+      const results = await Promise.all(enrichmentPromises);
+      
+      // Filter out failed fetches and transactions without group data
+      const enrichedTransactions = results.filter(t => t !== null) as EnrichedTransaction[];
+      
+      // Extract unique categories from enriched transactions
+      const uniqueCategories = [...new Set(enrichedTransactions
+        .map((t) => t.category)
+        .filter(Boolean))] as string[];
+      setCategories(uniqueCategories);
+      
+      setTransactions(enrichedTransactions);
     } catch (err) {
       console.error('Error fetching transactions:', err);
     } finally {
@@ -98,84 +158,62 @@ const HistoryScreen = () => {
     }
   };
 
-  const fetchLogosForTransactions = async () => {
-    const logoMap: { [key: string]: string | null } = {};
-
-    for (const transaction of transactions) {
-      const name = transaction.description;
-      if (name && !logos[name]) {
-        try {
-          const res = await axios.get(`${API_URL}/api/subscriptions`, {
-            params: { search: name },
-          });
-          const match = res.data[0]
-          console.log(`Fetched logo for ${name}:`, match.logo);
-          logoMap[name] = match.logo || null;
-        } catch (err) {
-          console.error(`Failed to fetch logo for ${name}`, err);
-          logoMap[name] = null;
-        }
-      }
-    }
-
-    setLogos((prev) => ({ ...prev, ...logoMap }));
-  };
-
   useEffect(() => {
-    if (clerkId) {
+    if (clerkId && user?.stripeCustomerId) {
       fetchTransactions();
     }
-  }, [clerkId]);
+  }, [clerkId, user?.stripeCustomerId]);
 
-  useEffect(() => {
-    if (transactions.length > 0) {
-      fetchLogosForTransactions();
-    }
-  }, [transactions]);
+  const getFilteredTransactions = () => {
+    return transactions.filter(transaction => {
+      // Filter by type (personal/shared)
+      if (filterType !== 'all') {
+        if (filterType === 'shared' && !transaction.isShared) return false;
+        if (filterType === 'personal' && transaction.isShared) return false;
+      }
 
-  const getStatusColor = (status: string) => {
-    return status === 'succeeded' ? '#4CAF50' : '#FFA500';
+      // Filter by category
+      if (categoryFilter !== 'all' && transaction.category !== categoryFilter) return false;
+
+      return true;
+    });
   };
 
-  const renderTransaction = (transaction: Transaction) => {
-    const amount = (transaction.amount / 100).toFixed(2);
-    const status = transaction.status === 'succeeded' ? 'Succeed' : 'Pending';
-    const name = transaction.description || 'Subscription';
-    const logo = logos[name];
+  const renderTransaction = (transaction: EnrichedTransaction) => {
+    const amount = transaction.amount / 100;
+    const name = transaction.subscriptionName || 'Subscription';
     const createdAt = new Date(transaction.created * 1000);
-    const formattedDateTime = createdAt.toLocaleString('en-US', {
-      dateStyle: 'medium',
-      timeStyle: 'short',
+    const formattedTime = createdAt.toLocaleString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
     });
 
-    const icon = logo ? (
-      <View style={styles.iconContainer}>
-        <Image source={{ uri: logo }} style={styles.logoImage} />
-      </View>
-    ) : (
-      <View style={[styles.iconContainer, { backgroundColor: '#6B7280' }]}>
-        <Text style={styles.iconText}>{name.charAt(0).toUpperCase()}</Text>
-      </View>
-    );
-
     return (
-      <View key={transaction.id} style={styles.transactionCard}>
-        <View style={styles.transactionContent}>
-          {icon}
-          <View style={styles.transactionDetails}>
-            <Text style={styles.transactionName}>{name}</Text>
-            <Text style={styles.transactionTimestamp}>{formattedDateTime}</Text>
-          </View>
-          <View style={styles.rightSection}>
-            <Text style={styles.amount}>-${amount}</Text>
-            <Text style={[styles.status, { color: getStatusColor(transaction.status) }]}>
-              {status}
-            </Text>
-          </View>
-        </View>
+      <View key={transaction.id}>
+        <SubscriptionCard
+          logo={transaction.logo ? { uri: transaction.logo } : null}
+          subscriptionName={name}
+          amountEach={amount}
+          isShared={transaction.isShared}
+          category={transaction.category}
+          showNegativeAmount={true}
+          timestamp={formattedTime}
+        />
       </View>
     );
   };
+
+  const FilterPill = ({ label, isActive, onPress }: { label: string; isActive: boolean; onPress: () => void }) => (
+    <TouchableOpacity
+      style={[styles.filterPill, isActive && styles.filterPillActive]}
+      onPress={onPress}
+    >
+      <Text style={[styles.filterPillText, isActive && styles.filterPillTextActive]}>
+        {label}
+      </Text>
+    </TouchableOpacity>
+  );
 
   if (loading) {
     return (
@@ -187,7 +225,8 @@ const HistoryScreen = () => {
     );
   }
 
-  const groupedTransactions = groupTransactionsByDate(transactions);
+  const filteredTransactions = getFilteredTransactions();
+  const groupedTransactions = groupTransactionsByDate(filteredTransactions);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -199,8 +238,61 @@ const HistoryScreen = () => {
         <View style={styles.placeholder} />
       </View>
 
+      <View style={styles.filterContainer}>
+        <FilterPill
+          label="All"
+          isActive={filterType === 'all'}
+          onPress={() => setFilterType('all')}
+        />
+        <FilterPill
+          label="Personal"
+          isActive={filterType === 'personal'}
+          onPress={() => setFilterType('personal')}
+        />
+        <FilterPill
+          label="Shared"
+          isActive={filterType === 'shared'}
+          onPress={() => setFilterType('shared')}
+        />
+        <FilterPill
+          label="Filters"
+          isActive={showCategoryFilters}
+          onPress={() => setShowCategoryFilters(!showCategoryFilters)}
+        />
+      </View>
+
+      {showCategoryFilters && categories.length > 0 && (
+        <View style={styles.categoryFilterContainer}>
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.categoryFilterContent}
+          >
+            <TouchableOpacity
+              style={[styles.categoryPill, categoryFilter === 'all' && styles.categoryPillActive]}
+              onPress={() => setCategoryFilter('all')}
+            >
+              <Text style={[styles.categoryPillText, categoryFilter === 'all' && styles.categoryPillTextActive]}>
+                All Categories
+              </Text>
+            </TouchableOpacity>
+            {categories.map((category) => (
+              <TouchableOpacity
+                key={category}
+                style={[styles.categoryPill, categoryFilter === category && styles.categoryPillActive]}
+                onPress={() => setCategoryFilter(category)}
+              >
+                <Text style={[styles.categoryPillText, categoryFilter === category && styles.categoryPillTextActive]}>
+                  {category.charAt(0).toUpperCase() + category.slice(1)}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+      )}
+
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {transactions.length === 0 ? (
+        {filteredTransactions.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyText}>No transactions found</Text>
           </View>
@@ -218,7 +310,10 @@ const HistoryScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F5F5F5' },
+  container: { 
+    flex: 1, 
+    backgroundColor: '#F8F9FA' 
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -226,48 +321,103 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 15,
   },
-  backButton: { width: 40, height: 40, justifyContent: 'center', alignItems: 'center' },
-  backButtonText: { fontSize: 35, color: '#000000', fontWeight: '300' },
-  headerTitle: { fontSize: 24, fontWeight: '600', color: '#5B5FFF' },
-  placeholder: { width: 40 },
-  scrollView: { flex: 1, paddingHorizontal: 20 },
-  dateGroup: { marginTop: 25 },
-  dateHeader: { fontSize: 20, fontWeight: '600', color: '#000000', marginBottom: 15 },
-  transactionCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 15,
-    padding: 20,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 2,
+  backButton: { 
+    width: 40, 
+    height: 40, 
+    justifyContent: 'center', 
+    alignItems: 'center' 
   },
-  transactionContent: { flexDirection: 'row', alignItems: 'center' },
-  iconContainer: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: '#E50914',
-    justifyContent: 'center',
+  backButtonText: { 
+    fontSize: 35, 
+    color: '#000000', 
+    fontWeight: '300' 
+  },
+  headerTitle: { 
+    fontSize: 24, 
+    fontWeight: '600', 
+    color: '#5B5FFF' 
+  },
+  placeholder: { 
+    width: 40 
+  },
+  filterContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 20,
+    marginBottom: 10,
+    gap: 10,
+  },
+  categoryFilterContainer: {
+    marginHorizontal: 20,
+    marginBottom: 10,
+    marginTop: -5,
+  },
+  categoryFilterContent: {
+    gap: 8,
+    paddingRight: 20,
+  },
+  categoryPill: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 16,
+    backgroundColor: '#E8E9F3',
+  },
+  categoryPillActive: {
+    backgroundColor: '#5B5FFF',
+  },
+  categoryPillText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#5B5FFF',
+  },
+  categoryPillTextActive: {
+    color: '#FFFFFF',
+  },
+  filterPill: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 20,
+    backgroundColor: '#E8E9F3',
     alignItems: 'center',
-    marginRight: 15,
   },
-  iconText: { color: '#FFFFFF', fontSize: 24, fontWeight: 'bold' },
-  logoImage: { width: 50, height: 50, borderRadius: 25, resizeMode: 'cover' },
-  transactionDetails: { flex: 1 },
-  transactionName: { fontSize: 18, fontWeight: '600', color: '#000000', marginBottom: 5 },
-  rightSection: { alignItems: 'flex-end' },
-  amount: { fontSize: 20, fontWeight: '600', color: '#000000', marginBottom: 5 },
-  status: { fontSize: 16, fontWeight: '500' },
-  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingTop: 100 },
-  emptyText: { fontSize: 16, color: '#666' },
-  transactionTimestamp: {
+  filterPillActive: {
+    backgroundColor: '#5B5FFF',
+  },
+  filterPillText: {
     fontSize: 14,
-    color: '#555',
-  }
+    fontWeight: '500',
+    color: '#5B5FFF',
+  },
+  filterPillTextActive: {
+    color: '#FFFFFF',
+  },
+  scrollView: { 
+    flex: 1, 
+    paddingHorizontal: 20 
+  },
+  dateGroup: { 
+    marginTop: 25 
+  },
+  dateHeader: { 
+    fontSize: 20, 
+    fontWeight: '600', 
+    color: '#000000', 
+    marginBottom: 15 
+  },
+  loadingContainer: { 
+    flex: 1, 
+    justifyContent: 'center', 
+    alignItems: 'center' 
+  },
+  emptyContainer: { 
+    flex: 1, 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    paddingTop: 100 
+  },
+  emptyText: { 
+    fontSize: 16, 
+    color: '#666' 
+  },
 });
 
 export default HistoryScreen;

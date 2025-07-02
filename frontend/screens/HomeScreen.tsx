@@ -37,7 +37,8 @@ export default function HomeScreen() {
   const [subscriptions, setSubscriptions] = useState<GroupData[]>([]);
   const [loading, setLoading] = useState(true);
 
-  usePushNotifications();
+  usePushNotifications(userId || '');
+
 
   useEffect(() => {
     const fetchGroups = async () => {

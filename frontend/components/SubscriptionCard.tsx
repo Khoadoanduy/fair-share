@@ -14,7 +14,9 @@ interface SubscriptionCardProps {
     logo?: string;
     isPersonal?: boolean;
     totalMem?: number;
-    endDate?: string;
+    endDate?: string; 
+    showNegativeAmount?: boolean;
+    timestamp?: string;
   };
   logo?: any; // fallback for simple usage
   subscriptionName?: string;
