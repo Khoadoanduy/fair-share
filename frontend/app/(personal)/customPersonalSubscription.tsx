@@ -9,10 +9,10 @@ import ProgressDots from '@/components/ProgressDots';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import CustomDropdown, { DropdownOption } from '@/components/CustomDropdown';
+import { useUser } from '@clerk/clerk-expo';
 import { useUserState } from '@/hooks/useUserState';
 import CustomDropdownModal from '@/components/CustomDropdownModal';
 import CustomInputModal from '@/components/CustomInputModal';
-
 
 type FormatData = {
   subscriptionName: string;
@@ -24,15 +24,38 @@ type FormatData = {
   currency: string;
 };
 
-export default function CustomSubscriptionScreen() {
+const CYCLE_OPTIONS: DropdownOption[] = [
+  { label: 'Weekly', value: 'weekly' },
+  { label: 'Monthly', value: 'monthly' },
+  { label: 'Yearly', value: 'yearly' },
+];
+
+const CURRENCY_OPTIONS: DropdownOption[] = [
+  { label: 'USD ($)', value: 'USD' },
+  { label: 'EUR (€)', value: 'EUR' },
+  { label: 'JPY (¥)', value: 'JPY' },
+];
+
+const CYCLE_DAYS_MAP = {
+  'weekly': 7,
+  'monthly': 30,
+  'yearly': 365,
+};
+
+export default function CustomPersonalSubscriptionScreen() {
   const API_URL = process.env.EXPO_PUBLIC_API_URL;
   const router = useRouter();
   const { userId } = useUserState();
+  const { personalType } = useLocalSearchParams();
 
+  // Calculate progress dots based on personalType
+  const totalSteps = personalType === 'virtual' ? 4 : 3;
+  const currentStep = 2; // Always step 2 for both flows
 
-  // Add visibility to the destructured params
-  const { groupName, visibility } = useLocalSearchParams();
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
+  const [subscriptionImage, setSubscriptionImage] = useState<string | null>(null);
+  const [showCustomCategoryModal, setShowCustomCategoryModal] = useState(false);
+  const [customCategoryInput, setCustomCategoryInput] = useState('');
 
   const { control, handleSubmit, setValue, watch } = useForm<FormatData>({
     defaultValues: {
@@ -41,32 +64,26 @@ export default function CustomSubscriptionScreen() {
       day: '1'
     }
   });
-  const dayValue = watch('day');
-  const cycleValue = watch('cycle');
-  const categoryValue = watch('category');
 
-  // State for modals and dropdowns
-  const [subscriptionImage, setSubscriptionImage] = useState<string | null>(null);
-  const [showCycleDropdown, setShowCycleDropdown] = useState(false);
-  const [showCurrencyDropdown, setShowCurrencyDropdown] = useState(false);
-  const [showCustomCategoryModal, setShowCustomCategoryModal] = useState(false);
-  const [customCategoryInput, setCustomCategoryInput] = useState('');
+  const watchedValues = watch(['day', 'cycle', 'category']);
+  const [dayValue, cycleValue, categoryValue] = watchedValues;
 
-  // Request permission on mount
+  // Request image permissions on mount
   useEffect(() => {
-    (async () => {
+    const requestPermissions = async () => {
       if (Platform.OS !== 'web') {
         const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (status !== 'granted') {
-          Alert.alert('Permission Denied', 'Sorry, we need camera roll permissions to make this work!');
+          Alert.alert('Permission Denied', 'Camera roll permissions are needed to upload images.');
         }
       }
-    })();
+    };
+    requestPermissions();
   }, []);
 
   const pickImage = async () => {
     try {
-      let result = await ImagePicker.launchImageLibraryAsync({
+      const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [1, 1],
@@ -74,8 +91,7 @@ export default function CustomSubscriptionScreen() {
       });
 
       if (!result.canceled) {
-        const uri = result.assets[0].uri;
-        setSubscriptionImage(uri);
+        setSubscriptionImage(result.assets[0].uri);
       }
     } catch (error) {
       console.error('ImagePicker error:', error);
@@ -85,59 +101,51 @@ export default function CustomSubscriptionScreen() {
 
   const calculateTotalDays = (dayValue: string, cycle: string): number => {
     const parsedDay = parseFloat(dayValue) || 1;
-    // Base days for each cycle
-
-    const cycleDaysMap: { [key: string]: number } = {
-      'weekly': 7,
-      'monthly': 30,
-      'yearly': 365,
-    };
-    const baseDays = cycleDaysMap[cycle.toLowerCase()] || 30;
-    // Calculate total days by multiplying base cycle days with the day value
-    const totalDays = Math.round(parsedDay * baseDays);
-    return totalDays;
+    const baseDays = CYCLE_DAYS_MAP[cycle.toLowerCase() as keyof typeof CYCLE_DAYS_MAP] || 30;
+    return Math.round(parsedDay * baseDays);
   };
 
-  const handleCreateGroup: SubmitHandler<FormatData> = async (info) => {
-    if (!info.subscriptionName || !info.planName || !info.amount || !info.cycle || !info.category) {
+  const handleCreatePersonalSubscription: SubmitHandler<FormatData> = async (data) => {
+    const { subscriptionName, planName, amount, cycle, category } = data;
+
+    if (!subscriptionName || !planName || !amount || !cycle || !category) {
       Alert.alert('Missing Info', 'Please fill in all fields');
       return;
     }
 
     try {
-      const cycleDays = calculateTotalDays(info.day, info.cycle);
-
-      // Create the group
+      const cycleDays = calculateTotalDays(data.day, cycle);
+      // Use unified endpoint for group creation
       const response = await axios.post(`${API_URL}/api/group/create`, {
-        groupName,
-        subscriptionName: info.subscriptionName,
-        planName: info.planName,
-        amount: parseFloat(info.amount),
-        cycle: info.cycle,
-        cycleDays: cycleDays,
-        paymentFrequency: parseFloat(info.day),
-        category: info.category,
-        userId: userId, 
-        visibility: visibility || 'friends', 
+        userId,
+        groupName: subscriptionName, // Consistent with personalSubscriptionInfo
+        subscriptionName,
+        planName,
+        amount: parseFloat(amount),
+        cycle,
+        cycleDays,
+        paymentFrequency: parseFloat(data.day),
+        category,
+        logo: subscriptionImage || null, // Consistent with personalSubscriptionInfo
+        subscriptionType: "personal", // Always set for personal
+        personalType, // 'existing' or 'virtual'
       });
-      
-      const groupId = response.data.groupId;
-      await axios.post(`${API_URL}/api/groupMember/${groupId}/${userId}`, { userRole: "leader" });
+      const nextRoute = personalType === 'virtual'
+        ? '/(personal)/createVirtualCard'
+        : '/(personal)/addAccountCredentials';
       router.push({
-        pathname: '/(group)/inviteMember',
-        params: { groupId: response.data.groupId },
+        pathname: nextRoute,
+        params: { groupId: response.data.groupId, personalType },
       });
     } catch (error) {
       console.error(error);
-      Alert.alert('Error', 'Failed to create group');
+      Alert.alert('Error', 'Failed to create personal subscription');
     }
   };
 
-  const toggleDropdown = (dropdown: string) => {
+  const handleDropdownToggle = (dropdown: string) => {
     setActiveDropdown(activeDropdown === dropdown ? null : dropdown);
   };
-
-  const isDropdownOpen = (dropdown: string) => activeDropdown === dropdown;
 
   const handleAddCustomCategory = () => {
     if (customCategoryInput.trim()) {
@@ -147,33 +155,19 @@ export default function CustomSubscriptionScreen() {
     }
   };
 
-  const cycleOptions: DropdownOption[] = [
-    { label: 'Weekly', value: 'weekly' },
-    { label: 'Monthly', value: 'monthly' },
-    { label: 'Yearly', value: 'yearly' },
-  ];
-
-  const currencyOptions: DropdownOption[] = [
-    { label: 'USD ($)', value: 'USD' },
-    { label: 'EUR (€)', value: 'EUR' },
-    { label: 'JPY (¥)', value: 'JPY' },
-  ];
-
-  // Close dropdown when clicking outside
   const handleOutsideClick = () => {
-    if (showCycleDropdown) {
-      setShowCycleDropdown(false);
-    }
-    if (showCurrencyDropdown) {
-      setShowCurrencyDropdown(false);
-    }
     setActiveDropdown(null);
     Keyboard.dismiss();
   };
 
+  const handleCloseCustomCategoryModal = () => {
+    setShowCustomCategoryModal(false);
+    setCustomCategoryInput('');
+  };
+
   return (
     <SafeAreaView style={styles.container}>
-      {(showCycleDropdown || showCurrencyDropdown || activeDropdown) && (
+      {activeDropdown && (
         <TouchableOpacity
           style={styles.overlay}
           activeOpacity={1}
@@ -185,10 +179,7 @@ export default function CustomSubscriptionScreen() {
         visible={showCustomCategoryModal}
         value={customCategoryInput}
         onChangeText={setCustomCategoryInput}
-        onCancel={() => {
-          setShowCustomCategoryModal(false);
-          setCustomCategoryInput('');
-        }}
+        onCancel={handleCloseCustomCategoryModal}
         onAdd={handleAddCustomCategory}
         title="Add custom category"
         subtitle="Customize category for your subscription"
@@ -198,7 +189,7 @@ export default function CustomSubscriptionScreen() {
       />
 
       <View style={styles.contentContainer}>
-        <Text style={styles.title}>Create new group</Text>
+        <Text style={styles.title}>Add personal subscription</Text>
         <Text style={styles.subtitle}>Next, enter some subscription details</Text>
 
         <View style={styles.formContainer}>
@@ -225,7 +216,7 @@ export default function CustomSubscriptionScreen() {
             </View>
           </View>
 
-          {/* Category field using the imported CustomDropdown */}
+          {/* Category field */}
           <Text style={styles.label}>Category</Text>
           <Controller
             control={control}
@@ -234,7 +225,7 @@ export default function CustomSubscriptionScreen() {
               <View style={styles.categoryContainer}>
                 <Pressable
                   style={styles.categoryInput}
-                  onPress={() => toggleDropdown('category')}
+                  onPress={() => handleDropdownToggle('category')}
                 >
                   <Text style={value ? styles.inputText : styles.placeholderText}>
                     {value ? value.charAt(0).toUpperCase() + value.slice(1) : 'Select subscription category'}
@@ -268,7 +259,7 @@ export default function CustomSubscriptionScreen() {
             )}
           />
 
-          {/* Payment every */}
+          {/* Payment frequency */}
           <Text style={styles.label}>Payment every</Text>
           <View style={styles.rowContainer}>
             <Controller
@@ -283,7 +274,7 @@ export default function CustomSubscriptionScreen() {
                   keyboardType="decimal-pad"
                   blurOnSubmit={true}
                   returnKeyType="done"
-                  onSubmitEditing={() => Keyboard.dismiss()}
+                  onSubmitEditing={Keyboard.dismiss}
                 />
               )}
             />
@@ -294,20 +285,14 @@ export default function CustomSubscriptionScreen() {
               rules={{ required: true }}
               render={({ field: { value } }) => (
                 <CustomDropdown
-                  options={cycleOptions}
+                  options={CYCLE_OPTIONS}
                   value={value}
                   placeholder="Select cycle"
                   onChange={(val) => setValue('cycle', val)}
-                  isOpen={showCycleDropdown}
-                  setIsOpen={() => setShowCycleDropdown(!showCycleDropdown)}
+                  isOpen={activeDropdown === 'cycle'}
+                  setIsOpen={() => handleDropdownToggle('cycle')}
                   style={styles.simpleDropdown}
-                  menuStyle={{
-                    position: 'absolute',
-                    top: 52,
-                    right: 0,
-                    width: '48%',
-                    zIndex: 100,
-                  }}
+                  menuStyle={styles.cycleDropdownMenu}
                 />
               )}
             />
@@ -321,20 +306,14 @@ export default function CustomSubscriptionScreen() {
               name="currency"
               render={({ field: { value } }) => (
                 <CustomDropdown
-                  options={currencyOptions}
+                  options={CURRENCY_OPTIONS}
                   value={value}
                   placeholder="Currency"
                   onChange={(val) => setValue('currency', val)}
-                  isOpen={showCurrencyDropdown}
-                  setIsOpen={() => setShowCurrencyDropdown(!showCurrencyDropdown)}
+                  isOpen={activeDropdown === 'currency'}
+                  setIsOpen={() => handleDropdownToggle('currency')}
                   style={styles.currencyInput}
-                  menuStyle={{
-                    position: 'absolute',
-                    top: 52,
-                    left: 0,
-                    width: '30%',
-                    zIndex: 100,
-                  }}
+                  menuStyle={styles.currencyDropdownMenu}
                   iconSize={18}
                 />
               )}
@@ -344,15 +323,15 @@ export default function CustomSubscriptionScreen() {
               control={control}
               name="amount"
               render={({ field: { value, onChange } }) => (
-                <TextInput
-                  style={[styles.amountInput, styles.inputStyle]}
+                <CustomInput
+                  control={control}
+                  name="amount"
                   placeholder="Amount"
-                  value={value}
-                  onChangeText={onChange}
                   keyboardType="decimal-pad"
+                  style={styles.amountInput}
                   blurOnSubmit={true}
                   returnKeyType="done"
-                  onSubmitEditing={() => Keyboard.dismiss()}
+                  onSubmitEditing={Keyboard.dismiss}
                 />
               )}
             />
@@ -367,7 +346,7 @@ export default function CustomSubscriptionScreen() {
               <View style={styles.categoryContainer}>
                 <Pressable
                   style={styles.categoryInput}
-                  onPress={() => toggleDropdown('planName')}
+                  onPress={() => handleDropdownToggle('planName')}
                 >
                   <Text style={value ? styles.inputText : styles.placeholderText}>
                     {value ? value : 'Select plan name'}
@@ -398,10 +377,10 @@ export default function CustomSubscriptionScreen() {
 
       {/* Bottom section */}
       <View style={styles.buttonContainer}>
-        <ProgressDots totalSteps={3} currentStep={2} />
+        <ProgressDots totalSteps={totalSteps} currentStep={currentStep} />
         <CustomButton
-          text="Next"
-          onPress={handleSubmit(handleCreateGroup)}
+          text={personalType === 'virtual' ? 'Next - Create virtual card' : 'Next - Update account credentials'}
+          onPress={handleSubmit(handleCreatePersonalSubscription)}
           size="large"
           fullWidth
           style={styles.nextButton}
@@ -412,7 +391,6 @@ export default function CustomSubscriptionScreen() {
 }
 
 const styles = StyleSheet.create({
-  // Container and main layout styles
   container: {
     flex: 1,
     backgroundColor: 'white',
@@ -427,13 +405,19 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0)',
     zIndex: 90,
   },
+  contentContainer: {
+    flex: 1,
+    paddingTop: 40,
+    paddingHorizontal: 20,
+    paddingBottom: 120,
+  },
   title: {
     fontSize: 24,
-    fontWeight: '700',
+    fontWeight: '600',
     marginBottom: 8,
     color: '#4A3DE3',
     alignSelf: 'center',
-    marginTop: -30
+    marginTop: -20
   },
   subtitle: {
     fontSize: 16,
@@ -441,16 +425,6 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     alignSelf: 'center'
   },
-
-  // Content container
-  contentContainer: {
-    flex: 1,
-    paddingTop: 40,
-    paddingHorizontal: 20,
-    paddingBottom: 120,
-  },
-
-  // Form container and labels
   formContainer: {
     flex: 1,
     paddingBottom: 20,
@@ -462,8 +436,6 @@ const styles = StyleSheet.create({
     marginTop: 16,
     color: '#000',
   },
-
-  // Subscription section
   subscriptionSection: {
     paddingVertical: 16,
     flexDirection: 'row',
@@ -506,8 +478,6 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     color: '#000',
   },
-
-  // Input styles
   subscriptionInput: {
     borderWidth: 1,
     borderColor: '#E2E8F0',
@@ -524,8 +494,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     fontSize: 16,
   },
-
-  // Category styles
   categoryContainer: {
     position: 'relative',
   },
@@ -549,8 +517,6 @@ const styles = StyleSheet.create({
     color: '#888',
     fontSize: 16,
   },
-
-  // Row container for inputs
   rowContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -565,9 +531,23 @@ const styles = StyleSheet.create({
     width: '48%',
     height: 50,
   },
+  cycleDropdownMenu: {
+    position: 'absolute',
+    top: 52,
+    right: 0,
+    width: '48%',
+    zIndex: 100,
+  },
   currencyInput: {
     width: '30%',
     height: 50,
+  },
+  currencyDropdownMenu: {
+    position: 'absolute',
+    top: 52,
+    left: 0,
+    width: '30%',
+    zIndex: 100,
   },
   amountInput: {
     width: '67%',
@@ -577,11 +557,9 @@ const styles = StyleSheet.create({
     height: 50,
     marginBottom: 20,
   },
-
-  // Button container
   buttonContainer: {
     position: 'absolute',
-    bottom: 0,
+    bottom: 35,
     left: 0,
     right: 0,
     paddingHorizontal: 20,
