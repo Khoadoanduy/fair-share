@@ -89,6 +89,41 @@ export default function GroupsScreen() {
   const handleCreateGroup = () => {
     router.push("/(group)/createGroupName");
   };
+  const handleAddPress = () => {
+    if (buttonRef.current) {
+      buttonRef.current.measure((fx: number, fy: number, width: number, height: number, px: number, py: number) => {
+        setButtonPosition({ x: px, y: py, width, height });
+        setShowAddModal(true);
+      });
+    } else {
+      setShowAddModal(true);
+    }
+  };
+  const handlePersonalPress = () => {
+    setShowAddModal(false);
+    router.push('/(personal)/personalSubscriptionChoice');
+  };
+
+  const handleGroupPress = () => {
+    setShowAddModal(false);
+    router.push('/(group)/createGroupName');
+  };
+
+  const handleExistingSubscription = () => {
+    setShowPersonalModal(false);
+    router.push({
+      pathname: '/(personal)/personalSubscriptionInfo',
+      params: { subscriptionType: 'existing' }
+    });
+  };
+
+  const handleVirtualCardSubscription = () => {
+    setShowPersonalModal(false);
+    router.push({
+      pathname: '/(personal)/personalSubscriptionInfo',
+      params: { subscriptionType: 'virtual' }
+    });
+  };
 
   const showAllInvitations = () => {
     router.push("/(group)/showAllInvitations");
