@@ -1,5 +1,5 @@
-import React from "react";
-import { View, Text, StyleSheet, ScrollView, Pressable } from "react-native";
+import React, { useEffect } from "react";
+import { View, Text, StyleSheet, ScrollView, Pressable, Animated, Easing } from "react-native";
 import Svg, { Path } from "react-native-svg";
 import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -38,9 +38,7 @@ const getCategoryIcon = (name) => {
 const formatCategoryName = (name: string) => {
   return name
     .split("_")
-    .map(
-      (word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
-    )
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
     .join(" ");
 };
 
@@ -51,13 +49,46 @@ const AnalysisCard = ({
   totalAmount,
   amountOfActive,
   backgroundColor = "transparent",
-  navigation, // Add navigation prop
+  navigation,
 }) => {
+  // Add rotation and scale animated values
+  const rotateValue = React.useRef(new Animated.Value(0)).current;
+  const scaleValue = React.useRef(new Animated.Value(0)).current;
+
+  // Add animation effect
+  useEffect(() => {
+    if (data && data.length > 0) {
+      // Reset values if needed
+      rotateValue.setValue(0);
+      scaleValue.setValue(0);
+      Animated.parallel([
+        Animated.timing(rotateValue, {
+          toValue: 1,
+          duration: 1000,
+          easing: Easing.out(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(scaleValue, {
+          toValue: 1,
+          duration: 1000,
+          easing: Easing.out(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [data]);
+
+  // Create rotate interpolation
+  const spin = rotateValue.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
+
   const radius = size / 2 - strokeWidth / 2;
   const center = size / 2;
 
   const createDonutPath = (percentage, startAngle, radius, strokeWidth) => {
-    const angle = (percentage / 100) * 360;
+    const angle = percentage >= 100 ? 359.99 : (percentage / 100) * 360;
     const endAngle = startAngle + angle;
 
     const centerX = center;
@@ -87,20 +118,42 @@ const AnalysisCard = ({
     let currentAngle = 0;
 
     return (
-      <Svg width={size} height={size} style={{ backgroundColor }}>
-        {data.map((item, index) => {
-          const path = createDonutPath(
-            item.percentage,
-            currentAngle,
-            radius,
-            strokeWidth
-          );
-          currentAngle += (item.percentage / 100) * 360;
+      <Animated.View style={{ transform: [{ rotate: spin }, { scale: scaleValue }] }}>
+        <Svg width={size} height={size} style={{ backgroundColor }}>
+          {data?.map((item, index) => {
+            const path = createDonutPath(
+              item.percentage,
+              currentAngle,
+              radius,
+              strokeWidth
+            );
+            currentAngle += (item.percentage / 100) * 360;
 
-          return <Path key={index} d={path} fill={item.color} />;
-        })}
-      </Svg>
+            return <Path key={index} d={path} fill={item.color} />;
+          })}
+        </Svg>
+      </Animated.View>
     );
+  };
+
+  const renderSafeChart = () => {
+    try {
+      if (!data || data.length === 0) {
+        return (
+          <View style={[styles.container, { width: size, height: size }]}>
+            <Text style={styles.errorText}>No data available</Text>
+          </View>
+        );
+      }
+      return renderChart();
+    } catch (error) {
+      console.error('Error rendering chart:', error);
+      return (
+        <View style={[styles.container, { width: size, height: size }]}>
+          <Text style={styles.errorText}>Error loading chart</Text>
+        </View>
+      );
+    }
   };
 
   const renderCenterContent = () => (
@@ -122,8 +175,8 @@ const AnalysisCard = ({
         color: category.color,
         backgroundColor: getCategoryIcon(category.name).backgroundColor,
         icon: category.name.toLowerCase(),
-        subscriptions: JSON.stringify(category.subscriptions)
-      }
+        subscriptions: JSON.stringify(category.subscriptions),
+      },
     });
   };
 
@@ -131,7 +184,7 @@ const AnalysisCard = ({
     <View style={styles.cardContainer}>
       <View style={styles.chartSection}>
         <View style={styles.container}>
-          {renderChart()}
+          {renderSafeChart()}
           <View
             style={[
               styles.centerContent,
@@ -262,7 +315,7 @@ const styles = StyleSheet.create({
     display: "flex",
     flexDirection: "row",
     marginBottom: 12,
-    backgroundColor: 'white', // Add background color
+    backgroundColor: "white", // Add background color
     borderRadius: 8, // Add border radius
     // Add pressed state
     pressable: {
@@ -311,6 +364,13 @@ const styles = StyleSheet.create({
   categoryRight: {
     flexDirection: "row",
     alignItems: "center",
+  },
+  errorText: {
+    color: "red",
+    fontSize: 14,
+    fontFamily: "Inter",
+    fontWeight: "500",
+    textAlign: "center",
   },
 });
 

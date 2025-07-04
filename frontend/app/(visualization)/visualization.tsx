@@ -1,6 +1,6 @@
 import { AnalysisCard } from "@/components/AnalysisCard";
-import { useLocalSearchParams } from "expo-router";
-import { useMemo, useState } from "react";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { useMemo, useState, useEffect, useRef } from "react";
 import Feather from "@expo/vector-icons/Feather";
 import {
   View,
@@ -8,79 +8,199 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
+  Animated,
+  Easing,
 } from "react-native";
+import mockPaymentData from "@/utils/mockData.json";
+import axios from "axios";
 
 export default function Visualization() {
+  const API_URL = process.env.EXPO_PUBLIC_API_URL;
   const [selectedView, setSelectedView] = useState("Monthly");
   const [selectedYear, setSelectedYear] = useState(2025);
   const [selectedMonth, setSelectedMonth] = useState("June");
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [calendarType, setCalendarType] = useState<"month" | "year">("month");
+  const [filteredPayments, setFilteredPayments] = useState([]);
+  const [chartAnimation] = useState(new Animated.Value(0));
+  const [categoryDataState, setCategoryData] = useState([]);
+  const router = useRouter();
   const params = useLocalSearchParams();
   const subscriptions = JSON.parse(params.subscriptions as string);
 
+  // Update the hashmap to include more categories and their variations
   const hashmap = {
     home: "#3BCEAC",
     streaming: "#EC4899",
     music: "#4A3DE3",
     news: "#F6AE2D",
     cloud_storage: "#666",
+    other: "#666",
+    // Add variations
+    "cloud-storage": "#666",
+    "cloud storage": "#666",
   };
 
   const hasSubscriptions = subscriptions.length > 0;
 
+  // Convert month name to month number (0-11)
+  const getMonthNumber = (monthName) => {
+    const months = [
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December",
+    ];
+    return months.indexOf(monthName);
+  };
+
+  // Filter payments based on selected date
+  useEffect(() => {
+    if (mockPaymentData && mockPaymentData.length > 0) {
+      let filtered = [];
+
+      if (selectedView === "Monthly") {
+        const monthNumber = getMonthNumber(selectedMonth);
+
+        filtered = mockPaymentData.filter((payment) => {
+          const paymentDate = new Date(payment.created * 1000);
+          return (
+            paymentDate.getFullYear() === selectedYear &&
+            paymentDate.getMonth() === monthNumber
+          );
+        });
+      } else {
+        // Yearly view
+        filtered = mockPaymentData.filter((payment) => {
+          const paymentDate = new Date(payment.created * 1000);
+          return paymentDate.getFullYear() === selectedYear;
+        });
+      }
+
+      setFilteredPayments(filtered);
+
+      // Reset chart animation value
+      chartAnimation.setValue(0);
+
+      // Delay the animation start by 300ms
+      setTimeout(() => {
+        Animated.timing(chartAnimation, {
+          toValue: 1,
+          duration: 1000,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }).start();
+      }, 1000);
+    }
+  }, [selectedMonth, selectedYear, selectedView, chartAnimation]);
+
   const totalAmount = useMemo(() => {
-    if (!hasSubscriptions) return 0;
-    return subscriptions.reduce(
-      (sum, subscription) => sum + subscription.amountEach,
+    if (filteredPayments.length === 0) return 0;
+    return filteredPayments.reduce(
+      (sum, payment) => sum + payment.amount / 100, // Convert cents to dollars
       0
     );
-  }, [subscriptions]);
+  }, [filteredPayments]);
 
-  const categoryData = useMemo(() => {
-    if (!hasSubscriptions) return [];
+  const categoryData = useMemo(async () => {
+    if (filteredPayments.length === 0) return [];
 
-    const categoryTotals = subscriptions.reduce((acc, subscription) => {
-      const category = subscription.category;
-      if (!acc[category]) {
-        acc[category] = 0;
-      }
-      acc[category] += subscription.amountEach;
-      return acc;
-    }, {});
+    try {
+      // Get all groups from filtered payments
+      const groupIds = [...new Set(filteredPayments.map(payment => 
+        payment.metadata?.groupId).filter(Boolean))];
 
-    const categories = Object.entries(categoryTotals).map(
-      ([category, amount]) => ({
+      // Fetch group details for each group
+      const groupResponses = await Promise.all(
+        groupIds.map(groupId => 
+          axios.get(`${API_URL}/api/group/${groupId}`)
+        )
+      );
+
+      const groups = groupResponses.map(response => response.data);
+
+      // Calculate totals by category
+      const categoryTotals = {};
+      filteredPayments.forEach(payment => {
+        const group = groups.find(g => g.id === payment.metadata?.groupId);
+        if (!group) return;
+
+        const category = group.category?.toLowerCase() || 'other';
+        if (!categoryTotals[category]) {
+          categoryTotals[category] = 0;
+        }
+        categoryTotals[category] += payment.amount / 100; // Convert cents to dollars
+      });
+
+      // Format data for chart
+      const categories = Object.entries(categoryTotals).map(([category, amount]) => ({
         category,
         amount,
         exactPercentage: (amount / totalAmount) * 100,
-        color: hashmap[category],
-      })
-    );
+        color: hashmap[category] || "#666",
+        subscriptions: groups
+          .filter(group => group.category?.toLowerCase() === category)
+          .map(group => ({
+            ...group,
+            logo: group.subscription?.logo || group.logo,
+            subscriptionName: group.subscriptionName,
+            amountEach: group.amountEach,
+            cycle: group.cycle
+          }))
+      }));
 
-    const roundedCategories = categories.map((item) => ({
-      ...item,
-      percentage: Math.floor(item.exactPercentage),
-    }));
+      // Round percentages
+      const roundedCategories = categories.map(item => ({
+        ...item,
+        percentage: Math.floor(item.exactPercentage)
+      }));
 
-    const totalRounded = roundedCategories.reduce(
-      (sum, item) => sum + item.percentage,
-      0
-    );
-    const remaining = 100 - totalRounded;
-    const withDecimals = categories
-      .map((item, index) => ({
-        index,
-        decimal: item.exactPercentage - Math.floor(item.exactPercentage),
-      }))
-      .sort((a, b) => b.decimal - a.decimal);
-    for (let i = 0; i < remaining; i++) {
-      const indexToIncrement = withDecimals[i % withDecimals.length].index;
-      roundedCategories[indexToIncrement].percentage += 1;
+      // Adjust rounding
+      const totalRounded = roundedCategories.reduce(
+        (sum, item) => sum + item.percentage, 0
+      );
+      const remaining = 100 - totalRounded;
+      
+      if (remaining > 0) {
+        const withDecimals = categories
+          .map((item, index) => ({
+            index,
+            decimal: item.exactPercentage - Math.floor(item.exactPercentage)
+          }))
+          .sort((a, b) => b.decimal - a.decimal);
+          
+        for (let i = 0; i < remaining; i++) {
+          const indexToIncrement = withDecimals[i % withDecimals.length]?.index || 0;
+          roundedCategories[indexToIncrement].percentage += 1;
+        }
+      }
+
+      return roundedCategories;
+
+    } catch (error) {
+      console.error('Error fetching category data:', error);
+      return [];
     }
+  }, [filteredPayments, totalAmount, API_URL]);
 
-    return roundedCategories;
-  }, [subscriptions, totalAmount]);
+  // Update the AnalysisCard usage to handle Promise
+  useEffect(() => {
+    const loadCategoryData = async () => {
+      const data = await categoryData;
+      // Update state to trigger re-render
+      setCategoryData(data);
+    };
+    
+    loadCategoryData();
+  }, [categoryData]);
 
   const DatePicker = () => {
     const months = [
@@ -118,6 +238,11 @@ export default function Visualization() {
     const handleYearHeaderClick = () => {
       setCalendarType("year");
     };
+
+    // Update calendar type when view changes
+    useEffect(() => {
+      setCalendarType(selectedView === "Monthly" ? "month" : "year");
+    }, [selectedView]);
 
     return (
       <View style={styles.datePickerContainer}>
@@ -226,22 +351,98 @@ export default function Visualization() {
     );
   };
 
+  // Handle navigation to category details
+  const handleCategoryPress = (category) => {
+    router.push({
+      pathname: "/(visualization)/categoryDetails",
+      params: {
+        category: category.category,
+        amount: category.amount.toFixed(2),
+        percentage: category.percentage,
+        color: category.color,
+        subscriptions: JSON.stringify(category.subscriptions),
+      },
+    });
+  };
+
   return (
     <View style={styles.container}>
+      <View style={styles.viewToggle}>
+        <TouchableOpacity
+          style={[
+            styles.toggleButton,
+            selectedView === "Monthly" && styles.selectedToggle,
+          ]}
+          onPress={() => setSelectedView("Monthly")}
+        >
+          <Text
+            style={[
+              styles.toggleText,
+              selectedView === "Monthly" && styles.selectedToggleText,
+            ]}
+          >
+            Monthly
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[
+            styles.toggleButton,
+            selectedView === "Yearly" && styles.selectedToggle,
+          ]}
+          onPress={() => setSelectedView("Yearly")}
+        >
+          <Text
+            style={[
+              styles.toggleText,
+              selectedView === "Yearly" && styles.selectedToggleText,
+            ]}
+          >
+            Yearly
+          </Text>
+        </TouchableOpacity>
+      </View>
+
       <DatePicker />
-      <AnalysisCard
-        data={categoryData.map((item) => ({
-          name: item.category,
-          percentage: item.percentage,
-          amount: item.amount.toFixed(2),
-          color: item.color,
-        }))}
-        amountOfActive={subscriptions.length}
-        totalAmount={totalAmount.toFixed(2)}
-        size={200}
-        strokeWidth={25}
-        backgroundColor="white"
-      />
+
+      {categoryDataState.length > 0 ? (
+        <Animated.View
+          style={{
+            opacity: chartAnimation,
+            transform: [
+              {
+                scale: chartAnimation.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0.8, 1],
+                }),
+              },
+            ],
+          }}
+        >
+          <AnalysisCard
+            data={categoryDataState.map((item) => ({
+              name: item.category,
+              percentage: item.percentage,
+              amount: item.amount.toFixed(2),
+              color: item.color,
+              subscriptions: item.subscriptions,
+            }))}
+            amountOfActive={filteredPayments.length}
+            totalAmount={totalAmount.toFixed(2)}
+            size={200}
+            strokeWidth={25}
+            backgroundColor="white"
+          />
+        </Animated.View>
+      ) : (
+        <View style={styles.noDataContainer}>
+          <Text style={styles.noDataText}>
+            No payment data available for{" "}
+            {selectedView === "Monthly"
+              ? `${selectedMonth} ${selectedYear}`
+              : selectedYear}
+          </Text>
+        </View>
+      )}
     </View>
   );
 }
@@ -391,5 +592,18 @@ const styles = StyleSheet.create({
     color: "#1F2937",
     fontWeight: "500",
     fontSize: 16,
+  },
+  noDataContainer: {
+    marginTop: 20,
+    padding: 16,
+    backgroundColor: "#F9FAFB",
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  noDataText: {
+    fontSize: 16,
+    color: "#6B7280",
+    textAlign: "center",
   },
 });
