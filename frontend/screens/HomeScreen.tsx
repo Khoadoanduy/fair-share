@@ -7,16 +7,14 @@ import {
   ActivityIndicator,
   Pressable,
 } from "react-native";
-import { useUser } from "@clerk/clerk-expo";
 import { useUserState } from "@/hooks/useUserState";
 import { useEffect, useState, useMemo } from "react";
-import { useAppDispatch } from "@/redux/hooks";
 import { usePushNotifications } from "@/utils/notificationUtils";
 import SubscriptionCard from "@/components/SubscriptionCard";
 import axios from "axios";
-import { sub } from "date-fns";
-import { formatRelativeDate, getDaysRemaining } from "@/utils/dateUtils";
 import Feather from "@expo/vector-icons/Feather";
+import { useRouter } from "expo-router";
+import { formatCategoryName } from "@/utils/categoryName";
 
 type GroupData = {
   subscription: {
@@ -36,9 +34,9 @@ export default function HomeScreen() {
   const { name, userId } = useUserState();
   const [subscriptions, setSubscriptions] = useState<GroupData[]>([]);
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
-  usePushNotifications(userId || '');
-
+  usePushNotifications();
 
   useEffect(() => {
     const fetchGroups = async () => {
@@ -88,11 +86,32 @@ export default function HomeScreen() {
       0
     );
   }, [subscriptions]);
+  const handleSummry = () => {
+    router.push({
+      pathname: "/(visualization)/visualization",
+      params: {
+        subscriptions: JSON.stringify(subscriptions),
+      },
+    });
+  };
+
+  const getNonUpcomingSubscriptions = () => {
+    if (!hasSubscriptions) return [];
+
+    const today = new Date();
+    const oneWeekFromNow = new Date();
+    oneWeekFromNow.setDate(today.getDate() + 7);
+
+    return subscriptions.filter((subscription) => {
+      const renewalDate = new Date(subscription.endDate);
+      return renewalDate > oneWeekFromNow;
+    });
+  };
 
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView>
-        <Pressable style={styles.content}>
+        <View style={styles.content}>
           <Text style={styles.welcomeText}>Welcome, {name}</Text>
 
           {loading ? (
@@ -112,7 +131,10 @@ export default function HomeScreen() {
             </View>
           ) : (
             <>
-              <Pressable style={styles.summaryBox}>
+              <Pressable
+                onPress={() => handleSummry()}
+                style={styles.summaryBox}
+              >
                 <Pressable style={styles.cycleSelector}>
                   <Text style={styles.cycleText}>Monthly</Text>
                   <Text style={styles.cycleArrow}>›</Text>
@@ -149,18 +171,21 @@ export default function HomeScreen() {
                 </View>
               </Pressable>
 
-              {getUpcomingRenewals().length > 0 && (
-                <View style={styles.upcomingRenewalsSection}>
-                  <View style={styles.headerContainer}>
-                    <View style={styles.titleGroup}>
-                      <Text style={styles.sectionTitle}>Upcoming Renewals</Text>
-                      <View style={styles.verticalSeparator} />
-                    </View>
+              <View style={styles.upcomingRenewalsSection}>
+                <View style={styles.headerContainer}>
+                  <View style={styles.titleGroup}>
+                    <Text style={styles.sectionTitle}>Upcoming Renewals</Text>
+                    <View style={styles.verticalSeparator} />
+                  </View>
+                  {getUpcomingRenewals().length > 0 && (
                     <Text style={styles.upcomingAmount}>
                       ${totalAmountOfUpcomingRenewals.toFixed(2)}
                     </Text>
-                  </View>
-                  <View style={styles.upcomingRenewalsList}>
+                  )}
+                </View>
+
+                {getUpcomingRenewals().length > 0 ? (
+                  <View style={styles.subscriptionsList}>
                     {getUpcomingRenewals().map((subscription, index) => (
                       <SubscriptionCard
                         key={`renewal-${index}`}
@@ -169,15 +194,42 @@ export default function HomeScreen() {
                         cycle={subscription.cycle}
                         amountEach={subscription.amountEach}
                         isShared
-                        category={subscription.category}
+                        category={formatCategoryName(subscription.category)}
                       />
                     ))}
                   </View>
+                ) : (
+                  <View style={styles.noUpcomingContainer}>
+                    <Text style={styles.noUpcomingText}>
+                      No upcoming renewals in the next 7 days
+                    </Text>
+                  </View>
+                )}
+              </View>
+
+              <View style={styles.allSubscriptionsSection}>
+                <View style={styles.headerContainer}>
+                  <View style={styles.titleGroup}>
+                    <Text style={styles.sectionTitle}>All Subscriptions</Text>
+                  </View>
                 </View>
-              )}
+                <View style={styles.subscriptionsList}>
+                  {getNonUpcomingSubscriptions().map((subscription, index) => (
+                    <SubscriptionCard
+                      key={`subscription-${index}`}
+                      logo={{ uri: subscription.logo }}
+                      subscriptionName={subscription.groupName}
+                      cycle={subscription.cycle}
+                      amountEach={subscription.amountEach}
+                      isShared
+                      category={formatCategoryName(subscription.category)}
+                    />
+                  ))}
+                </View>
+              </View>
             </>
           )}
-        </Pressable>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -214,6 +266,7 @@ const styles = StyleSheet.create({
   },
   subscriptionsList: {
     paddingHorizontal: 20,
+    gap: 9,
   },
   emptyStateContainer: {
     padding: 20,
@@ -276,7 +329,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "black",
     marginBottom: 4,
-    paddingRight: 32, // Add padding to prevent text overlap with icon
+    paddingRight: 32,
   },
   statValueContainer: {
     flexDirection: "row",
@@ -305,7 +358,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   upcomingRenewalsSection: {
-    paddingHorizontal: 20,
+    marginTop: 24,
   },
   headerContainer: {
     flexDirection: "row",
@@ -324,7 +377,7 @@ const styles = StyleSheet.create({
   },
   verticalSeparator: {
     width: 1,
-    height: 24, // Fixed height to match text
+    height: 24,
     backgroundColor: "#ccc",
     marginLeft: 12,
   },
@@ -332,5 +385,19 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "600",
     color: "#111827",
+  },
+  noUpcomingContainer: {
+    padding: 16,
+    backgroundColor: "#F9FAFB",
+    borderRadius: 12,
+    marginBottom: 16,
+  },
+  noUpcomingText: {
+    fontSize: 14,
+    color: "#6B7280",
+    textAlign: "center",
+  },
+  allSubscriptionsSection: {
+    marginTop: 15,
   },
 });

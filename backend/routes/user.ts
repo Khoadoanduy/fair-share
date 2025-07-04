@@ -100,62 +100,34 @@ router.get('/invitation/:userId', async (request: Request, response: Response) =
 router.get('/groups/:userId', async (request: Request, response: Response) => {
     try {
         const { userId } = request.params;
-        const { subscriptionType } = request.query;
         if (!userId) {
             return response.status(400).json({ message: 'userId are required' });
         }
         // Get user's groups with subscription info
         const allGroups = await prisma.groupMember.findMany({
             where: { userId },
-            include: {
-                user: {
-                    select: {
-                        id: true,
-                        firstName: true,
-                        lastName: true,
-                        username: true
-                    }
-                },
-                group: {
-                    select: {
-                        id: true,
-                        groupName: true,
-                        subscriptionName: true,
-                        amount: true,
-                        cycleDays: true,
-                        category: true,
-                        totalMem: true,
-                        amountEach: true,
-                        subscription: {
+            include: { 
+                group :{
+                    include: {
+                        subscription : {
                             select: {
                                 logo: true
                             }
                         }
                     }
                 }
-            },
-            orderBy: {
-                id: 'desc'
-            }
+              } 
         });
 
         if (allGroups.length === 0) {
             return response.json([]);
         }
 
-        // Format for feed-like display
-        const formattedGroups = allGroups.map(item => ({
-            id: item.id,
-            friend: item.user, // Current user is the "friend" in this case
-            group: {
-                ...item.group,
-                timeAgo: getTimeAgoFromObjectId(item.id)
-            },
-            message: item.userRole === 'leader'
-                ? `You created ${item.group.subscriptionName} group`
-                : `You joined ${item.group.subscriptionName} group`,
-            userRole: item.userRole
-        }));
+        const formattedGroups = allGroups.map(member => ({
+            ...member.group, 
+            logo: member.group.subscription?.logo,
+            subscription: undefined
+          }));
 
         response.status(200).json(formattedGroups);
 
@@ -165,7 +137,48 @@ router.get('/groups/:userId', async (request: Request, response: Response) => {
     }
 });
 
-// Get all join requests sent by a specific user
+router.get('/find-subs-by-category/:userId/:category', async (request: Request, response: Response) => {
+    try {
+        const { userId, category } = request.params;
+
+        if (!userId || !category) {
+            return response.status(400).json({ message: 'userId and category are required' });
+        }
+
+        const allGroups = await prisma.groupMember.findMany({
+            where: {
+                userId: userId,
+            },
+            include: { 
+                group :{
+                    include: {
+                        subscription : {
+                            select: {
+                                logo: true
+                            }
+                        }
+                    }
+                }
+              }
+        });
+        const formattedGroups = allGroups.map(member => ({
+            ...member.group, 
+            logo: member.group.subscription?.logo,
+            subscription: undefined
+          }));
+        
+        const categorySubscriptions = formattedGroups
+            .filter(member => member.category === category)
+
+        response.status(200).json(categorySubscriptions);
+
+    } catch (error) {
+        console.error('Error finding subscriptions by category:', error);
+        response.status(500).json({ message: 'Error finding subscriptions by category' });
+    }
+});
+
+
 router.get('/requests-sent/:userId', async (request: Request, response: Response) => {
     try {
         const { userId } = request.params;
