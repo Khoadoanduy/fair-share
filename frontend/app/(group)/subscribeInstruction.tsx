@@ -67,7 +67,7 @@ export default function CreateVirtualCardScreen() {
         setGroup(groupDetails.data);
         const userResponse = await axios.get(`${API_URL}/api/user/`, { params: { clerkID: user?.id } });
         const mongoUserId = userResponse.data.id;
-        const cardResponse = await axios.get(`${API_URL}/api/virtualCard/group/${groupId}`);
+        const cardResponse = await axios.get(`${API_URL}/api/virtualCard/${groupId}`);
         if (cardResponse.data) {
           const latestCard = cardResponse.data;
           setVirtualCard({
