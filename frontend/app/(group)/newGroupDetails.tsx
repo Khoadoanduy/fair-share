@@ -416,9 +416,14 @@ export default function GroupDetailsScreen() {
                 </View>
               </View>
 
-              <TouchableOpacity style={styles.stepItem}>
-                <Ionicons name="card" size={24} color="black" style={styles.stepIcon} />
-                <View style={styles.stepTextContainer}>
+                <TouchableOpacity 
+                  style={styles.stepItem} 
+                  onPress={() => {
+                    toggleSubscribeModal();
+                    router.push({pathname: '/(group)/createGroupVirtualCard', params: {groupId: groupId}});
+                  }}>
+                  <Ionicons name="card" size={24} color="black" style={styles.stepIcon} />
+                  <View style={styles.stepTextContainer}>
                     <Text style={[styles.stepTitle, {color: 'black'}]}>Pull funds & generate virtual card</Text>
                     <Text style={[styles.stepSub, {color: '#64748B'}]}>Pull funds from members and generate a virtual card</Text>
                 </View>
