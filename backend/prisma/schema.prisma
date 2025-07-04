@@ -69,7 +69,7 @@ model Group {
   totalMem           Int
   subscriptionType   String @default("shared") // "shared" or "personal"
   personalType       String? @default("existing") // "existing" or "virtual" (only for personal)
-  visibility         String   @default("friends")
+  visibility         String   @default("private")
 }
 
 model GroupMember {

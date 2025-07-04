@@ -61,7 +61,7 @@ interface Group {
     category: string;
     domain: string;
   }; // Add this field
-};
+}
 
 type VirtualCard = {
   id: string;
@@ -74,7 +74,6 @@ type VirtualCard = {
   type: string;
   currency: string;
 };
-
 
 export default function GroupDetailsScreen() {
   const API_URL = process.env.EXPO_PUBLIC_API_URL;
@@ -95,7 +94,6 @@ export default function GroupDetailsScreen() {
           axios.get(`${API_URL}/api/group/${groupId}`),
           axios.get(`${API_URL}/api/groupMember/${groupId}/${userId}`),
         ]);
-
         setGroup(groupResponse.data);
         setIsLeader(roleResponse.data.isLeader);
         setError(null);
@@ -131,12 +129,10 @@ export default function GroupDetailsScreen() {
     });
   };
 
-  console.log(group);
-
   // Add this near the other handler functions, before the return statement
   const handleSubscriptionDetails = () => {
     router.push({
-      pathname: "/(group)/subscriptionDetails",
+      pathname: "/(group)/SubscriptionDetails",
       params: { groupId },
     });
   };
@@ -165,7 +161,7 @@ export default function GroupDetailsScreen() {
 
   const daysRemaining = getDaysRemaining(group.nextPaymentDate);
 
-    return (
+  return (
     <SafeAreaView style={styles.container}>
       {/* Add this header */}
       <View style={styles.header}>
@@ -192,12 +188,12 @@ export default function GroupDetailsScreen() {
         {/* Service Card */}
         <View style={styles.serviceCard}>
           <SubscriptionCard
-              logo={{uri: group.subscription?.logo}}
-              subscriptionName={group.subscriptionName}
-              amountEach={group.amountEach}
-              cycle={group.cycle}
-              isShared={true} // or item.isShared if available
-              category={group.category}
+            logo={{ uri: group.subscription?.logo }}
+            subscriptionName={group.subscriptionName}
+            amountEach={group.amountEach}
+            cycle={group.cycle}
+            isShared={true} // or item.isShared if available
+            category={group.category}
           />
           <TouchableOpacity
             style={styles.detailsRow}
@@ -211,17 +207,17 @@ export default function GroupDetailsScreen() {
           </TouchableOpacity>
         </View>
 
-
         {/* Members Section */}
         {groupId && userId && (
-          <GroupMembers 
-            groupId={groupId as string} 
-            userId={userId} 
-              showAmountEach={true}
-              showEstimatedText={false}
-              showInvitations={false}
-              showHeader={true}
-            />
+          <GroupMembers
+            groupId={groupId as string}
+            userId={userId}
+            showAmountEach={true}
+            showEstimatedText={false}
+            showInvitations={true}
+            showHeader={true}
+            requestConfirmSent={false}
+          />
         )}
 
         <View style={styles.virtualCardSection}>
@@ -422,15 +418,15 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 30,
-    backgroundColor: '#4A3DE3',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "#4A3DE3",
+    justifyContent: "center",
+    alignItems: "center",
     marginRight: 12,
   },
   logoText: {
-    color: 'white',
+    color: "white",
     fontSize: 28,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   serviceInfo: {
     flex: 1,

@@ -142,7 +142,7 @@ export default function setMemberShares() {
             <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Confirm Shares</Text>
             <Text style={styles.modalText}>
-                You’re about to send a share request to 5 members. Each will be asked to approve their share before payment is processed.
+                You’re about to send a share request to members. Each will be asked to approve their share before payment is processed.
             </Text>
 
             <View style={styles.modalActions}>

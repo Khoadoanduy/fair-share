@@ -48,7 +48,7 @@ router.post('/create', async (request: Request, response: Response) => {
           endDate: nextPaymentDate,
           visibility: visibility || 'friends', 
           subscriptionType: subscriptionType || 'shared',
-          personalType: (subscriptionType === 'personal') ? (personalType || 'existing') : null
+          personalType: (subscriptionType === 'personal') ? (personalType || 'existing') : "N/A"
         },
         include: {
           subscription: true // Include subscription data in response
@@ -89,7 +89,7 @@ router.get('/search-user/:username', async (request: Request, response: Response
         username: {
           contains: username,
           mode: 'insensitive'
-        }
+        },
       },
       select: {
         id: true,
@@ -123,7 +123,6 @@ router.get('/:groupId', async (request: Request, response: Response) => {
         subscription: true
       }
     });
-
     if (!group) {
       return response.status(404).json({ message: 'Group not found' });
     }
@@ -149,7 +148,6 @@ router.get('/:groupId', async (request: Request, response: Response) => {
         data: { endDate: nextPaymentDate }
       });
     }
-
     const subscriptionDetails = {
       id: group.id,
       groupName: group.groupName,
@@ -161,6 +159,7 @@ router.get('/:groupId', async (request: Request, response: Response) => {
       nextPaymentDate: nextPaymentDate?.toISOString().split('T')[0],
       cycleDays: group.cycleDays,
       category: group.category,
+      amountEach: group.amountEach,
       virtualCardId: group.virtualCardId,
       subscription: group.subscription ? {
         id: group.subscription.id,
