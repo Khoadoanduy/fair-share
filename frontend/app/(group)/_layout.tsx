@@ -93,6 +93,27 @@ export default function AuthLayout() {
           headerShown: false, // This removes the duplicate header
         }}
       />
+      <Stack.Screen
+          name="createGroupVirtualCard"
+          options={{
+            title: "",
+            headerTitle: () => null,
+          }}
+      />
+      <Stack.Screen
+          name="subscribeInstruction"
+          options={{
+            title: "",
+            headerTitle: () => null,
+          }}
+      />
+      <Stack.Screen
+          name="addGroupCredentials"
+          options={{
+            title: "",
+            headerTitle: () => null,
+          }}
+      />
     </Stack>
 
   );

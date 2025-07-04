@@ -362,5 +362,27 @@ router.get('/leader/:groupId', async (request: Request, response: Response) => {
     response.status(500).json({ message: 'Error getting group leader' });
   }
 });
+//Start cycle as of today
+router.put('/start-cycle/:groupId', async (request, response) => {
+  try {
+    const { groupId } = request.params;
+    if (!groupId) {
+      return response.status(400).json({ message: 'groupId are required' });
+    }
+    const group = await prisma.group.findFirst({
+      where: { id: groupId },
+    })
+    if (!group)
+      return response.status(404).json({ message: "No group found" });
+    await prisma.group.update({
+        where: { id: groupId },
+        data: { startDate: new Date() }
+    });
+    response.status(200).json(group.startDate);
+  } catch (error) {
+    console.error(error);
+    response.status(500).json({ message: 'Error starting cycle' });
+  }
+});
 
 export default router
