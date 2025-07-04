@@ -100,7 +100,6 @@ router.get('/invitation/:userId', async (request: Request, response: Response) =
 router.get('/groups/:userId', async (request: Request, response: Response) => {
     try {
         const { userId } = request.params;
-        const { subscriptionType } = request.query;
         if (!userId) {
             return response.status(400).json({ message: 'userId are required' });
         }
@@ -108,53 +107,21 @@ router.get('/groups/:userId', async (request: Request, response: Response) => {
         const allGroups = await prisma.groupMember.findMany({
             where: { userId },
             include: {
-                user: {
-                    select: {
-                        id: true,
-                        firstName: true,
-                        lastName: true,
-                        username: true
-                    }
-                },
-                group: {
-                    select: {
-                        id: true,
-                        groupName: true,
-                        subscriptionName: true,
-                        amount: true,
-                        cycleDays: true,
-                        category: true,
-                        totalMem: true,
-                        amountEach: true,
-                        subscription: {
-                            select: {
-                                logo: true
-                            }
-                        }
-                    }
-                }
+                user: true,
+                group: { include: { subscription: { select: { logo: true } } } }
             },
-            orderBy: {
-                id: 'desc'
-            }
+            orderBy: { id: 'desc' }
         });
 
-        if (allGroups.length === 0) {
-            return response.json([]);
-        }
-
-        // Format for feed-like display
+        // Format for consistent flat structure
         const formattedGroups = allGroups.map(item => ({
-            id: item.id,
-            friend: item.user, // Current user is the "friend" in this case
-            group: {
-                ...item.group,
-                timeAgo: getTimeAgoFromObjectId(item.id)
-            },
+            ...item.group,
+            userRole: item.userRole,
+            memberId: item.id,
+            timeAgo: getTimeAgoFromObjectId(item.id),
             message: item.userRole === 'leader'
                 ? `You created ${item.group.subscriptionName} group`
-                : `You joined ${item.group.subscriptionName} group`,
-            userRole: item.userRole
+                : `You joined ${item.group.subscriptionName} group`
         }));
 
         response.status(200).json(formattedGroups);
