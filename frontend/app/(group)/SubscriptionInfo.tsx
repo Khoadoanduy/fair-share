@@ -36,7 +36,7 @@ export default function SubscriptionScreen() {
   const { userId } = useUserState();
 
   // Add visibility to the destructured params
-  const { groupName, visibility } = useLocalSearchParams();
+  const { groupName, visibility, maxMember } = useLocalSearchParams();
   const { control, handleSubmit, setValue, watch } = useForm<FormatData>({
     defaultValues: {
       currency: 'USD',
@@ -110,7 +110,7 @@ export default function SubscriptionScreen() {
   const handleCreateCustomSubscription = () => {
     router.push({
       pathname: '/(group)/customSubscription',
-      params: { groupName }
+      params: { groupName, maxMember }
     });
   };
   const calculateTotalDays = (dayValue: string, cycle: string): number => {
@@ -150,6 +150,7 @@ export default function SubscriptionScreen() {
 
       const response = await axios.post(`${API_URL}/api/group/create`, {
         groupName,
+        maxMember: parseInt(maxMember),
         userId: userId,
         subscriptionId: info.subscriptionId,
         subscriptionName: info.subscriptionName,

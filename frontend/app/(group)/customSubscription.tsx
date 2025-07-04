@@ -31,7 +31,7 @@ export default function CustomSubscriptionScreen() {
 
 
   // Add visibility to the destructured params
-  const { groupName, visibility } = useLocalSearchParams();
+  const { groupName, visibility, maxMember } = useLocalSearchParams();
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
 
   const { control, handleSubmit, setValue, watch } = useForm<FormatData>({
@@ -111,6 +111,7 @@ export default function CustomSubscriptionScreen() {
       // Create the group
       const response = await axios.post(`${API_URL}/api/group/create`, {
         groupName,
+        maxMember: parseInt(maxMember),
         subscriptionName: info.subscriptionName,
         planName: info.planName,
         amount: parseFloat(info.amount),
