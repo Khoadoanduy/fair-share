@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import CustomButton from '@/components/CustomButton';
 import ProgressDots from '@/components/ProgressDots';
 import axios from 'axios';
-import { useUser } from '@clerk/clerk-expo';
+import { useUserState } from '@/hooks/useUserState';
 
 interface VirtualCard {
   id: string;
@@ -17,6 +17,8 @@ interface VirtualCard {
   status: string;
   type: string;
   currency: string;
+  number?: string; // add number
+  cvc?: string;    // add cvc
 }
 
 interface SubscriptionData {
@@ -24,68 +26,54 @@ interface SubscriptionData {
   // Add other properties as needed
 }
 
-export default function CreateGroupVirtualCard() {
+export default function CreateVirtualCardScreen() {
   const API_URL = process.env.EXPO_PUBLIC_API_URL;
-  const { user } = useUser();
+  const [subscriptionData, setSubscriptionData] = useState<SubscriptionData | null>(null);
   const router = useRouter();
-  const { groupId } = useLocalSearchParams();
+  const { groupId, nextScreen, personalType } = useLocalSearchParams();
+  const { userId } = useUserState();
   const [virtualCard, setVirtualCard] = useState<VirtualCard | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const fetchData = async() => {
+    // Fetch subscription data to get service name
+    const fetchSubscriptionData = async () => {
       try {
-        setLoading(true);
-        const groupDetails = await axios.get(`${API_URL}/api/group/${groupId}`);
-        const allMembers = groupDetails.data.members;
-        // Charge each member
-        await Promise.all(
-          allMembers.map(async (member) => {
-            await axios.post(`${API_URL}/api/stripe-payment/charge-user`, 
-                { 
-                    customerStripeID: member.user.customerId, 
-                    amount: groupDetails.data.amountEach,
-                    subscription: groupDetails.data.subscriptionName
-                });
-          })
-        );
-        // After charging users, create virtual card
-        createVirtualCard();
+        // Use unified endpoint for group details
+        const response = await axios.get(`${API_URL}/api/group/${groupId}`);
+        setSubscriptionData(response.data);
       } catch (error) {
-        console.error("Failed to charge user money or create virtual card", error);
-      } finally {
-        setLoading(false);
+        console.error('Error fetching subscription data:', error);
       }
     };
-    fetchData();
-  }, [groupId]);
+    fetchSubscriptionData();
+    createVirtualCard();
+  }, []);
 
   const createVirtualCard = async () => {
     try {
       setLoading(true);
-
-      // Get user's MongoDB ID
-      const userResponse = await axios.get(`${API_URL}/api/user/`, { params: { clerkID: user?.id } });
-      const mongoUserId = userResponse.data.id;
-      // Create virtual card for the group
+      // Create virtual card for personal subscription
       const response = await axios.post(`${API_URL}/api/virtualCard/create`, {
-        userId: mongoUserId,
-        groupId: groupId,
+        userId,
+        groupId, // groupId is used as the personal subscription ID
       });
       if (response.data.success) {
-        const cardResponse = await axios.get(`${API_URL}/api/virtualCard/get`, { params: { userId: mongoUserId } });
-        if (cardResponse.data.cards && cardResponse.data.cards.length > 0) {
-          const latestCard = cardResponse.data.cards[0];
+        // Get the created card details
+        const cardResponse = await axios.get(`${API_URL}/api/virtualCard/${groupId}`);
+        if (cardResponse.data) {
           setVirtualCard({
-            id: latestCard.id,
-            last4: latestCard.last4,
-            expMonth: latestCard.exp_month,
-            expYear: latestCard.exp_year,
-            brand: latestCard.brand,
-            cardholderName: latestCard.cardholder?.name || `${user?.firstName} ${user?.lastName}`,
-            status: latestCard.status,
-            type: latestCard.type,
-            currency: latestCard.currency,
+            id: cardResponse.data.id,
+            last4: cardResponse.data.last4,
+            expMonth: cardResponse.data.expMonth,
+            expYear: cardResponse.data.expYear,
+            brand: cardResponse.data.brand,
+            cardholderName: cardResponse.data.cardholderName,
+            status: cardResponse.data.status,
+            type: cardResponse.data.type,
+            currency: cardResponse.data.currency,
+            number: cardResponse.data.number, // use number
+            cvc: cardResponse.data.cvc        // use cvc
           });
         }
       }
@@ -99,6 +87,7 @@ export default function CreateGroupVirtualCard() {
 
   const handleCopyCardNumber = () => {
     if (virtualCard) {
+      // In a real app, you'd copy to clipboard
       Alert.alert('Copied', 'Card number copied to clipboard');
     }
   };
@@ -107,15 +96,19 @@ export default function CreateGroupVirtualCard() {
     Alert.alert('Copied', 'Security code copied to clipboard');
   };
 
-//   const handleNext = () => {
-//     router.push({
-//       pathname: '/(group)/addAccountCredentials',
-//       params: {
-//         subscriptionId: "some-id",  // Replace with actual subscription ID if needed
-//         hasVirtualCard: 'true',
-//       },
-//     });
-//   };
+  const handleNext = () => {
+    router.push({
+      pathname: '/(personal)/addAccountCredentials',
+      params: {
+        groupId,
+        personalType,
+      },
+    });
+  };
+
+  // Use personalType for progress dots
+  const totalSteps = 4;
+  const currentStep = 3;
 
   if (loading) {
     return (
@@ -132,10 +125,8 @@ export default function CreateGroupVirtualCard() {
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
         {/* Title */}
-        <Text style={styles.title}>Your card is <Text style={{color: "#4A3DE3"}}>ready!</Text> 🎉</Text>
-        <Text style={styles.text}>
-          You can now use your virtual card to subscribe to the service. Tap the button below after subscribing to notify your group and start the cycle.
-        </Text>
+        <Text style={styles.title}>Subscribe with{'\n'}your virtual card</Text>
+
         {/* Virtual Card Display */}
         {virtualCard && (
           <View style={styles.cardContainer}>
@@ -149,12 +140,16 @@ export default function CreateGroupVirtualCard() {
               <View style={styles.cardNumberSection}>
                 <Text style={styles.cardNumberLabel}>Card number</Text>
                 <View style={styles.cardNumberRow}>
-                  <Text style={styles.cardNumber}>
-                    {`**** **** **** ${virtualCard.last4}`}
-                  </Text>
-                  <Pressable onPress={handleCopyCardNumber} style={styles.copyButton}>
-                    <Ionicons name="copy-outline" size={20} color="white" />
-                  </Pressable>
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <Text style={styles.cardNumber}>
+                      {virtualCard.number
+                        ? virtualCard.number.replace(/(.{4})/g, "$1 ").trim()
+                        : virtualCard.last4}
+                    </Text>
+                    <Pressable onPress={handleCopyCardNumber} style={[styles.copyButton, { marginLeft: 8 }]}>
+                      <Ionicons name="copy-outline" size={20} color="white" />
+                    </Pressable>
+                  </View>
                 </View>
               </View>
 
@@ -168,7 +163,9 @@ export default function CreateGroupVirtualCard() {
                 <View style={styles.cardDetailItem}>
                   <Text style={styles.cardDetailLabel}>Security code</Text>
                   <View style={styles.securityCodeRow}>
-                    <Text style={styles.cardDetailValue}>123</Text>
+                    <Text style={styles.cardDetailValue}>
+                      {virtualCard.cvc || '***'}
+                    </Text>
                     <Pressable onPress={handleCopySecurityCode} style={styles.copyButton}>
                       <Ionicons name="copy-outline" size={16} color="white" />
                     </Pressable>
@@ -178,16 +175,43 @@ export default function CreateGroupVirtualCard() {
             </View>
           </View>
         )}
+
+        {/* Instructions */}
+        <View style={styles.instructionsContainer}>
           <Text style={styles.instructionsTitle}>
             Tap the copy button next to your virtual card number and security code to use them.
           </Text>
+
+          <View style={styles.stepContainer}>
+            <View style={styles.stepHeader}>
+              <View style={styles.stepNumber}>
+                <Text style={styles.stepNumberText}>1</Text>
+              </View>
+              <Text style={styles.stepText}>
+                Open <Text style={styles.boldText}>{subscriptionData?.subscriptionName || 'the service'}</Text> in your browser or app and go to the payment or subscription page.
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.stepContainer}>
+            <View style={styles.stepHeader}>
+              <View style={styles.stepNumber}>
+                <Text style={styles.stepNumberText}>2</Text>
+              </View>
+              <Text style={styles.stepText}>
+                Paste the copied card details into the payment fields. Ensure all fields match.
+              </Text>
+            </View>
+          </View>
+        </View>
       </View>
 
-      {/* Bottom Container to begin subscription */}
+      {/* Bottom Container with Progress Dots and Button */}
       <View style={styles.bottomContainer}>
+        <ProgressDots totalSteps={totalSteps} currentStep={currentStep} />
         <CustomButton
-          text="Begin subscription cycle"
-          onPress={() => router.push({pathname: '/(group)/subscribeInstruction', params: {groupId: groupId, virtualCard: virtualCard}})}
+          text="Next - Update account credentials"
+          onPress={handleNext}
           size="large"
           fullWidth
           style={styles.nextButton}
@@ -215,29 +239,20 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: 20,
-    paddingVertical: 20
   },
   title: {
-    fontSize: 30,
+    fontSize: 24,
     fontWeight: '600',
-    color: 'black',
-    textAlign: 'left',
-    marginBottom: 30,
-    lineHeight: 36,
-    paddingHorizontal: 8
-  },
-  text: {
-    fontSize: 16,
-    color: '#1C1C1C',
-    textAlign: 'left',
-    marginBottom: 20,
-    paddingHorizontal: 8
+    color: '#4A3DE3',
+    textAlign: 'center',
+    marginBottom: 40,
+    lineHeight: 32,
   },
   cardContainer: {
-    backgroundColor: '#4A3DE3',
+    backgroundColor: '#5E5AEF',
     borderRadius: 16,
     padding: 24,
-    marginBottom: 15,
+    marginBottom: 32,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -302,6 +317,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
+  instructionsContainer: {
+    gap: 24,
+    marginBottom: 20, // Reduced from 40
+  },
   instructionsTitle: {
     fontSize: 14,
     color: '#666',
@@ -341,12 +360,12 @@ const styles = StyleSheet.create({
   },
   bottomContainer: {
     paddingHorizontal: 20,
-    paddingBottom: 34,
+    paddingBottom: 50,
     paddingTop: 20,
     backgroundColor: 'white', // Ensure white background
   },
   nextButton: {
-    backgroundColor: '#4A3DE3',
+    backgroundColor: '#5E5AEF',
     borderRadius: 12,
     paddingVertical: 16,
   },

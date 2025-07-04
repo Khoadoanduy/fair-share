@@ -43,6 +43,7 @@ export default function TabLayout() {
           name="friends"
           options={{
             title: "Friends",
+            headerShown: false,
             tabBarIcon: ({ color, size }) => (
               <Ionicons name="people" size={size} color={color} />
             ),
@@ -52,6 +53,7 @@ export default function TabLayout() {
           name="history"
           options={{
             title: "History",
+            headerShown: false,
             tabBarIcon: ({ color, size }) => (
               <Ionicons name="time" size={size} color={color} />
             ),

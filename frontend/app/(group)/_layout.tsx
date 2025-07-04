@@ -25,57 +25,60 @@ export default function AuthLayout() {
       }}
     >
       <Stack.Screen
-          name="createGroupName"
-          options={{
-            title: "",
-            headerTitle: () => null,
-          }}
+        name="createGroupName"
+        options={{
+          title: "",
+          headerTitle: () => null,
+        }}
       />
       <Stack.Screen
-          name="subscriptionInfo"
-          options={{
-              title: "",
-              headerTitle: () => null,
-          }}
+        name="subscriptionInfo"
+        options={{
+          title: "",
+          headerTitle: () => null,
+        }}
       />
       <Stack.Screen
-          name="CustomSubscription"
-          options={{
-            title: "",
-            headerTitle: () => null,
-          }}
+        name="customSubscription"
+        options={{
+          title: "",
+          headerTitle: () => null,
+        }}
       />
       <Stack.Screen
-          name="inviteMember"
-          options={{
-            title: "",
-            headerTitle: () => null,
-          }}
-      />
-      {/* <Stack.Screen
-          name = "ShowAllInvitations"
-          options={{ title: ""}}
-      /> */}
-      <Stack.Screen
-          name="SubscriptionDetails"
-          options={{
-            title: "",
-            headerTitle: () => null,
-          }}
+        name="inviteMember"
+        options={{
+          title: "",
+          headerTitle: () => null,
+        }}
       />
       <Stack.Screen
-          name="newGroupDetails"
-          options={{
-            title: "",
-            headerTitle: () => null,
-          }}
+        name="subscriptionDetails"
+        options={{
+          title: "",
+          headerTitle: () => null,
+          headerShown: false, // This removes the duplicate header
+        }}
       />
-      <Stack.Screen 
-          name="userGroups" 
-          options={{ 
-            headerShown: false,
-            title: 'My Groups'
-          }} 
+      <Stack.Screen
+        name="newGroupDetails"
+        options={{
+          title: "",
+          headerTitle: () => null,
+        }}
+      />
+      <Stack.Screen
+        name="userGroups"
+        options={{
+          headerShown: false,
+          title: 'My Groups'
+        }}
+      />
+      <Stack.Screen
+          name = "showAllInvitations"
+          options={{ title: "", 
+                    headerTitle: () => null,
+                    headerLeft: () => null,}}
       />
       <Stack.Screen
           name="setMemberShares"
@@ -83,6 +86,12 @@ export default function AuthLayout() {
             title: "Set member shares",
             headerTitle: () => null,
           }}
+      />
+      <Stack.Screen
+        name="groupDetails"
+        options={{
+          headerShown: false, // This removes the duplicate header
+        }}
       />
       <Stack.Screen
           name="createGroupVirtualCard"

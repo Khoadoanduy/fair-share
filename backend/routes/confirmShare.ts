@@ -1,12 +1,11 @@
 import express, { Request, Response, Router } from 'express';
 import dotenv from 'dotenv';
-import { PrismaClient } from '@prisma/client';
+import prisma from '../prisma/client';
 import { group } from 'console';
 
 dotenv.config();
 
 const router: Router = express.Router();
-const prisma = new PrismaClient();
 
 //Create share confirmation request for everyone
 router.post('/:groupId', async (request: Request, response: Response) => {
@@ -17,7 +16,7 @@ router.post('/:groupId', async (request: Request, response: Response) => {
         }
         //Find the member of the group
         const groupMembers = await prisma.groupMember.findMany({
-            where: { groupId: groupId},
+            where: { groupId: groupId },
             select: {
                 userId: true,
                 userRole: true
@@ -36,7 +35,7 @@ router.post('/:groupId', async (request: Request, response: Response) => {
                     status: member.userRole === "leader"
                 }
             }))
-        );   
+        );
         response.status(200).json({ message: 'Confirm shares created ' });
 
     } catch (error) {
@@ -54,7 +53,7 @@ router.get('/check-status/:groupId/:userId', async (request: Request, response: 
         }
         //Find the member of the group
         const confirmReq = await prisma.confirmShare.findFirst({
-            where: { 
+            where: {
                 groupId: groupId,
                 userId: userId
             },
@@ -80,7 +79,7 @@ router.get('/leader-sent/:groupId', async (request: Request, response: Response)
         }
         //Find the member of the group
         const confirmReq = await prisma.confirmShare.findFirst({
-            where: { 
+            where: {
                 groupId: groupId,
             },
         });
@@ -105,8 +104,8 @@ router.put('/:groupId/:userId', async (request: Request, response: Response) => 
         }
         //Find confirm request
         const cfRequest = await prisma.confirmShare.findFirst({
-            where: { 
-                groupId: groupId, 
+            where: {
+                groupId: groupId,
                 userId: userId
             },
         });
@@ -117,7 +116,7 @@ router.put('/:groupId/:userId', async (request: Request, response: Response) => 
         //
         await prisma.confirmShare.update({
             where: { id: cfRequest.id },
-            data: { status: true}
+            data: { status: true }
         })
         response.status(200).json({ message: 'Confirm shares updated ' });
 
@@ -136,7 +135,7 @@ router.get('/all-confirmed/:groupId', async (request: Request, response: Respons
         }
         //Find the member of the group
         const notConfirmed = await prisma.confirmShare.findFirst({
-            where: { 
+            where: {
                 groupId: groupId,
                 status: false
             },
