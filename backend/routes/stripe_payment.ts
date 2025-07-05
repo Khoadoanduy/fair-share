@@ -13,43 +13,52 @@ router.post('/charge-user', async function (request, response) {
   try {
       const customerStripeID = request.body.customerStripeID;
       const groupId = request.body.groupId;
+      const cycle = request.body.cycle;
+      const intervalCount = request.body.intervalCount;
       if (!customerStripeID) {
           return response.status(400).json({ error: 'Customer Stripe ID is required' });
       }
-      if (!request.body.amount) {
+      if (!request.body.amountEach) {
           return response.status(400).json({ error: 'Amount is required' });
       }
       
-      const preAmount = request.body.amount; //in cents
+      const preAmount = request.body.amountEach * 100; //in cents
         // Calculate Stripe fees: 2.9% + 30¢
       const stripeFeePercentage = 0.029; // 2.9%
       const stripeFixedFee = 0.3; // 30 cents
       const amount = Math.round((preAmount + stripeFixedFee) / (1 - stripeFeePercentage));
       const paymentMethods = await stripe.customers.listPaymentMethods(customerStripeID);
       const paymentMethod = paymentMethods.data[0];
-      const subscription = request.body.subscription;
 
-      const paymentIntent = await stripe.paymentIntents.create({
-          amount: amount*100,
+      // Create a product
+      const product = await stripe.products.create({
+          name: `Group Charge for ${groupId}`,
+      });
+
+      // Create a price for the product
+      const price = await stripe.prices.create({
+          unit_amount: amount,
           currency: 'usd',
-          automatic_payment_methods: {
-            enabled: true,
-          },
+          recurring: { interval: cycle, interval_count: intervalCount},
+          product: product.id
+      });
+
+      // Create a subscription
+      const subscription = await stripe.subscriptions.create({
           customer: customerStripeID,
-          payment_method: paymentMethod.id,
-          off_session: true,
-          confirm: true,
+          items: [{ price: price.id }],
+          default_payment_method: paymentMethod.id,
           metadata: {
             groupId: groupId
           }
-        });
+      });
 
       response.json({
-          paymentIntent: paymentIntent.id
+          subscription: subscription.id
         });
       } catch (err) {
         // Log for debugging
-        console.error('Error creating Stripe paymentIntent:', err);
+        console.error('Error creating Stripe subscription:', err);
 
         // Send back the Stripe (or other) error message
         response.status(500).json({err});
@@ -63,8 +72,8 @@ router.get('/transactions', async function (request, response) {
           return response.status(400).json({ error: 'Customer Stripe ID is required' });
       }
 
-      const transactions = await stripe.paymentIntents.list({
-          limit: 20,
+      const transactions = await stripe.subscriptions.list({
+          limit: 100,
           customer: customerStripeID,
       });
 
