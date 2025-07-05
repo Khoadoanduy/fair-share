@@ -22,7 +22,6 @@ interface SubscriptionCardProps {
   subscriptionName?: string;
   amountEach?: number;
   cycle?: string;
-  isShared?: boolean;
   category?: string;
   amount?: number;
   onPress?: () => void;
@@ -49,8 +48,7 @@ const SubscriptionCard: React.FC<SubscriptionCardProps> = (props) => {
   const amountEach = group?.amountEach !== undefined ? group.amountEach : props.amountEach;
   const cycle = group?.cycle || props.cycle;
   const category = group?.category || props.category;
-  const isPersonal = group?.isPersonal;
-  const isShared = props.isShared !== undefined ? props.isShared : !isPersonal;
+  const isPersonal = group?.isPersonal ?? false;
   const totalMem = group?.totalMem;
   const endDate = group?.endDate;
   const onPress = props.onPress;
@@ -75,15 +73,15 @@ const SubscriptionCard: React.FC<SubscriptionCardProps> = (props) => {
         <View style={styles.tagsContainer}>
           {/* Type tag */}
           {isPersonal !== undefined && (
-            <View style={[styles.tag, { backgroundColor: isPersonal ? '#6C63FF' : '#FEC260' }]}>
-              <Text style={[styles.tagText, { color: isPersonal ? 'white' : 'black' }]}>
+            <View style={[styles.tag, { backgroundColor: '#F6AE2D80' }]}>
+              <Text style={[styles.tagText, { color: 'black' }]}>
                 {isPersonal ? 'Personal' : 'Shared'}
               </Text>
             </View>
           )}
           {category && (
-            <View style={[styles.tag, { backgroundColor: '#10B981' }]}>
-              <Text style={[styles.tagText, { color: 'white' }]}>{category}</Text>
+            <View style={[styles.tag, { backgroundColor: '#3BCEAC80' }]}>
+              <Text style={[styles.tagText, { color: 'black' }]}>{category}</Text>
             </View>
           )}
         </View>

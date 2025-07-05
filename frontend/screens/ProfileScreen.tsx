@@ -242,7 +242,7 @@ export default function ProfileScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {(isLoading || loading) && (
           <View style={styles.loadingOverlay}>
-            <ActivityIndicator size="large" color="#4353FD" />
+            <ActivityIndicator size="large" color="#4A3DE3" />
           </View>
         )}
 
@@ -252,7 +252,7 @@ export default function ProfileScreen() {
             <View style={styles.headerSpacer} />
             <Text style={styles.title}>Profile</Text>
             <TouchableOpacity style={styles.notificationButton}>
-              <Ionicons name="notifications-outline" size={24} color="#4353FD" />
+              <Ionicons name="notifications-outline" size={24} color="#4A3DE3" />
             </TouchableOpacity>
           </View>
 
@@ -281,7 +281,7 @@ export default function ProfileScreen() {
             onPress={() => router.push("/(profile)/personalInfo")}
           >
             <View style={styles.personalInfoContent}>
-              <Ionicons name="person-outline" size={24} color="#4353FD" />
+              <Ionicons name="person-outline" size={24} color="#4A3DE3" />
               <Text style={styles.personalInfoText}>Personal information</Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color="#666" />
@@ -362,7 +362,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "600",
     marginBottom: 16,
-    color: "#4353FD",
+    color: "#4A3DE3",
   },
   userName: {
     fontSize: 24,
@@ -422,7 +422,7 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: "#4353FD",
+    backgroundColor: "#4A3DE3",
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 16,
@@ -464,7 +464,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#4353FD",
+    backgroundColor: "#4A3DE3",
     borderRadius: 8,
     paddingVertical: 12,
     paddingHorizontal: 16,
@@ -508,7 +508,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   defaultBadge: {
-    backgroundColor: "#4353FD",
+    backgroundColor: "#4A3DE3",
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
@@ -529,7 +529,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   setDefaultText: {
-    color: "#4353FD",
+    color: "#4A3DE3",
     fontSize: 11,
     fontWeight: "500",
     textAlign: "center",

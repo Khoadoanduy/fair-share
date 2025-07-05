@@ -32,28 +32,28 @@ export default function AuthLayout() {
         }}
       />
       <Stack.Screen
-        name="subscriptionInfo"
+        name="SubscriptionInfo"
         options={{
           title: "",
           headerTitle: () => null,
         }}
       />
       <Stack.Screen
-        name="customSubscription"
+        name="CustomSubscription"
         options={{
           title: "",
           headerTitle: () => null,
         }}
       />
       <Stack.Screen
-        name="inviteMember"
+        name="InviteMember"
         options={{
           title: "",
           headerTitle: () => null,
         }}
       />
       <Stack.Screen
-        name="subscriptionDetails"
+        name="SubscriptionDetails"
         options={{
           title: "",
           headerTitle: () => null,

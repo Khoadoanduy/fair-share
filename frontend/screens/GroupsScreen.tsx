@@ -29,6 +29,7 @@ interface Group {
   amount: number;
   cycle: string;
   category: string;
+  subscriptionType?: string;
   startDate?: string;
   endDate?: string;
   totalMem?: number;
@@ -58,33 +59,7 @@ export default function GroupsScreen() {
     height: number;
   } | null>(null);
   const buttonRef = useRef<any>(null);
-  const [personalSubscriptions, setPersonalSubscriptions] = useState<
-    PersonalSubscription[]
-  >([]);
-
-  interface PersonalSubscription {
-    id: string;
-    group: {
-      id: string;
-      groupName: string;
-      subscriptionName: string;
-      planName?: string;
-      amountEach: number;
-      cycle: string | null;
-      category: string;
-      logo?: string | null;
-      subscription?: {
-        logo?: string;
-      };
-      endDate?: string;
-      totalMem?: number;
-      // Add any other fields you use from group
-    };
-    userId: string;
-    userRole: string;
-    groupId: string;
-    // ...other fields if needed
-  }
+  const [personalSubscriptions, setPersonalSubscriptions] = useState<Group[]>([]);
 
   const handleCreateGroup = () => {
     router.push("/(group)/createGroupName");
@@ -133,70 +108,48 @@ export default function GroupsScreen() {
     router.push('/(group)/userGroups')
   }
 
+const fetchAllSubscriptions = async () => {
+  if (!userId) return;
+  try {
+    const response = await axios.get(`${API_URL}/api/user/groups/${userId}`);
+    const allData = response.data;
+    
+    const sharedGroups = allData.filter((item: { subscriptionType: string; }) => 
+      item.subscriptionType !== 'personal'
+    );
+    const personalSubs = allData.filter((item: { subscriptionType: string; }) => 
+      item.subscriptionType === 'personal'
+    );
 
-  const fetchGroups = async () => {
-    if (!userId) return;
-    try {
-      const response = await axios.get(`${API_URL}/api/user/groups/${userId}`);
-      setGroups(response.data);
-    } catch (error) {
-      console.error("Error fetching groups:", error);
-    }
-  };
-
-  const fetchPersonalSubscriptions = async () => {
-    if (!userId) return;
-    try {
-      const response = await axios.get(
-        `${API_URL}/api/user/groups/${userId}?subscriptionType=personal`
-      );
-      console.log(JSON.stringify(response.data));
-      setPersonalSubscriptions(
-        Array.isArray(response.data) ? response.data : []
-      );
-    } catch (error) {
-      console.error("Error fetching personal subscriptions:", error);
-      setPersonalSubscriptions([]);
-    }
-  };
+    setGroups(sharedGroups);
+    setPersonalSubscriptions(personalSubs);
+  } catch (error) {
+    console.error("Error fetching subscriptions:", error);
+    setGroups([]);
+    setPersonalSubscriptions([]);
+  }
+};
 
   useEffect(() => {
     if (userId) {
-      fetchGroups();
-      fetchPersonalSubscriptions();
+      fetchAllSubscriptions(); 
     }
   }, [userId]);
 
   const getDisplayData = () => {
-    const personalSubs = personalSubscriptions.map((sub) => ({
-      id: sub.group.id,
-      groupName: sub.group.groupName,
-      subscriptionName: sub.group.subscriptionName,
-      planName: sub.group.planName,
-      amountEach: sub.group.amountEach,
-      cycle: sub.group.cycle || "monthly",
-      category: sub.group.category,
-      logo: sub.group.subscription?.logo ?? sub.group.logo ?? undefined,
-      isPersonal: true,
-      endDate: sub.group.endDate,
-      totalMem: sub.group.totalMem,
-    }));
-
-    // Add group subscriptions with real logos
-    const groupSubs = groups.map((group) => ({
-      ...group,
-      logo: group.subscription?.logo ?? group.logo ?? undefined,
-      isPersonal: false,
+    const allItems = [...groups, ...personalSubscriptions].map(item => ({
+      ...item,
+      logo: item.subscription?.logo ?? item.logo ?? undefined,
+      isPersonal: item.subscriptionType === 'personal'
     }));
 
     if (selectedFilter === "Personal") {
-      return personalSubs;
-    } else if (selectedFilter === "Shared") {
-      return groupSubs;
-    } else {
-      // "All" - combine both
-      return [...groupSubs, ...personalSubs];
+      return allItems.filter(item => item.isPersonal);
     }
+    if (selectedFilter === "Shared") {
+      return allItems.filter(item => !item.isPersonal);
+    }
+    return allItems; 
   };
 
   return (

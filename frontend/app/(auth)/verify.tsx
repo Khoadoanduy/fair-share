@@ -147,7 +147,7 @@ const styles = StyleSheet.create({
     textAlign: 'center'
   },
   link: {
-    color: '#4353FD',
+    color: '#4A3DE3',
     fontWeight: '600',
   },
   resend: {

@@ -14,6 +14,7 @@ import { useRouter } from "expo-router";
 import CustomButton from "./CustomButton";
 import AcceptInvitationButton from "./AcceptInvitationButton";
 import DeclineInvitationButton from "./DeclineInvitationButton";
+import { totalmem } from "os";
 
 // Types
 type GroupMember = {
@@ -58,6 +59,8 @@ type Props = {
 
 type Group = {
   amountEach: number;
+  totalMem: number;
+  maxMember: number;
 }
 
 type Invitation = {
@@ -147,7 +150,7 @@ const GroupMembers: React.FC<Props> = ({
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#4353FD" />
+        <ActivityIndicator size="large" color="#4A3DE3" />
         <Text style={styles.loadingText}>Loading members...</Text>
       </View>
     );
@@ -165,7 +168,7 @@ const GroupMembers: React.FC<Props> = ({
     <ScrollView style={styles.container}>
       {showHeader &&
         <View style={styles.header}>
-          <Text style={styles.title}>Members</Text>
+          <Text style={styles.title}>Members ({group?.totalMem}/{group?.maxMember})</Text>
           {isLeader && (
             <TouchableOpacity style={styles.addButton} onPress={handleInvite}>
               <Ionicons name="add" size={20} color="black" />

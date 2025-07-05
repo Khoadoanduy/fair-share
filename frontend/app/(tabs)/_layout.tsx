@@ -14,7 +14,7 @@ export default function TabLayout() {
     <StripeProvider publishableKey={publishableKey}>
       <Tabs
         screenOptions={{
-          tabBarActiveTintColor: "#4353FD",
+          tabBarActiveTintColor: "#4A3DE3",
           tabBarInactiveTintColor: "#888",
           // Remove back button from all tab screens
           headerLeft: () => null,
