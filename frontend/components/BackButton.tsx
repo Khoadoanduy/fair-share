@@ -10,7 +10,7 @@ interface BackButtonProps {
 }
 
 export default function BackButton({ 
-  color = '#4353FD', 
+  color = '#4A3DE3', 
   size = 24, 
   onPress 
 }: BackButtonProps) {

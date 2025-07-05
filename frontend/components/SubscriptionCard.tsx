@@ -73,15 +73,15 @@ const SubscriptionCard: React.FC<SubscriptionCardProps> = (props) => {
         <View style={styles.tagsContainer}>
           {/* Type tag */}
           {isPersonal !== undefined && (
-            <View style={[styles.tag, { backgroundColor: isPersonal ? '#6C63FF' : '#FEC260' }]}>
-              <Text style={[styles.tagText, { color: isPersonal ? 'white' : 'black' }]}>
+            <View style={[styles.tag, { backgroundColor: '#F6AE2D80' }]}>
+              <Text style={[styles.tagText, { color: 'black' }]}>
                 {isPersonal ? 'Personal' : 'Shared'}
               </Text>
             </View>
           )}
           {category && (
-            <View style={[styles.tag, { backgroundColor: '#10B981' }]}>
-              <Text style={[styles.tagText, { color: 'white' }]}>{category}</Text>
+            <View style={[styles.tag, { backgroundColor: '#3BCEAC80' }]}>
+              <Text style={[styles.tagText, { color: 'black' }]}>{category}</Text>
             </View>
           )}
         </View>

@@ -150,7 +150,7 @@ const GroupMembers: React.FC<Props> = ({
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#4353FD" />
+        <ActivityIndicator size="large" color="#4A3DE3" />
         <Text style={styles.loadingText}>Loading members...</Text>
       </View>
     );

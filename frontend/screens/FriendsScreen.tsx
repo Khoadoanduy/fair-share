@@ -6,7 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from "expo-router";
 import { useFocusEffect } from '@react-navigation/native';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
-import SubscriptionCard from '../components/SubscriptionCard';
+import FeedCard from '../components/FeedCard';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useUserState } from '@/hooks/useUserState';
 import { useAppDispatch } from '@/redux/hooks';
@@ -251,7 +251,7 @@ export default function FriendsScreen() {
   };
 
   const renderActivityItem = ({ item }: { item: FriendActivity }) => (
-    <SubscriptionCard
+    <FeedCard
       mode="feed"
       friend={item.friend}
       group={item.group}
@@ -263,7 +263,7 @@ export default function FriendsScreen() {
   );
 
   const renderUserGroupItem = ({ item }: { item: UserGroup }) => (
-    <SubscriptionCard
+    <FeedCard
       mode="postings"
       friend={item.friend}
       group={item.group}
