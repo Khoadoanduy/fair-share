@@ -21,15 +21,11 @@ const calculateDaysBetween = (startDate: Date, endDate: Date): number => {
 // Create group (add subscriptionType and personalType, backward compatible)
 router.post('/create', async (request: Request, response: Response) => {
   try {
-    const { groupName, subscriptionName, subscriptionId, planName, amount, cycle, category, cycleDays, userId, subscriptionType, personalType, visibility } = request.body;
+    const { groupName, subscriptionName, subscriptionId, planName, amount, cycle, category, cycleDays, userId, subscriptionType, personalType, visibility, maxMember } = request.body;
 
     if (!groupName || !subscriptionName || !amount || !userId) {
       return response.status(400).json({ message: 'Missing required fields' });
     }
-
-    const startDate = new Date();
-    const nextPaymentDate = calculateNextPaymentDate(cycleDays, startDate);
-    const daysUntilNextPayment = cycleDays;
 
     const result = await prisma.$transaction(async (tx) => {
       const newGroup = await tx.group.create({
@@ -43,9 +39,8 @@ router.post('/create', async (request: Request, response: Response) => {
           cycle,
           category,
           totalMem: 1,
+          maxMember,
           amountEach: parseFloat(parseFloat(amount).toFixed(2)),
-          startDate,
-          endDate: nextPaymentDate,
           visibility: visibility || 'friends', 
           subscriptionType: subscriptionType || 'shared',
           personalType: (subscriptionType === 'personal') ? (personalType || 'existing') : "N/A"
@@ -69,9 +64,6 @@ router.post('/create', async (request: Request, response: Response) => {
     response.status(201).json({
       message: 'Group created successfully with leader',
       groupId: result.group.id,
-      startDate: startDate.toISOString().split('T')[0],
-      nextPaymentDate: nextPaymentDate.toISOString().split('T')[0],
-      daysUntilNextPayment
     });
 
   } catch (error) {
@@ -154,11 +146,14 @@ router.get('/:groupId', async (request: Request, response: Response) => {
       subscriptionName: group.subscriptionName,
       planName: group.planName,
       amount: group.amount,
+      amountEach: group.amountEach,
       cycle: group.cycle,
+      totalMem: group.totalMem,
       currency: 'USD',
       nextPaymentDate: nextPaymentDate?.toISOString().split('T')[0],
       cycleDays: group.cycleDays,
       category: group.category,
+      maxMember: group.maxMember,
       amountEach: group.amountEach,
       virtualCardId: group.virtualCardId,
       subscription: group.subscription ? {

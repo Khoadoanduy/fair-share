@@ -10,6 +10,7 @@ import { useState, useMemo } from "react";
 
 type FormatData = {
   groupName: string;
+  maxMember: string;
 };
 
 //User create a group name
@@ -84,6 +85,7 @@ export default function CreateGroupName() {
       pathname: '/(group)/SubscriptionInfo',
       params: {
         groupName: data.groupName,
+        maxMember: data.maxMember,
         visibility: visibility
       },
     });
@@ -102,12 +104,22 @@ export default function CreateGroupName() {
           style={styles.input}
         />
 
+        <Text style={styles.groupname}>Max members</Text>
+        <CustomInput
+          control={control}
+          name="maxMember"
+          placeholder="Enter max members number"
+          keyboardType="decimal-pad"
+          style={styles.input}
+        />
+        <Text style={{fontSize: 15, color: "#64748B"}}>We’ll update the estimated price as people join.</Text>
+
         <Text style={styles.visibilityLabel}>Visibility</Text>
 
         {privateOption}
         {friendsOption}
       </View>
-      <ProgressDots totalSteps={3} currentStep={1} />
+      <ProgressDots totalSteps={4} currentStep={1} />
       <CustomButton
         text="Next"
         onPress={handleSubmit(onNext)}
@@ -128,7 +140,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   title: {
-    marginTop: -40,
+    marginTop: -60,
     fontSize: 24,
     fontWeight: "bold",
     marginBottom: 10,
@@ -138,16 +150,16 @@ const styles = StyleSheet.create({
   subtitle: {
     alignSelf: "center",
     color: "#64748B",
-    fontSize: 15,
-    marginBottom: 50,
+    fontSize: 14,
+    marginBottom: 30,
   },
   groupname: {
     fontSize: 16,
     fontWeight: "500",
-    marginBottom: 15,
+    marginBottom: 10,
   },
   input: {
-    marginBottom: 40,
+    marginBottom: 10,
     borderBottomWidth: 1,
     borderColor: "#ccc",
     padding: 12,
@@ -156,12 +168,13 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   button: {
-    marginBottom: 50,
+    marginBottom: 20,
   },
   visibilityLabel: {
     fontSize: 16,
     fontWeight: "500",
     marginBottom: 15,
+    marginTop: 15
   },
   visibilityOption: {
     padding: 16,
