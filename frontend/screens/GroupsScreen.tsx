@@ -47,7 +47,6 @@ export default function GroupsScreen() {
   const API_URL = process.env.EXPO_PUBLIC_API_URL;
   const { user } = useUser();
   const { userId } = useUserState();
-  // const [userId, setUserId] = useState<string | null>(null);
   const [groups, setGroups] = useState<Group[]>([]);
   const [selectedFilter, setSelectedFilter] = useState("All");
   const [showAddModal, setShowAddModal] = useState(false);

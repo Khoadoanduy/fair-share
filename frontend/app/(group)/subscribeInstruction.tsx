@@ -1,15 +1,23 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, Alert, Pressable, ActivityIndicator } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import CustomButton from '@/components/CustomButton';
-import ProgressDots from '@/components/ProgressDots';
-import axios from 'axios';
-import { useUser } from '@clerk/clerk-expo';
+import React, { useState, useEffect } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  SafeAreaView,
+  Alert,
+  Pressable,
+  ActivityIndicator,
+} from "react-native";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import CustomButton from "@/components/CustomButton";
+import ProgressDots from "@/components/ProgressDots";
+import axios from "axios";
+import { useUser } from "@clerk/clerk-expo";
+import VirtualCardDisplay from "@/components/VirtualCardDisplay";
 
 interface VirtualCard {
   id: string;
-  last4: string;
   expMonth: number;
   expYear: number;
   brand: string;
@@ -17,8 +25,8 @@ interface VirtualCard {
   type: string;
   currency: string;
   cardholderName: string;
-  cvc: string;
-  number: string;
+  cvc: number;
+  number: number;
 }
 
 interface Group {
@@ -52,7 +60,8 @@ interface SubscriptionData {
 
 export default function CreateVirtualCardScreen() {
   const API_URL = process.env.EXPO_PUBLIC_API_URL;
-  const [subscriptionData, setSubscriptionData] = useState<SubscriptionData | null>(null);
+  const [subscriptionData, setSubscriptionData] =
+    useState<SubscriptionData | null>(null);
   const { user } = useUser();
   const router = useRouter();
   const { groupId } = useLocalSearchParams();
@@ -61,14 +70,18 @@ export default function CreateVirtualCardScreen() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const fetchData = async() => {
+    const fetchData = async () => {
       try {
         setLoading(true);
         const groupDetails = await axios.get(`${API_URL}/api/group/${groupId}`);
         setGroup(groupDetails.data);
-        const userResponse = await axios.get(`${API_URL}/api/user/`, { params: { clerkID: user?.id } });
+        const userResponse = await axios.get(`${API_URL}/api/user/`, {
+          params: { clerkID: user?.id },
+        });
         const mongoUserId = userResponse.data.id;
-        const cardResponse = await axios.get(`${API_URL}/api/virtualCard/${groupId}`);
+        const cardResponse = await axios.get(
+          `${API_URL}/api/virtualCard/${groupId}`
+        );
         if (cardResponse.data) {
           const latestCard = cardResponse.data;
           setVirtualCard({
@@ -77,12 +90,14 @@ export default function CreateVirtualCardScreen() {
             expMonth: latestCard.expMonth,
             expYear: latestCard.expYear,
             brand: latestCard.brand,
-            cardholderName: latestCard.cardholder?.name || `${user?.firstName} ${user?.lastName}`,
+            cardholderName:
+              latestCard.cardholder?.name ||
+              `${user?.firstName} ${user?.lastName}`,
             status: latestCard.status,
             type: latestCard.type,
             currency: latestCard.currency,
             cvc: latestCard.cvc,
-            number: latestCard.number
+            number: latestCard.number,
           });
         }
       } catch (error) {
@@ -94,29 +109,28 @@ export default function CreateVirtualCardScreen() {
     fetchData();
   }, [groupId]);
 
-
   const handleCopyCardNumber = () => {
     if (virtualCard) {
       // In a real app, you'd copy to clipboard
-      Alert.alert('Copied', 'Card number copied to clipboard');
+      Alert.alert("Copied", "Card number copied to clipboard");
     }
   };
 
   const handleStartCycle = async () => {
     try {
-        console.log(groupId);
-        await axios.put(`${API_URL}/api/group/start-cycle/${groupId}`);
-        router.push({
-            pathname: '/(group)/addGroupCredentials', 
-            params: {groupId: groupId}
-        })
+      console.log(groupId);
+      await axios.put(`${API_URL}/api/group/start-cycle/${groupId}`);
+      router.push({
+        pathname: "/(group)/addGroupCredentials",
+        params: { groupId: groupId },
+      });
     } catch (error) {
-        console.error('Fail to start cycle', error);
+      console.error("Fail to start cycle", error);
     }
-  }
+  };
 
   const handleCopySecurityCode = () => {
-    Alert.alert('Copied', 'Security code copied to clipboard');
+    Alert.alert("Copied", "Security code copied to clipboard");
   };
 
   if (loading) {
@@ -138,51 +152,21 @@ export default function CreateVirtualCardScreen() {
 
         {/* Virtual Card Display */}
         {virtualCard && (
-          <View style={styles.cardContainer}>
-            <View style={styles.cardHeader}>
-              <View style={styles.virtualBadge}>
-                <Text style={styles.virtualBadgeText}>Virtual</Text>
-              </View>
-            </View>
-
-            <View style={styles.cardBody}>
-              <View style={styles.cardNumberSection}>
-                <Text style={styles.cardNumberLabel}>Card number</Text>
-                <View style={styles.cardNumberRow}>
-                  <Text style={styles.cardNumber}>
-                    {`${virtualCard.number}`}
-                  </Text>
-                  <Pressable onPress={handleCopyCardNumber} style={styles.copyButton}>
-                    <Ionicons name="copy-outline" size={20} color="white" />
-                  </Pressable>
-                </View>
-              </View>
-
-              <View style={styles.cardDetailsRow}>
-                <View style={styles.cardDetailItem}>
-                  <Text style={styles.cardDetailLabel}>Expiration date</Text>
-                  <Text style={styles.cardDetailValue}>
-                    {virtualCard.expMonth}/{virtualCard.expYear.toString().slice(-2)}
-                  </Text>
-                </View>
-                <View style={styles.cardDetailItem}>
-                  <Text style={styles.cardDetailLabel}>Security code</Text>
-                  <View style={styles.securityCodeRow}>
-                    <Text style={styles.cardDetailValue}>{virtualCard.cvc}</Text>
-                    <Pressable onPress={handleCopySecurityCode} style={styles.copyButton}>
-                      <Ionicons name="copy-outline" size={16} color="white" />
-                    </Pressable>
-                  </View>
-                </View>
-              </View>
-            </View>
-          </View>
+          <VirtualCardDisplay
+            cardBrand={virtualCard?.brand}
+            number={virtualCard?.number}
+            cvc={virtualCard?.cvc}
+            expMonth={virtualCard?.expMonth}
+            expYear={virtualCard?.expYear}
+            cardholderName={virtualCard?.cardholderName}
+          />
         )}
 
         {/* Instructions */}
         <View style={styles.instructionsContainer}>
           <Text style={styles.instructionsTitle}>
-            Tap the copy button next to your virtual card number and security code to use them.
+            Tap the copy button next to your virtual card number and security
+            code to use them.
           </Text>
 
           <View style={styles.stepContainer}>
@@ -191,7 +175,12 @@ export default function CreateVirtualCardScreen() {
                 <Text style={styles.stepNumberText}>1</Text>
               </View>
               <Text style={styles.stepText}>
-                Open <Text style={styles.boldText}>{group?.subscriptionName || 'the service'}</Text> in your browser or app and go to the payment or subscription page.
+                Open{" "}
+                <Text style={styles.boldText}>
+                  {group?.subscriptionName || "the service"}
+                </Text>{" "}
+                in your browser or app and go to the payment or subscription
+                page.
               </Text>
             </View>
           </View>
@@ -202,7 +191,10 @@ export default function CreateVirtualCardScreen() {
                 <Text style={styles.stepNumberText}>2</Text>
               </View>
               <Text style={styles.stepText}>
-                <Text style={styles.boldText}>Paste the copied card details</Text> into the payment fields. Ensure all fields match.
+                <Text style={styles.boldText}>
+                  Paste the copied card details
+                </Text>{" "}
+                into the payment fields. Ensure all fields match.
               </Text>
             </View>
           </View>
@@ -213,7 +205,8 @@ export default function CreateVirtualCardScreen() {
                 <Text style={styles.stepNumberText}>3</Text>
               </View>
               <Text style={styles.stepText}>
-                <Text style={styles.boldText}>Tap the button below</Text> after subscribing to notify your group and start the cycle.
+                <Text style={styles.boldText}>Tap the button below</Text> after
+                subscribing to notify your group and start the cycle.
               </Text>
             </View>
           </View>
@@ -237,17 +230,17 @@ export default function CreateVirtualCardScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'white',
+    backgroundColor: "white",
   },
   loadingContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   loadingText: {
     marginTop: 16,
     fontSize: 16,
-    color: '#666',
+    color: "#666",
   },
   content: {
     flex: 1,
@@ -255,34 +248,34 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 24,
-    fontWeight: '600',
-    color: '#4A3DE3',
-    textAlign: 'center',
+    fontWeight: "600",
+    color: "#4A3DE3",
+    textAlign: "center",
     marginBottom: 20,
     lineHeight: 36,
-    marginTop: 10
+    marginTop: 10,
   },
   cardContainer: {
-    backgroundColor: '#4A3DE3',
+    backgroundColor: "#4A3DE3",
     borderRadius: 16,
     padding: 24,
     marginBottom: 10,
   },
   cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
+    flexDirection: "row",
+    justifyContent: "flex-end",
     marginBottom: 24,
   },
   virtualBadge: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 12,
   },
   virtualBadgeText: {
-    color: 'white',
+    color: "white",
     fontSize: 12,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   cardBody: {
     gap: 24,
@@ -291,44 +284,44 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   cardNumberLabel: {
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: "rgba(255, 255, 255, 0.8)",
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   cardNumberRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   cardNumber: {
-    color: 'white',
+    color: "white",
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: "600",
     letterSpacing: 2,
   },
   copyButton: {
     padding: 4,
   },
   cardDetailsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
   },
   cardDetailItem: {
     gap: 4,
   },
   cardDetailLabel: {
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: "rgba(255, 255, 255, 0.8)",
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   cardDetailValue: {
-    color: 'white',
+    color: "white",
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   securityCodeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
   },
   instructionsContainer: {
@@ -337,49 +330,49 @@ const styles = StyleSheet.create({
   },
   instructionsTitle: {
     fontSize: 14,
-    color: '#666',
-    textAlign: 'center',
+    color: "#666",
+    textAlign: "center",
     lineHeight: 20,
   },
   stepContainer: {
     gap: 12,
   },
   stepHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
+    flexDirection: "row",
+    alignItems: "flex-start",
     gap: 16,
   },
   stepNumber: {
     width: 24,
     height: 24,
-    backgroundColor: '#4A3DE31A',
+    backgroundColor: "#4A3DE31A",
     borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     marginTop: 2,
   },
   stepNumberText: {
-    color: 'black',
+    color: "black",
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   stepText: {
     flex: 1,
     fontSize: 16,
-    color: '#333',
+    color: "#333",
     lineHeight: 22,
   },
   boldText: {
-    fontWeight: '600',
+    fontWeight: "600",
   },
   bottomContainer: {
     paddingHorizontal: 20,
     paddingBottom: 34,
     paddingTop: 20,
-    backgroundColor: 'white', // Ensure white background
+    backgroundColor: "white", // Ensure white background
   },
   nextButton: {
-    backgroundColor: '#4A3DE3',
+    backgroundColor: "#4A3DE3",
     borderRadius: 12,
     paddingVertical: 16,
   },

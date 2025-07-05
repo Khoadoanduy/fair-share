@@ -1,6 +1,7 @@
 import React from "react";
-import { View, Text, Image, StyleSheet } from "react-native";
+import { View, Text, Image, StyleSheet, Pressable } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import * as Clipboard from "expo-clipboard";
 
 interface VirtualCardDisplayProps {
   cardBrand?: string;
@@ -11,46 +12,68 @@ interface VirtualCardDisplayProps {
   cvc?: number;
   number?: number;
 }
-
 export default function VirtualCardDisplay({
-  cardBrand = "visa",
   expMonth,
   expYear,
   cardholderName,
   number,
   cvc,
 }: VirtualCardDisplayProps) {
+  const handleCopyCardNumber = async (number: number) => {
+    await Clipboard.setStringAsync(number.toString());
+    alert("Copied card number");
+  };
+
+  const handleCopySecurityCode = async (cvc: number) => {
+    await Clipboard.setStringAsync(cvc.toString());
+    alert("Copied security code");
+  };
   return (
     <View style={styles.cardContainer}>
-      <View style={styles.cardBody}>
-        <Image
-          source={
-            cardBrand.toLowerCase() === "visa"
-              ? require("../assets/images/visa-240.png")
-              : require("../assets/images/mastercard-240.png")
-          }
-          style={styles.cardImage}
-        />
-
-        <View style={styles.cardDetails}>
-          <Text style={styles.cardNumber}>{number}</Text>
-
-          {expMonth && expYear && (
-            <Text style={styles.cardExpiry}>
-              Expires {expMonth}/{expYear}
-            </Text>
-          )}
-
-          {cardholderName && (
-            <Text style={styles.cardholderName}>{cardholderName}</Text>
-          )}
-
-          {cvc && (
-            <Text style={styles.cardholderName}>CVC: {cvc}</Text>
-          )}
+      <View style={styles.cardHeader}>
+        <View style={styles.virtualBadge}>
+          <Text style={styles.virtualBadgeText}>Virtual</Text>
         </View>
-        
-        <Ionicons name="card-outline" size={24} color="#4A3DE3" />
+      </View>
+
+      <View style={styles.cardBody}>
+        <View style={styles.cardNumberSection}>
+          <Text style={styles.cardNumberLabel}>Card number</Text>
+          <View style={styles.cardNumberRow}>
+            <Text style={styles.cardNumber}>{number}</Text>
+            <Pressable
+              onPress={() => handleCopyCardNumber(number)}
+              style={styles.copyButton}
+            >
+              <Ionicons name="copy-outline" size={20} color="white" />
+            </Pressable>
+          </View>
+          <Text style={styles.cardNumberLabel}>Card Holder Name</Text>
+          <View style={styles.cardNumberRow}>
+            <Text style={styles.cardNumber}>{cardholderName}</Text>
+          </View>
+        </View>
+
+        <View style={styles.cardDetailsRow}>
+          <View style={styles.cardDetailItem}>
+            <Text style={styles.cardDetailLabel}>Expiration date</Text>
+            <Text style={styles.cardDetailValue}>
+              {expMonth}/{expYear}
+            </Text>
+          </View>
+          <View style={styles.cardDetailItem}>
+            <Text style={styles.cardDetailLabel}>Security code</Text>
+            <View style={styles.securityCodeRow}>
+              <Text style={styles.cardDetailValue}>{cvc}</Text>
+              <Pressable
+                onPress={() => handleCopySecurityCode(cvc)}
+                style={styles.copyButton}
+              >
+                <Ionicons name="copy-outline" size={16} color="white" />
+              </Pressable>
+            </View>
+          </View>
+        </View>
       </View>
     </View>
   );
@@ -58,19 +81,10 @@ export default function VirtualCardDisplay({
 
 const styles = StyleSheet.create({
   cardContainer: {
-    backgroundColor: "#F8F9FA",
-    borderRadius: 12,
-    padding: 16,
-    marginVertical: 8,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    minHeight: 120,
-    paddingTop: 24,
-  },
-  cardBody: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    flex: 1,
+    backgroundColor: "#4A3DE3",
+    borderRadius: 16,
+    padding: 24,
+    marginBottom: 10,
   },
   cardImage: {
     width: 50,
@@ -101,5 +115,68 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "500",
     color: "#000",
+  },
+  cardHeader: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    marginBottom: 24,
+  },
+  virtualBadge: {
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  virtualBadgeText: {
+    color: "white",
+    fontSize: 12,
+    fontWeight: "500",
+  },
+  cardBody: {
+    gap: 24,
+  },
+  cardNumberSection: {
+    gap: 8,
+  },
+  securityCodeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  cardNumberLabel: {
+    color: "rgba(255, 255, 255, 0.8)",
+    fontSize: 14,
+    fontWeight: "500",
+  },
+  cardNumberRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  cardNumber: {
+    color: "white",
+    fontSize: 18,
+    fontWeight: "600",
+    letterSpacing: 2,
+  },
+  copyButton: {
+    padding: 4,
+  },
+  cardDetailsRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  cardDetailItem: {
+    gap: 4,
+  },
+  cardDetailLabel: {
+    color: "rgba(255, 255, 255, 0.8)",
+    fontSize: 14,
+    fontWeight: "500",
+  },
+  cardDetailValue: {
+    color: "white",
+    fontSize: 16,
+    fontWeight: "600",
   },
 });
