@@ -9,6 +9,7 @@ import { Ionicons } from '@expo/vector-icons';
 import AcceptInvitationButton from '@/components/AcceptInvitationButton';
 import DeclineInvitationButton from '@/components/DeclineInvitationButton';
 import SubscriptionCard from '@/components/SubscriptionCard';
+import { useUserState } from "@/hooks/useUserState";
 
 interface Subscription {
   id: string;
@@ -43,6 +44,7 @@ export default function AllInvitations() {
   const router = useRouter();
   const { user } = useUser();
   const clerkId = user?.id;
+  const { hasPayment } = useUserState();
   const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [sentRequests, setSentRequests] = useState<Invitation[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
@@ -223,6 +225,7 @@ export default function AllInvitations() {
                   <AcceptInvitationButton
                     userId={userId!}
                     groupId={groupId}
+                    hasPayment = {hasPayment}
                     disabled={status !== undefined}
                     onResponse={() => handleInvitationResponse(groupId, 'accepted')}
                   />

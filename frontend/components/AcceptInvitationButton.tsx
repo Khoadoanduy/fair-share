@@ -3,6 +3,8 @@ import CustomButton from './CustomButton';
 import { useState } from 'react';
 import { StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useUserState } from "@/hooks/useUserState";
+import { useRouter } from 'expo-router';
 
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
@@ -11,20 +13,26 @@ type AcceptButtonProps = {
   userId: string;
   groupId: string;
   disabled?: boolean;
+  hasPayment: boolean;
   onResponse?: () => void;
 };
 
-const AcceptInvitationButton = ({ userId, groupId, disabled, onResponse }: AcceptButtonProps) => {
+const router = useRouter();
+const AcceptInvitationButton = ({ userId, groupId, disabled, hasPayment, onResponse }: AcceptButtonProps) => {
   const [accepted, setAccepted] = useState(false);
   const handleAccept = async () => {
-    try {
-      await axios.put(`${API_URL}/api/invite/${groupId}/${userId}`);
-      await axios.post(`${API_URL}/api/groupMember/${groupId}/${userId}`, {userRole: "member"});
-      setAccepted(true);
-      onResponse?.();
-      console.log('Accept invitation successfully');
-    } catch (error) {
-      console.error('Error accepting invitation:', error);
+    if (!hasPayment) {
+      router.push('/(group)/promptUserToAddPaymentMethod')
+    } else {
+      try {
+        await axios.put(`${API_URL}/api/invite/${groupId}/${userId}`);
+        await axios.post(`${API_URL}/api/groupMember/${groupId}/${userId}`, {userRole: "member"});
+        setAccepted(true);
+        onResponse?.();
+        console.log('Accept invitation successfully');
+      } catch (error) {
+        console.error('Error accepting invitation:', error);
+      }
     }
   };
 

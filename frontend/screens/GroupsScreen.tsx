@@ -45,15 +45,14 @@ interface Group {
 export default function GroupsScreen() {
   const router = useRouter();
   const API_URL = process.env.EXPO_PUBLIC_API_URL;
-  const { user } = useUser();
-  const { userId } = useUserState();
+  const { userId, hasPayment } = useUserState();
   // const [userId, setUserId] = useState<string | null>(null);
   const [groups, setGroups] = useState<Group[]>([]);
   const [selectedFilter, setSelectedFilter] = useState("All");
   const [showAddModal, setShowAddModal] = useState(false);
   const [showPersonalModal, setShowPersonalModal] = useState(false);
   const [buttonPosition, setButtonPosition] = useState<{
-    x: number;
+    x: number;  
     y: number;
     width: number;
     height: number;
@@ -81,7 +80,12 @@ export default function GroupsScreen() {
 
   const handleGroupPress = () => {
     setShowAddModal(false);
-    router.push('/(group)/createGroupName');
+    if (hasPayment) {
+      router.push('/(group)/createGroupName');
+    } else {
+      router.push('/(group)/promptUserToAddPaymentMethod')
+    }
+
   };
 
   const handleExistingSubscription = () => {
