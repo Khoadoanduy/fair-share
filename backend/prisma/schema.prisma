@@ -42,7 +42,7 @@ model User {
   receivedInvitations FriendInvitation[] @relation("ReceivedInvitations")
   friends             Friend[]           @relation("UserFriends")
   friendOf            Friend[]           @relation("FriendsOf")
-  pushToken         String? @unique
+  pushToken           String?            @unique
 }
 
 model Group {
@@ -54,7 +54,7 @@ model Group {
   subscriptionId     String?           @db.ObjectId
   planName           String?
   amount             Float
-  virtualCardId      String? @unique
+  virtualCardId      String?           @unique
   cycle              String
   cycleDays          Int?
   members            GroupMember[]
@@ -62,14 +62,15 @@ model Group {
   startDate          DateTime?
   endDate            DateTime?
   GroupInvitation    GroupInvitation[]
-  ConfirmShare     ConfirmShare[]
+  ConfirmShare       ConfirmShare[]
   credentialUsername String?
   credentialPassword String?
   amountEach         Float?
   totalMem           Int
-  subscriptionType   String @default("shared") // "shared" or "personal"
-  personalType       String? @default("existing") // "existing" or "virtual" (only for personal)
-  visibility         String   @default("friends")
+  maxMember          Int?
+  subscriptionType   String            @default("shared") // "shared" or "personal"
+  personalType       String?           @default("existing") // "existing" or "virtual" (only for personal)
+  visibility         String            @default("friends"
 }
 
 model GroupMember {

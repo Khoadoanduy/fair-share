@@ -106,28 +106,22 @@ router.get('/groups/:userId', async (request: Request, response: Response) => {
         // Get user's groups with subscription info
         const allGroups = await prisma.groupMember.findMany({
             where: { userId },
-            include: { 
-                group :{
-                    include: {
-                        subscription : {
-                            select: {
-                                logo: true
-                            }
-                        }
-                    }
-                }
-              } 
+            include: {
+                group: { include: { subscription: { select: { logo: true } } } }
+            },
         });
+        
 
-        if (allGroups.length === 0) {
-            return response.json([]);
-        }
-
-        const formattedGroups = allGroups.map(member => ({
-            ...member.group, 
-            logo: member.group.subscription?.logo,
-            subscription: undefined
-          }));
+        // Format for consistent flat structure
+        const formattedGroups = allGroups.map(item => ({
+            ...item.group,
+            userRole: item.userRole,
+            memberId: item.id,
+            timeAgo: getTimeAgoFromObjectId(item.id),
+            message: item.userRole === 'leader'
+                ? `You created ${item.group.subscriptionName} group`
+                : `You joined ${item.group.subscriptionName} group`
+        }));
 
         response.status(200).json(formattedGroups);
 

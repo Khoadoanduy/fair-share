@@ -21,15 +21,11 @@ const calculateDaysBetween = (startDate: Date, endDate: Date): number => {
 // Create group (add subscriptionType and personalType, backward compatible)
 router.post('/create', async (request: Request, response: Response) => {
   try {
-    const { groupName, subscriptionName, subscriptionId, planName, amount, cycle, category, cycleDays, userId, subscriptionType, personalType, visibility } = request.body;
+    const { groupName, subscriptionName, subscriptionId, planName, amount, cycle, category, cycleDays, userId, subscriptionType, personalType, visibility, maxMember } = request.body;
 
     if (!groupName || !subscriptionName || !amount || !userId) {
       return response.status(400).json({ message: 'Missing required fields' });
     }
-
-    const startDate = new Date();
-    const nextPaymentDate = calculateNextPaymentDate(cycleDays, startDate);
-    const daysUntilNextPayment = cycleDays;
 
     const result = await prisma.$transaction(async (tx) => {
       const newGroup = await tx.group.create({
@@ -43,12 +39,11 @@ router.post('/create', async (request: Request, response: Response) => {
           cycle,
           category,
           totalMem: 1,
+          maxMember,
           amountEach: parseFloat(parseFloat(amount).toFixed(2)),
-          startDate,
-          endDate: nextPaymentDate,
           visibility: visibility || 'friends', 
           subscriptionType: subscriptionType || 'shared',
-          personalType: (subscriptionType === 'personal') ? (personalType || 'existing') : null
+          personalType: (subscriptionType === 'personal') ? (personalType || 'existing') : "N/A"
         },
         include: {
           subscription: true // Include subscription data in response
@@ -69,9 +64,6 @@ router.post('/create', async (request: Request, response: Response) => {
     response.status(201).json({
       message: 'Group created successfully with leader',
       groupId: result.group.id,
-      startDate: startDate.toISOString().split('T')[0],
-      nextPaymentDate: nextPaymentDate.toISOString().split('T')[0],
-      daysUntilNextPayment
     });
 
   } catch (error) {
@@ -89,7 +81,7 @@ router.get('/search-user/:username', async (request: Request, response: Response
         username: {
           contains: username,
           mode: 'insensitive'
-        }
+        },
       },
       select: {
         id: true,
@@ -123,7 +115,6 @@ router.get('/:groupId', async (request: Request, response: Response) => {
         subscription: true
       }
     });
-
     if (!group) {
       return response.status(404).json({ message: 'Group not found' });
     }
@@ -149,18 +140,21 @@ router.get('/:groupId', async (request: Request, response: Response) => {
         data: { endDate: nextPaymentDate }
       });
     }
-
     const subscriptionDetails = {
       id: group.id,
       groupName: group.groupName,
       subscriptionName: group.subscriptionName,
       planName: group.planName,
       amount: group.amount,
+      amountEach: group.amountEach,
       cycle: group.cycle,
+      totalMem: group.totalMem,
       currency: 'USD',
       nextPaymentDate: nextPaymentDate?.toISOString().split('T')[0],
       cycleDays: group.cycleDays,
       category: group.category,
+      maxMember: group.maxMember,
+      amountEach: group.amountEach,
       virtualCardId: group.virtualCardId,
       subscription: group.subscription ? {
         id: group.subscription.id,
@@ -360,6 +354,28 @@ router.get('/leader/:groupId', async (request: Request, response: Response) => {
   } catch (error) {
     console.error(error);
     response.status(500).json({ message: 'Error getting group leader' });
+  }
+});
+//Start cycle as of today
+router.put('/start-cycle/:groupId', async (request, response) => {
+  try {
+    const { groupId } = request.params;
+    if (!groupId) {
+      return response.status(400).json({ message: 'groupId are required' });
+    }
+    const group = await prisma.group.findFirst({
+      where: { id: groupId },
+    })
+    if (!group)
+      return response.status(404).json({ message: "No group found" });
+    await prisma.group.update({
+        where: { id: groupId },
+        data: { startDate: new Date() }
+    });
+    response.status(200).json(group.startDate);
+  } catch (error) {
+    console.error(error);
+    response.status(500).json({ message: 'Error starting cycle' });
   }
 });
 

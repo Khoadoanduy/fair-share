@@ -22,7 +22,6 @@ interface SubscriptionCardProps {
   subscriptionName?: string;
   amountEach?: number;
   cycle?: string;
-  isShared?: boolean;
   category?: string;
   amount?: number;
   onPress?: () => void;
@@ -49,8 +48,7 @@ const SubscriptionCard: React.FC<SubscriptionCardProps> = (props) => {
   const amountEach = group?.amountEach !== undefined ? group.amountEach : props.amountEach;
   const cycle = group?.cycle || props.cycle;
   const category = group?.category || props.category;
-  const isPersonal = group?.isPersonal;
-  const isShared = props.isShared !== undefined ? props.isShared : !isPersonal;
+  const isPersonal = group?.isPersonal ?? false;
   const totalMem = group?.totalMem;
   const endDate = group?.endDate;
   const onPress = props.onPress;
