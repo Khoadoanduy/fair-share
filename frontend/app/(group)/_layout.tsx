@@ -32,28 +32,28 @@ export default function AuthLayout() {
         }}
       />
       <Stack.Screen
-        name="subscriptionInfo"
+        name="SubscriptionInfo"
         options={{
           title: "",
           headerTitle: () => null,
         }}
       />
       <Stack.Screen
-        name="customSubscription"
+        name="CustomSubscription"
         options={{
           title: "",
           headerTitle: () => null,
         }}
       />
       <Stack.Screen
-        name="inviteMember"
+        name="InviteMember"
         options={{
           title: "",
           headerTitle: () => null,
         }}
       />
       <Stack.Screen
-        name="subscriptionDetails"
+        name="SubscriptionDetails"
         options={{
           title: "",
           headerTitle: () => null,
@@ -92,6 +92,27 @@ export default function AuthLayout() {
         options={{
           headerShown: false, // This removes the duplicate header
         }}
+      />
+      <Stack.Screen
+          name="createGroupVirtualCard"
+          options={{
+            title: "",
+            headerTitle: () => null,
+          }}
+      />
+      <Stack.Screen
+          name="subscribeInstruction"
+          options={{
+            title: "",
+            headerTitle: () => null,
+          }}
+      />
+      <Stack.Screen
+          name="addGroupCredentials"
+          options={{
+            title: "",
+            headerTitle: () => null,
+          }}
       />
     </Stack>
 

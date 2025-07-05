@@ -25,8 +25,6 @@ router.post('/create', async function (request, response) {
             return response.status(400).json({ error: 'User not found' });
         }
 
-        console.log('User:', user);
-
         if (!user.dateOfBirth || !user.firstName || !user.lastName || !user.email || !user.phoneNumber) {
             return response.status(400).json({ error: 'User information is incomplete' });
         }
@@ -140,7 +138,6 @@ router.post('/create', async function (request, response) {
 router.get('/:groupId', async function (request, response) {
     try {
         const { groupId } = request.params;
-
         if (!groupId) {
             return response.status(400).json({ 
                 error: 'ID is required.' 
@@ -165,7 +162,6 @@ router.get('/:groupId', async function (request, response) {
         const card = await stripe.issuing.cards.retrieve(virtualCardId, {
             expand: ['number', 'cvc'],
         });
-        console.log(card)
 
         // Format the response
         const cardDetails = {

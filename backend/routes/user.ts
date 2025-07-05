@@ -107,11 +107,10 @@ router.get('/groups/:userId', async (request: Request, response: Response) => {
         const allGroups = await prisma.groupMember.findMany({
             where: { userId },
             include: {
-                user: true,
                 group: { include: { subscription: { select: { logo: true } } } }
             },
-            orderBy: { id: 'desc' }
         });
+        
 
         // Format for consistent flat structure
         const formattedGroups = allGroups.map(item => ({

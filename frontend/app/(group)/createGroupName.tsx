@@ -82,7 +82,7 @@ export default function CreateGroupName() {
 
     //move and pass the group name and visibility to the next page
     router.push({
-      pathname: '/(group)/subscriptionInfo',
+      pathname: '/(group)/SubscriptionInfo',
       params: {
         groupName: data.groupName,
         maxMember: data.maxMember,

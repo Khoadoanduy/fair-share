@@ -43,7 +43,7 @@ router.post('/create', async (request: Request, response: Response) => {
           amountEach: parseFloat(parseFloat(amount).toFixed(2)),
           visibility: visibility || 'friends', 
           subscriptionType: subscriptionType || 'shared',
-          personalType: (subscriptionType === 'personal') ? (personalType || 'existing') : null
+          personalType: (subscriptionType === 'personal') ? (personalType || 'existing') : "N/A"
         },
         include: {
           subscription: true // Include subscription data in response
@@ -81,7 +81,7 @@ router.get('/search-user/:username', async (request: Request, response: Response
         username: {
           contains: username,
           mode: 'insensitive'
-        }
+        },
       },
       select: {
         id: true,
@@ -115,7 +115,6 @@ router.get('/:groupId', async (request: Request, response: Response) => {
         subscription: true
       }
     });
-
     if (!group) {
       return response.status(404).json({ message: 'Group not found' });
     }
@@ -141,7 +140,6 @@ router.get('/:groupId', async (request: Request, response: Response) => {
         data: { endDate: nextPaymentDate }
       });
     }
-
     const subscriptionDetails = {
       id: group.id,
       groupName: group.groupName,
@@ -156,6 +154,7 @@ router.get('/:groupId', async (request: Request, response: Response) => {
       cycleDays: group.cycleDays,
       category: group.category,
       maxMember: group.maxMember,
+      amountEach: group.amountEach,
       virtualCardId: group.virtualCardId,
       subscription: group.subscription ? {
         id: group.subscription.id,
@@ -355,6 +354,28 @@ router.get('/leader/:groupId', async (request: Request, response: Response) => {
   } catch (error) {
     console.error(error);
     response.status(500).json({ message: 'Error getting group leader' });
+  }
+});
+//Start cycle as of today
+router.put('/start-cycle/:groupId', async (request, response) => {
+  try {
+    const { groupId } = request.params;
+    if (!groupId) {
+      return response.status(400).json({ message: 'groupId are required' });
+    }
+    const group = await prisma.group.findFirst({
+      where: { id: groupId },
+    })
+    if (!group)
+      return response.status(404).json({ message: "No group found" });
+    await prisma.group.update({
+        where: { id: groupId },
+        data: { startDate: new Date() }
+    });
+    response.status(200).json(group.startDate);
+  } catch (error) {
+    console.error(error);
+    response.status(500).json({ message: 'Error starting cycle' });
   }
 });
 
