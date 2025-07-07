@@ -289,7 +289,7 @@ export default function GroupDetailsScreen() {
           <SubscriptionCard
             logo={{ uri: group.subscription?.logo }}
             subscriptionName={group.subscriptionName}
-            amountEach={Number(group.amountEach.toFixed(2))}
+            amountEach={Number(group.amount.toFixed(2))}
             cycle={group.cycle}
             isShared={true} // or item.isShared if available
             category={group.category}
