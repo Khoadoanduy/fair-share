@@ -15,7 +15,7 @@ import { fetchUserData } from '@/redux/slices/userSlice';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
-interface GroupData {
+interface BaseGroup {
   id: string;
   groupName: string;
   subscriptionName: string;
@@ -37,74 +37,62 @@ interface Friend {
   id: string;
   firstName: string;
   lastName: string;
-  username: string;
+  username?: string;
 }
 
 interface FriendActivity {
   id: string;
   friend: Friend;
-  group: GroupData;
+  group: BaseGroup;
   message: string;
   hasRequested: boolean;
   requestStatus: string | null;
 }
 
-interface UserGroup {
-  id: string;
-  friend: Friend;
-  group: GroupData;
+interface UserGroup extends BaseGroup {
   message: string;
   userRole: string;
+  memberId: string;
 }
 
 export default function FriendsScreen() {
   const { userId: clerkId } = useAuth();
   const dispatch = useAppDispatch();
-  const { userId: mongoUserId, loading: userLoading } = useUserState();
+  const { userId: mongoUserId, loading: userLoading, name: userName } = useUserState();
   const [activeTab, setActiveTab] = useState<'feed' | 'postings'>('feed');
 
-  // Friend activity states (My feed tab)
+  // Combined state for both tabs
   const [activities, setActivities] = useState<FriendActivity[]>([]);
-  const [feedLoading, setFeedLoading] = useState(true);
-  const [feedError, setFeedError] = useState<string | null>(null);
-  const [refreshing, setRefreshing] = useState(false);
-
-  // User groups states (My postings tab)
   const [userGroups, setUserGroups] = useState<UserGroup[]>([]);
-  const [groupsLoading, setGroupsLoading] = useState(false);
-  const [groupsError, setGroupsError] = useState<string | null>(null);
-
-  // Track hidden/deleted postings
+  const [loading, setLoading] = useState({ feed: true, postings: false });
+  const [error, setError] = useState({ feed: null as string | null, postings: null as string | null });
+  const [refreshing, setRefreshing] = useState(false);
   const [hiddenPostings, setHiddenPostings] = useState<Set<string>>(new Set());
-
-  // Join request loading states
   const [joiningGroups, setJoiningGroups] = useState<Set<string>>(new Set());
 
-  // Load hidden postings from AsyncStorage
-  const loadHiddenPostings = async () => {
-    try {
-      const hiddenIds = await AsyncStorage.getItem(`hiddenPostings_${clerkId}`);
-      if (hiddenIds) {
-        setHiddenPostings(new Set(JSON.parse(hiddenIds)));
+  // AsyncStorage operations
+  const manageHiddenPostings = {
+    load: async () => {
+      try {
+        const hiddenIds = await AsyncStorage.getItem(`hiddenPostings_${clerkId}`);
+        if (hiddenIds) setHiddenPostings(new Set(JSON.parse(hiddenIds)));
+      } catch (error) {
+        console.error('Error loading hidden postings:', error);
       }
-    } catch (error) {
-      console.error('Error loading hidden postings:', error);
-    }
-  };
-
-  // Save hidden postings to AsyncStorage
-  const saveHiddenPostings = async (hiddenIds: Set<string>) => {
-    try {
-      await AsyncStorage.setItem(`hiddenPostings_${clerkId}`, JSON.stringify([...hiddenIds]));
-    } catch (error) {
-      console.error('Error saving hidden postings:', error);
+    },
+    save: async (hiddenIds: Set<string>) => {
+      try {
+        await AsyncStorage.setItem(`hiddenPostings_${clerkId}`, JSON.stringify([...hiddenIds]));
+      } catch (error) {
+        console.error('Error saving hidden postings:', error);
+      }
     }
   };
 
   useEffect(() => {
     if (clerkId) {
       // Load hidden postings from storage first
-      loadHiddenPostings();
+      manageHiddenPostings.load();
       // Fetch user data through Redux
       dispatch(fetchUserData(clerkId));
     }
@@ -145,38 +133,40 @@ export default function FriendsScreen() {
   }, [activeTab, mongoUserId]);
 
   const fetchData = useCallback(async (userId: string, showLoading = true) => {
-    if (activeTab === 'feed') {
-      try {
-        if (showLoading) {
-          setFeedLoading(true);
-          setFeedError(null);
-        }
+    const tabKey = activeTab === 'feed' ? 'feed' : 'postings';
+
+    try {
+      if (showLoading) {
+        setLoading(prev => ({ ...prev, [tabKey]: true }));
+        setError(prev => ({ ...prev, [tabKey]: null }));
+      }
+
+      if (activeTab === 'feed') {
         const response = await axios.get(`${API_URL}/api/feed/subscriptions/${userId}`);
         setActivities(Array.isArray(response.data) ? response.data : []);
-      } catch (err) {
-        console.error('Error fetching friend activities:', err);
-        if (showLoading) setFeedError('Failed to load friend activities');
-        setActivities([]);
-      } finally {
-        if (showLoading) setFeedLoading(false);
-      }
-    } else {
-      try {
-        if (showLoading) {
-          setGroupsLoading(true);
-          setGroupsError(null);
-        }
+      } else {
         const response = await axios.get(`${API_URL}/api/user/groups/${userId}`);
         const allGroups = Array.isArray(response.data) ? response.data : [];
         // Filter out hidden postings
-        const visibleGroups = allGroups.filter((group: UserGroup) => !hiddenPostings.has(group.group.id));
+        const visibleGroups = allGroups.filter((group: UserGroup) => !hiddenPostings.has(group.id));
         setUserGroups(visibleGroups);
-      } catch (err) {
-        console.error('Error fetching user groups:', err);
-        if (showLoading) setGroupsError('Failed to load your groups');
+      }
+    } catch (err) {
+      console.error(`Error fetching ${activeTab} data:`, err);
+      if (showLoading) {
+        const errorMessage = activeTab === 'feed'
+          ? 'Failed to load friend activities'
+          : 'Failed to load your groups';
+        setError(prev => ({ ...prev, [tabKey]: errorMessage }));
+      }
+      if (activeTab === 'feed') {
+        setActivities([]);
+      } else {
         setUserGroups([]);
-      } finally {
-        if (showLoading) setGroupsLoading(false);
+      }
+    } finally {
+      if (showLoading) {
+        setLoading(prev => ({ ...prev, [tabKey]: false }));
       }
     }
   }, [activeTab, hiddenPostings]);
@@ -238,10 +228,10 @@ export default function FriendsScreen() {
     // Add to hidden postings and save to storage
     const newHiddenPostings = new Set(hiddenPostings).add(groupId);
     setHiddenPostings(newHiddenPostings);
-    await saveHiddenPostings(newHiddenPostings);
+    await manageHiddenPostings.save(newHiddenPostings);
 
     // Remove the posting from local state immediately
-    setUserGroups(prevGroups => prevGroups.filter(group => group.group.id !== groupId));
+    setUserGroups(prevGroups => prevGroups.filter(group => group.id !== groupId));
 
     Alert.alert(
       'Posting Removed',
@@ -262,18 +252,24 @@ export default function FriendsScreen() {
     />
   );
 
-  const renderUserGroupItem = ({ item }: { item: UserGroup }) => (
-    <FeedCard
-      mode="postings"
-      friend={item.friend}
-      group={item.group}
-      message={item.message}
-      userRole={item.userRole}
-      onDeletePosting={handleDeletePosting}
-    />
-  );
+  const renderUserGroupItem = ({ item }: { item: UserGroup }) => {
+    // Parse user's name for display
+    const [firstName = 'You', ...lastNameParts] = userName?.split(' ') || [];
+    const lastName = lastNameParts.join(' ');
 
-  // Reusable loading component
+    return (
+      <FeedCard
+        mode="postings"
+        friend={{ id: mongoUserId || 'user', firstName, lastName }}
+        group={item}
+        message={item.message}
+        userRole={item.userRole}
+        onDeletePosting={handleDeletePosting}
+      />
+    );
+  };
+
+  // Reusable render functions
   const renderLoadingState = (message: string) => (
     <View style={styles.feedLoadingContainer}>
       <ActivityIndicator color="#4A3DE3" />
@@ -281,14 +277,12 @@ export default function FriendsScreen() {
     </View>
   );
 
-  // Reusable error component
   const renderErrorState = (error: string) => (
     <View style={styles.errorContainer}>
       <Text style={styles.errorText}>{error}</Text>
     </View>
   );
 
-  // Reusable empty state component
   const renderEmptyState = (icon: string, title: string, subtitle: string) => (
     <View style={styles.emptyContainer}>
       <Ionicons name={icon as any} size={48} color="#ccc" />
@@ -297,7 +291,6 @@ export default function FriendsScreen() {
     </View>
   );
 
-  // Reusable FlatList component
   const renderList = (data: any[], renderItem: any) => (
     <FlatList
       data={data}
@@ -318,8 +311,8 @@ export default function FriendsScreen() {
   );
 
   const renderFeedContent = () => {
-    if (feedLoading) return renderLoadingState('Loading friend activities...');
-    if (feedError) return renderErrorState(feedError);
+    if (loading.feed) return renderLoadingState('Loading friend activities...');
+    if (error.feed) return renderErrorState(error.feed);
     if (activities.length === 0) {
       return renderEmptyState(
         'people-outline',
@@ -332,8 +325,8 @@ export default function FriendsScreen() {
   };
 
   const renderPostingsContent = () => {
-    if (groupsLoading) return renderLoadingState('Loading your groups...');
-    if (groupsError) return renderErrorState(groupsError);
+    if (loading.postings) return renderLoadingState('Loading your groups...');
+    if (error.postings) return renderErrorState(error.postings);
     if (userGroups.length === 0) {
       return renderEmptyState(
         'add-circle-outline',

@@ -27,13 +27,14 @@ export default function AuthLayout() {
         headerShown: true,
         headerShadowVisible: false,
         headerStyle: { backgroundColor: "#fff" },
-        headerTitleStyle: { fontWeight: "bold", fontSize: 20, color: '#4A3DE3' },
+        headerTitleStyle: { fontSize: 20, color: '#4A3DE3' },
         headerLeft: () => <BackButton />, 
         headerRight: () => (
           <TouchableOpacity onPress={handleHomePress} style={{ marginRight: 10 }}>
             <Ionicons name="home" size={24} color="#4A3DE3" />
           </TouchableOpacity>
         ),
+
       }}
     >
       <Stack.Screen
@@ -44,14 +45,14 @@ export default function AuthLayout() {
         }}
       />
       <Stack.Screen
-        name="SubscriptionInfo"
+        name="subscriptionInfo"
         options={{
           title: "",
           headerTitle: () => null,
         }}
       />
       <Stack.Screen
-        name="CustomSubscription"
+        name="customSubscription"
         options={{
           title: "",
           headerTitle: () => null,
