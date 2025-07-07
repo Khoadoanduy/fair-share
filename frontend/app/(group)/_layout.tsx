@@ -75,7 +75,7 @@ export default function AuthLayout() {
       <Stack.Screen
         name="newGroupDetails"
         options={{
-          title: "",
+          title: "Group Details",
           headerTitle: () => null,
         }}
       />
@@ -88,9 +88,9 @@ export default function AuthLayout() {
       />
       <Stack.Screen
           name = "showAllInvitations"
-          options={{ title: "", 
+          options={{ title: "Manage Subscriptions", 
                     headerTitle: () => null,
-                    headerLeft: () => null,}}
+                    }}
       />
       <Stack.Screen
           name="setMemberShares"
@@ -102,8 +102,9 @@ export default function AuthLayout() {
       <Stack.Screen
         name="groupDetails"
         options={{
-          headerShown: false, // This removes the duplicate header
-        }}
+            title: "Group Details",
+            headerTitle: () => null,
+          }}
       />
       <Stack.Screen
           name="createGroupVirtualCard"
