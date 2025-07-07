@@ -20,6 +20,8 @@ interface UserState {
   error: string | null;
   dateOfBirth: string | null;
   phoneNumber: string | null;
+  firstName?: string | null; // Optional field for first name
+  lastName?: string | null; // Optional field for last name
 }
 
 // Initial state
@@ -122,6 +124,8 @@ const userSlice = createSlice({
       name?: string;
       username?: string;
       id: string;      // This is the MongoDB _id
+      firstName?: string;
+      lastName?: string;
     }>) => {
       state.userId = action.payload.id;    
       state.clerkId = action.payload.clerkId;       // Store MongoDB ID

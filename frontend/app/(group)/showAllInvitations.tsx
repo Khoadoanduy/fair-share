@@ -225,6 +225,7 @@ export default function AllInvitations() {
                     groupId={groupId}
                     disabled={status !== undefined}
                     onResponse={() => handleInvitationResponse(groupId, 'accepted')}
+                    username={user?.username ?? ''}
                   />
                 )}
 

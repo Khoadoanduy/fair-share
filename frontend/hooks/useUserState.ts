@@ -19,6 +19,9 @@ export function useUserState() {
     // User details
     dateOfBirth: userState.dateOfBirth,
     phoneNumber: userState.phoneNumber,
+    firstName: userState.firstName,
+    lastName: userState.lastName,
+
     
     // Payment status
     hasPayment: userState.hasPayment,

@@ -14,6 +14,8 @@ import CustomButton from "@/components/CustomButton";
 import ProgressDots from "@/components/ProgressDots";
 import axios from "axios";
 import { useUser } from "@clerk/clerk-expo";
+import { useUserState } from "@/hooks/useUserState";
+import VirtualCardDisplay from "@/components/VirtualCardDisplay";
 
 interface VirtualCard {
   id: string;
@@ -34,11 +36,11 @@ interface SubscriptionData {
 
 export default function CreateGroupVirtualCard() {
   const API_URL = process.env.EXPO_PUBLIC_API_URL;
-  const { user } = useUser();
   const router = useRouter();
   const { groupId } = useLocalSearchParams();
   const [virtualCard, setVirtualCard] = useState<VirtualCard | null>(null);
   const [loading, setLoading] = useState(false);
+  const user = useUserState();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -51,9 +53,22 @@ export default function CreateGroupVirtualCard() {
           allMembers.map(async (member) => {
             await axios.post(`${API_URL}/api/stripe-payment/charge-user`, {
               customerStripeID: member.user.customerId,
-              amount: groupDetails.data.amountEach,
-              subscription: groupDetails.data.subscriptionName,
+              groupId: groupId,
+              cycle: groupDetails.data.cycle,
+              intervalCount: groupDetails.data.intervalCount,
+              amountEach: groupDetails.data.amountEach,
             });
+
+            await axios.post(`${API_URL}/api/notifications/send`, {
+              mongoIds: [member.user.id],
+              title: "Charge Successful",
+              body: `You have been charged $${groupDetails.data.amountEach} for the subscription ${groupDetails.data.subscriptionName}.`,
+              data: {
+                type: "charge_success",
+                groupId,
+              },
+            });
+            console.log("Here");
           })
         );
         // After charging users, create virtual card
@@ -74,32 +89,22 @@ export default function CreateGroupVirtualCard() {
     try {
       setLoading(true);
 
+      console.log("here");
+
       // Get user's MongoDB ID
-      const userResponse = await axios.get(`${API_URL}/api/user/`, {
-        params: { clerkID: user?.id },
-      });
-      const mongoUserId = userResponse.data.id;
+
       // Create virtual card for the group
       const response = await axios.post(`${API_URL}/api/virtualCard/create`, {
-        userId: mongoUserId,
+        userId: user.userId,
         groupId: groupId,
       });
+
+      console.log("Virtual card created:", response.data);
       if (response.data.success) {
-        const cardResponse = await axios.get(`${API_URL}/api/virtualCard/${groupId}`);
-        if (cardResponse.data.cards && cardResponse.data.cards.length > 0) {
-          const latestCard = cardResponse.data.cards[0];
-          setVirtualCard({
-            id: latestCard.id,
-            last4: latestCard.last4,
-            expMonth: latestCard.exp_month,
-            expYear: latestCard.exp_year,
-            brand: latestCard.brand,
-            cardholderName: latestCard.cardholder?.name || `${user?.firstName} ${user?.lastName}`,
-            status: latestCard.status,
-            type: latestCard.type,
-            currency: latestCard.currency,
-          });
-        }
+        const cardResponse = await axios.get(
+          `${API_URL}/api/virtualCard/${groupId}`
+        );
+        setVirtualCard(cardResponse.data);
       }
     } catch (error) {
       console.error("Error creating virtual card:", error);
@@ -161,44 +166,14 @@ export default function CreateGroupVirtualCard() {
               </View>
             </View>
 
-            <View style={styles.cardBody}>
-              <View style={styles.cardNumberSection}>
-                <Text style={styles.cardNumberLabel}>Card number</Text>
-                <View style={styles.cardNumberRow}>
-                  <Text style={styles.cardNumber}>
-                    {`**** **** **** ${virtualCard.last4}`}
-                  </Text>
-                  <Pressable
-                    onPress={handleCopyCardNumber}
-                    style={styles.copyButton}
-                  >
-                    <Ionicons name="copy-outline" size={20} color="white" />
-                  </Pressable>
-                </View>
-              </View>
-
-              <View style={styles.cardDetailsRow}>
-                <View style={styles.cardDetailItem}>
-                  <Text style={styles.cardDetailLabel}>Expiration date</Text>
-                  <Text style={styles.cardDetailValue}>
-                    {virtualCard.expMonth}/
-                    {virtualCard.expYear.toString().slice(-2)}
-                  </Text>
-                </View>
-                <View style={styles.cardDetailItem}>
-                  <Text style={styles.cardDetailLabel}>Security code</Text>
-                  <View style={styles.securityCodeRow}>
-                    <Text style={styles.cardDetailValue}>123</Text>
-                    <Pressable
-                      onPress={handleCopySecurityCode}
-                      style={styles.copyButton}
-                    >
-                      <Ionicons name="copy-outline" size={16} color="white" />
-                    </Pressable>
-                  </View>
-                </View>
-              </View>
-            </View>
+            <VirtualCardDisplay
+              cardBrand={virtualCard?.brand}
+              number={virtualCard?.number}
+              cvc={virtualCard?.cvc}
+              expMonth={virtualCard?.expMonth}
+              expYear={virtualCard?.expYear}
+              cardholderName={virtualCard?.cardholderName}
+            />
           </View>
         )}
         <Text style={styles.instructionsTitle}>

@@ -73,6 +73,8 @@ type VirtualCard = {
   status: string;
   type: string;
   currency: string;
+  number: number;
+  cvc: number;
 };
 
 export default function GroupDetailsScreen() {

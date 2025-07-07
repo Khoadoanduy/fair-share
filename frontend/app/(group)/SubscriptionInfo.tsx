@@ -158,11 +158,12 @@ export default function SubscriptionScreen() {
         amount: parseFloat(info.amount),
         cycle: info.cycle,
         cycleDays: cycleDays,
-        paymentFrequency: parseFloat(info.day),
+        intervalCount: parseInt(info.day),
         category: info.category,
         logo: info.logo,
         visibility: visibility || 'friends', 
       });
+
 
       const groupId = response.data.groupId;
 
