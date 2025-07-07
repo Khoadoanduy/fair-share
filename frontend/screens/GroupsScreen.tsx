@@ -222,7 +222,7 @@ const fetchAllSubscriptions = async () => {
               } else {
                 router.push({
                   pathname:
-                    item.endDate === null
+                    item.startDate === null
                       ? "/(group)/newGroupDetails"
                       : "/(group)/groupDetails",
                   params: { groupId: item.id },

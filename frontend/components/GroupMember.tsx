@@ -53,6 +53,7 @@ type Props = {
   requestConfirmSent?: boolean;
   joinRequests?: JoinRequest[];
   invitations?: Invitation[];
+  startCycle?: boolean;
   onJoinRequestResponse?: () => void;
 };
 
@@ -82,6 +83,7 @@ const GroupMembers: React.FC<Props> = ({
   requestConfirmSent,
   joinRequests = [],
   invitations = [],
+  startCycle,
   onJoinRequestResponse
 }) => {
   const API_URL = process.env.EXPO_PUBLIC_API_URL;
@@ -219,6 +221,7 @@ const GroupMembers: React.FC<Props> = ({
       ))}
       {isLeader && showInvitations && (
         <>
+        { !requestConfirmSent && !startCycle && (
           <CustomButton
             text="Set shares & request confirmation"
             onPress={() => {
@@ -230,9 +233,11 @@ const GroupMembers: React.FC<Props> = ({
             size="large"
             fullWidth
           />
-          <Text style={styles.textInvitation}>Pending invites</Text>
+        )}
           {invitations.length > 0 ? (
-            invitations.map((invitation, index) => (
+            <>
+            <Text style={styles.textInvitation}>Pending invites</Text>
+            {invitations.map((invitation, index) => (
               <View key={invitation.id} style={styles.memberRow}>
                 <View
                   style={[styles.avatar, { backgroundColor: "#4A3DE3" }]}
@@ -255,7 +260,8 @@ const GroupMembers: React.FC<Props> = ({
                   textStyle={styles.textInvited}
                 />
               </View>
-            ))
+            ))}
+            </>
           ) : (
             <></>
           )}

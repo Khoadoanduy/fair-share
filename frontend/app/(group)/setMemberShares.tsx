@@ -107,16 +107,9 @@ export default function setMemberShares() {
             />
         </View>
 
-        {/* Service Card */}
         <View style={styles.toggleContainer}>
             <Pressable style={styles.toggleBtnActive}>
                 <Text style={styles.toggleTextActive}>Split equally</Text>
-            </Pressable>
-            <Pressable
-                style={styles.toggleBtnInactive}
-                //onPress={showAllInvitations}
-            >
-                <Text style={styles.toggleTextInactive}>Custom amounts</Text>
             </Pressable>
         </View>
 
@@ -171,7 +164,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "white",
-    justifyContent: "space-between"
+    justifyContent: "space-between",
   },
   scrollView: {
     flex: 1,
@@ -199,13 +192,10 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginBottom: 20,
   },
-  backButton: {
-    padding: 4,
-  },
   toggleContainer: {
     flexDirection: "row",
-    justifyContent: "space-around",
-    gap: 10,
+    justifyContent: "center",  // Center the buttons horizontally
+    gap: 20,
     backgroundColor: "#4A3DE31A",
     borderRadius: 12,
     padding: 8,
@@ -213,22 +203,23 @@ const styles = StyleSheet.create({
     marginVertical: 16,
   },
   toggleBtnActive: {
-    flex: 1, 
+    flex: 1, // Allow the button to take equal width
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 10,
     backgroundColor: "white",
-    alignContent: "center",
-    justifyContent: "center"
+    alignItems: "center", // Center the text inside the button
+    justifyContent: "center", // Vertically center the text
+    flexBasis: "auto", // Make sure they don't stretch unnecessarily
   },
   toggleBtnInactive: {
-    flex: 1, 
+    flex: 1,
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 10,
     backgroundColor: "transparent",
-    alignContent: "center",
-    justifyContent: "center"
+    alignItems: "center",  // Center the text horizontally
+    justifyContent: "center",  // Center the text vertically
   },
   toggleTextActive: {
     color: "black",
@@ -239,11 +230,11 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
   subscription: {
-    padding: 20
+    padding: 20,
   },
   button: {
     marginVertical: 16,
-    marginHorizontal: 16
+    marginHorizontal: 16,
   },
   modalBackdrop: {
     flex: 1,
@@ -277,11 +268,10 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   cancelButton: {
-    backgroundColor: "#4A3DE31A"
+    backgroundColor: "#4A3DE31A",
   },
-    cancelText: {
+  cancelText: {
     color: '#4A3DE3',
     fontWeight: '500',
   },
-
 });
