@@ -1,10 +1,13 @@
 import { Redirect, Stack } from "expo-router";
 import { useAuth } from "@clerk/clerk-expo";
-import { ActivityIndicator, View } from "react-native";
+import { ActivityIndicator, View, TouchableOpacity } from "react-native";
 import BackButton from "../../components/BackButton";
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 
 export default function AuthLayout() {
   const { isSignedIn, isLoaded } = useAuth();
+  const router = useRouter(); 
 
   if (!isLoaded) {
     return (
@@ -14,6 +17,10 @@ export default function AuthLayout() {
     );
   }
 
+  const handleHomePress = () => {
+    router.push({ pathname: "/(tabs)/groups" });
+  };
+
   return (
     <Stack
       screenOptions={{
@@ -21,7 +28,12 @@ export default function AuthLayout() {
         headerShadowVisible: false,
         headerStyle: { backgroundColor: "#fff" },
         headerTitleStyle: { fontWeight: "bold", fontSize: 20, color: '#4A3DE3' },
-        headerLeft: () => <BackButton />, // your custom back button
+        headerLeft: () => <BackButton />, 
+        headerRight: () => (
+          <TouchableOpacity onPress={handleHomePress} style={{ marginRight: 10 }}>
+            <Ionicons name="home" size={24} color="#4A3DE3" />
+          </TouchableOpacity>
+        ),
       }}
     >
       <Stack.Screen
@@ -62,7 +74,7 @@ export default function AuthLayout() {
       <Stack.Screen
         name="newGroupDetails"
         options={{
-          title: "",
+          title: "Group Details",
           headerTitle: () => null,
         }}
       />
@@ -75,9 +87,9 @@ export default function AuthLayout() {
       />
       <Stack.Screen
           name = "showAllInvitations"
-          options={{ title: "", 
+          options={{ title: "Manage Subscriptions", 
                     headerTitle: () => null,
-                    headerLeft: () => null,}}
+                    }}
       />
       <Stack.Screen
           name="setMemberShares"
@@ -89,8 +101,9 @@ export default function AuthLayout() {
       <Stack.Screen
         name="groupDetails"
         options={{
-          headerShown: false, // This removes the duplicate header
-        }}
+            title: "Group Details",
+            headerTitle: () => null,
+          }}
       />
       <Stack.Screen
           name="createGroupVirtualCard"

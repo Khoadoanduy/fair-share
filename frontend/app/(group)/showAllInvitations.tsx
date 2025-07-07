@@ -159,11 +159,6 @@ export default function AllInvitations() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <BackButton></BackButton>
-        <Text style={styles.headerTitle}>Manage Subscriptions</Text>
-        <Ionicons name="search" size={20} color="#4A3DE3" />
-      </View>
       <View style={styles.toggleContainer}>
         <Pressable style={styles.toggleBtnInactive} onPress={mySubscriptionsRoute}>
           <Text style={styles.toggleTextInactive}>My Subscriptions</Text>
@@ -292,19 +287,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFFFFF',
   },
-  header: {
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    justifyContent: "space-between",
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: -60
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: "700",
-    color: "#4A3DE3",
-  },
   subtitle: {
     fontSize: 16,
     fontWeight: '600',
@@ -328,6 +310,7 @@ const styles = StyleSheet.create({
     padding: 8,
     marginHorizontal: 16,
     marginVertical: 16,
+    marginTop: -20
   },
   toggleBtnActive: {
     flex: 1,
