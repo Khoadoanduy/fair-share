@@ -39,6 +39,7 @@ interface Group {
   };
   subscriptionType: 'shared' | 'personal';
   totalMem: number;
+  amountEach: number;
 }
 
 interface EnrichedTransaction extends Transaction {
@@ -127,6 +128,7 @@ const HistoryScreen = () => {
               category: group.subscription?.category || group.category,
               logo: group.subscription?.logo || group.logo || null,
               isShared: group.subscriptionType == "shared",
+              amount: group.amountEach
             };
           }
         } catch (err) {
@@ -180,7 +182,7 @@ const HistoryScreen = () => {
   };
 
   const renderTransaction = (transaction: EnrichedTransaction) => {
-    const amount = transaction.amount / 100;
+    const amount = transaction.amount;
     const name = transaction.subscriptionName || 'Subscription';
     const createdAt = new Date(transaction.created * 1000);
     const formattedTime = createdAt.toLocaleString('en-US', {

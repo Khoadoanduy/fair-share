@@ -18,14 +18,19 @@ interface SubscriptionCardProps {
     showNegativeAmount?: boolean;
     timestamp?: string;
     virtualCardId?: string;
-    status?: 'Active' | 'Inactive' | 'Pending';
+    status?: string; // Added for Active/Inactive status
   };
-  logo?: any; // fallback for simple usage
+  logo?: any;
   subscriptionName?: string;
   amountEach?: number;
   cycle?: string;
   category?: string;
   amount?: number;
+  status?: string;
+  endDate?: string;
+  isPersonal?: boolean;
+  showNegativeAmount?: boolean;
+  timestamp?: string;
   onPress?: () => void;
 }
 
@@ -36,9 +41,9 @@ const formatRelativeDate = (dateString: string) => {
   const now = new Date();
   const diff = date.getTime() - now.getTime();
   const days = Math.ceil(diff / (1000 * 3600 * 24));
-  if (days < 0) return "now";
-  if (days === 0) return "today";
-  if (days === 1) return "tomorrow";
+  if (days < 0) return "Due now";
+  if (days === 0) return "Due today";
+  if (days === 1) return "In 1 day";
   return `In ${days} days`;
 };
 
@@ -46,100 +51,109 @@ const SubscriptionCard: React.FC<SubscriptionCardProps> = (props) => {
   const group = props.group;
   const logo = group?.logo || props.logo;
   const subscriptionName = group?.subscriptionName || props.subscriptionName;
-  const planName = group?.planName;
   const amountEach = group?.amountEach !== undefined ? group.amountEach : props.amountEach;
   const cycle = group?.cycle || props.cycle;
   const category = group?.category || props.category;
-  const isPersonal = group?.isPersonal ?? false;
-  const totalMem = group?.totalMem;
-  const endDate = group?.endDate;
-  const virtualCardId = group?.virtualCardId;
-  const status = group?.status || 'Active';
+  const isPersonal = group?.isPersonal ?? props.isPersonal ?? true;
+  const endDate = group?.endDate || props.endDate;
+  const status = group?.status || props.status || 'Active';
+  const showNegativeAmount = group?.showNegativeAmount ?? props.showNegativeAmount ?? false;
+  const timestamp = group?.timestamp || props.timestamp;
   const onPress = props.onPress;
 
   const CardContent = (
     <View style={styles.subscriptionCard}>
-      {/* Left section */}
+      {/* Left side with logo */}
       <View style={styles.leftSection}>
-      {logo ? (
-        typeof logo === 'string' ? (
-          <Image source={{ uri: logo }} style={styles.subscriptionLogo} />
+        {logo ? (
+          typeof logo === 'string' ? (
+            <Image source={{ uri: logo }} style={styles.subscriptionLogo} />
+          ) : (
+            <Image source={logo} style={styles.subscriptionLogo} />
+          )
         ) : (
-          <Image source={logo} style={styles.subscriptionLogo} />
-        )
-      ) : (
-        <View style={styles.logoPlaceholder}>
-          <Text style={styles.logoText}>{subscriptionName ? subscriptionName.charAt(0) : '?'}</Text>
-        </View>
-      )}
+          <View style={styles.logoPlaceholder}>
+            <Text style={styles.logoText}>{subscriptionName ? subscriptionName.charAt(0) : '?'}</Text>
+          </View>
+        )}
       </View>
-       {/* Middle section */}
-       <View style={styles.middleSection}>
+
+      {/* Middle section */}
+      <View style={styles.middleSection}>
+        {/* Top row - Due date */}
         <View style={styles.topRow}>
-          {/* Due date */}
-          {endDate && (
+          {endDate && !showNegativeAmount && (
             <Text style={styles.dueDate}>{formatRelativeDate(endDate)}</Text>
           )}
         </View>
+        
+        {/* Middle row - Subscription name */}
         <View style={styles.middleRow}>
-        {/* Subscription name */}
-        {subscriptionName && (
-          <Text style={styles.subscriptionName}>{subscriptionName}</Text>
-        )}
+          {subscriptionName && (
+            <Text style={styles.subscriptionName}>{subscriptionName}</Text>
+          )}
         </View>
-
+        
+        {/* Bottom row - Tags */}
         <View style={styles.bottomRow}>
-        {/* Tags row */}
-        <View style={styles.tagsRow}>
-          {/* Personal/Shared indicator */}
-          <View style={styles.personalTag}>
-            <Ionicons 
-              name={isPersonal ? "person-outline" : "people-outline"} 
-              size={16} 
-              color="#6366F1" 
-            />
+          <View style={styles.tagsRow}>
+            {/* Personal/Shared indicator */}
+            <View style={styles.personalTag}>
+              <Ionicons 
+                name={isPersonal ? "person-outline" : "people-outline"} 
+                size={16} 
+                color="#6366F1" 
+              />
+            </View>
+            
+            {/* Virtual card indicator */}
+            {group?.virtualCardId && (
+              <View style={styles.virtualCardTag}>
+                <Ionicons name="card-outline" size={16} color="#6366F1" />
+              </View>
+            )}
+            
+            {/* Category tag */}
+            {category && (
+              <View style={styles.categoryTag}>
+                <Text style={styles.categoryText}>{category}</Text>
+              </View>
+            )}
           </View>
-
-          {/* Virtual card indicator */}
-          {group?.virtualCardId && (
-            <View style={styles.virtualCardTag}>
-              <Ionicons name="card-outline" size={16} color="#6366F1" />
-            </View>
-          )}
-          
-          {/* Category tag */}
-          {category && (
-            <View style={styles.categoryTag}>
-              <Text style={styles.categoryText}>{category}</Text>
-            </View>
-          )}
-        </View>
         </View>
       </View>
+
       {/* Right section */}
       <View style={styles.rightSection}>
-      <View style={styles.topRow}>
-        {/* Billing cycle */}
-        {cycle && (
-          <Text style={styles.cycleText}>{cycle}</Text>
-        )}
-      </View>
-      <View style={styles.middleRow}>
-        {/* Price */}
-        {amountEach !== undefined && amountEach !== null && (
-          <Text style={styles.price}>${amountEach.toFixed(2)}</Text>
-        )}
-       </View>
-       <View style={styles.bottomRow}>
-        {/* Status */}
-        <View style={[styles.statusTag, status === 'Active' ? styles.statusTagActive : styles.statusTagInactive]}>
-            <Text style={[styles.statusText, status === 'Active' ? styles.statusTextActive : styles.statusTextInactive]}>
-              {status}
+        {/* Top row - Billing cycle */}
+        <View style={styles.topRow}>
+          {cycle && !showNegativeAmount && (
+            <Text style={styles.cycleText}>{cycle}</Text>
+          )}
+        </View>
+        
+        {/* Middle row - Price */}
+        <View style={styles.middleRow}>
+          {amountEach !== undefined && amountEach !== null && (
+            <Text style={styles.price}>
+              {showNegativeAmount ? '-' : ''}${amountEach.toFixed(2)}
             </Text>
-          </View>
-          </View>
+          )}
+        </View>
+        
+        {/* Bottom row - Status or Timestamp */}
+        <View style={styles.bottomRow}>
+          {showNegativeAmount && timestamp ? (
+            <Text style={styles.timestampText}>{timestamp}</Text>
+          ) : (
+            <View style={[styles.statusTag, status === 'Active' ? styles.statusTagActive : styles.statusTagInactive]}>
+              <Text style={[styles.statusText, status === 'Active' ? styles.statusTextActive : styles.statusTextInactive]}>
+                {status}
+              </Text>
+            </View>
+          )}
+        </View>
       </View>
-
     </View>
   );
 
@@ -156,8 +170,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: 'white',
     borderRadius: 16,
-    padding: 10,
+    padding: 16,
     marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
   leftSection: {
     marginRight: 16,
@@ -169,8 +188,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#F3F4F6',
   },
   logoPlaceholder: {
-    width: 56,
-    height: 56,
+    width: 64,
+    height: 64,
     borderRadius: 12,
     backgroundColor: '#6366F1',
     justifyContent: 'center',
@@ -183,67 +202,51 @@ const styles = StyleSheet.create({
   },
   middleSection: {
     flex: 1,
-  },
-  topRow: {
-    height: 20,
-    justifyContent: 'center',
-  },
-  middleRow: {
-    height: 28,
-    justifyContent: 'center',
-  },
-  bottomRow: {
-    height: 28,
     justifyContent: 'center',
   },
   dueDate: {
     fontSize: 14,
-    color: '#64748B',
+    color: '#9CA3AF',
     marginBottom: 4,
   },
   subscriptionName: {
     fontSize: 18,
-    fontWeight: '400',
-    color: '#000',
+    fontWeight: '600',
+    color: '#111827',
     marginBottom: 8,
-    fontStyle: 'normal',
   },
   tagsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 8,
   },
   personalTag: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     backgroundColor: '#EEF2FF',
     justifyContent: 'center',
     alignItems: 'center',
   },
   virtualCardTag: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     backgroundColor: '#EEF2FF',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 4,
   },
   categoryTag: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    height: 28,
     backgroundColor: '#EEF2FF',
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    borderRadius: 20,
-    gap: 6,
+    paddingHorizontal: 12,
+    borderRadius: 14,
+    justifyContent: 'center',
   },
   categoryText: {
     fontSize: 14,
     color: '#6366F1',
     fontWeight: '500',
-    textTransform: 'capitalize',
   },
   rightSection: {
     alignItems: 'flex-end',
@@ -251,35 +254,38 @@ const styles = StyleSheet.create({
   },
   cycleText: {
     fontSize: 14,
-    color: '#64748B',
-    marginBottom: 4,
+    color: '#9CA3AF',
     textTransform: 'capitalize',
+    marginBottom: 4,
   },
   price: {
     fontSize: 18,
-    fontWeight: '400',
+    fontWeight: '600',
     color: '#111827',
-    marginBottom: 4,
-    flexDirection: 'column',
-    alignItems: 'flex-start',
+    marginBottom: 8,
+  },
+  timestampText: {
+    fontSize: 14,
+    color: '#9CA3AF',
   },
   statusTag: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
+    height: 28,
+    paddingHorizontal: 12,
+    borderRadius: 14,
+    justifyContent: 'center',
   },
   statusTagActive: {
     backgroundColor: '#D1FAE5',
   },
   statusTagInactive: {
-    backgroundColor: '#E9F9F3',
+    backgroundColor: '#FEE2E2',
   },
   statusText: {
     fontSize: 14,
-    fontWeight: '400',
+    fontWeight: '600',
   },
   statusTextActive: {
-    color: '#027A48',
+    color: '#065F46',
   },
   statusTextInactive: {
     color: '#991B1B',

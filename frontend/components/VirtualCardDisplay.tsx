@@ -36,15 +36,15 @@ export default function VirtualCardDisplay({
 
   return (
     <View style={styles.cardContainer}>
-      <View style={styles.cardHeader}>
-        <View style={styles.virtualBadge}>
-          <Text style={styles.virtualBadgeText}>Virtual</Text>
-        </View>
-      </View>
 
       <View style={styles.cardBody}>
         <View style={styles.cardNumberSection}>
-          <Text style={styles.cardNumberLabel}>Card number</Text>
+          <View style={styles.cardHeader}>
+            <Text style={styles.cardNumberLabel}>Card number</Text>
+            <View style={styles.virtualBadge}>
+              <Text style={styles.virtualBadgeText}>Virtual</Text>
+            </View>
+          </View>
           <View style={styles.cardNumberRow}>
             <Text style={styles.cardNumber}>{formatBankNumber(number)}</Text>
             <Pressable onPress={() => handleCopyCardNumber(number)} style={styles.copyButton}>
@@ -91,8 +91,7 @@ const styles = StyleSheet.create({
   },
   cardHeader: {
     flexDirection: "row",
-    justifyContent: "flex-end",
-    marginBottom: 24,
+    justifyContent: "space-between",
   },
   virtualBadge: {
     backgroundColor: "rgba(255, 255, 255, 0.2)",
@@ -113,8 +112,8 @@ const styles = StyleSheet.create({
   },
   cardNumberLabel: {
     color: "rgba(255, 255, 255, 0.8)",
-    fontSize: 14,
-    fontWeight: "500",
+    fontSize: 16,
+    fontWeight: "600",
   },
   cardNumberRow: {
     flexDirection: "row",
@@ -168,7 +167,6 @@ const styles = StyleSheet.create({
   cardExpiry: {
     fontSize: 14,
     color: "#666",
-    marginBottom: 4,
   },
   cardholderName: {
     fontSize: 14,

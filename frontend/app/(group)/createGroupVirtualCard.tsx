@@ -58,17 +58,18 @@ export default function CreateGroupVirtualCard() {
               intervalCount: groupDetails.data.intervalCount,
               amountEach: groupDetails.data.amountEach,
             });
+            console.log('charge user successfully')
 
-            await axios.post(`${API_URL}/api/notifications/send`, {
-              mongoIds: [member.user.id],
-              title: "Charge Successful",
-              body: `You have been charged $${groupDetails.data.amountEach} for the subscription ${groupDetails.data.subscriptionName}.`,
-              data: {
-                type: "charge_success",
-                groupId,
-              },
-            });
-            console.log("Here");
+            // await axios.post(`${API_URL}/api/notifications/send`, {
+            //   mongoIds: [member.user.id],
+            //   title: "Charge Successful",
+            //   body: `You have been charged $${groupDetails.data.amountEach} for the subscription ${groupDetails.data.subscriptionName}.`,
+            //   data: {
+            //     type: "charge_success",
+            //     groupId,
+            //   },
+            // });
+            console.log("noti sent");
           })
         );
         // After charging users, create virtual card
@@ -158,13 +159,7 @@ export default function CreateGroupVirtualCard() {
           cycle.
         </Text>
         {/* Virtual Card Display */}
-        {virtualCard && (
-          <View style={styles.cardContainer}>
-            <View style={styles.cardHeader}>
-              <View style={styles.virtualBadge}>
-                <Text style={styles.virtualBadgeText}>Virtual</Text>
-              </View>
-            </View>
+  
 
             <VirtualCardDisplay
               cardBrand={virtualCard?.brand}
@@ -174,8 +169,6 @@ export default function CreateGroupVirtualCard() {
               expYear={virtualCard?.expYear}
               cardholderName={virtualCard?.cardholderName}
             />
-          </View>
-        )}
         <Text style={styles.instructionsTitle}>
           Tap the copy button next to your virtual card number and security code
           to use them.
