@@ -168,7 +168,7 @@ export default function SubscriptionScreen() {
       const groupId = response.data.groupId;
 
       router.push({
-        pathname: '/(group)/inviteMember',
+        pathname: '/(group)/confirmInfo',
         params: { groupId: response.data.groupId },
       });
     } catch (error) {
@@ -434,7 +434,7 @@ export default function SubscriptionScreen() {
 
       {/* Bottom section with dots and button */}
       <View style={styles.buttonContainer}>
-        <ProgressDots totalSteps={3} currentStep={2} />
+        <ProgressDots totalSteps={4} currentStep={2} />
         <CustomButton
           text="Next"
           onPress={handleSubmit(handleCreateGroup)}

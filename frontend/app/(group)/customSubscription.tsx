@@ -126,7 +126,7 @@ export default function CustomSubscriptionScreen() {
       const groupId = response.data.groupId;
       await axios.post(`${API_URL}/api/groupMember/${groupId}/${userId}`, { userRole: "leader" });
       router.push({
-        pathname: '/(group)/inviteMember',
+        pathname: '/(group)/confirmInfo',
         params: { groupId: response.data.groupId },
       });
     } catch (error) {
@@ -415,7 +415,7 @@ export default function CustomSubscriptionScreen() {
 
       {/* Bottom section */}
       <View style={styles.buttonContainer}>
-        <ProgressDots totalSteps={3} currentStep={2} />
+        <ProgressDots totalSteps={4} currentStep={2} />
         <CustomButton
           text="Next"
           onPress={handleSubmit(handleCreateGroup)}
