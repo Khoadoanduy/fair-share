@@ -1,10 +1,13 @@
 import { Redirect, Stack } from "expo-router";
 import { useAuth } from "@clerk/clerk-expo";
-import { ActivityIndicator, View } from "react-native";
+import { ActivityIndicator, View, TouchableOpacity } from "react-native";
 import BackButton from "../../components/BackButton";
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 
 export default function AuthLayout() {
   const { isSignedIn, isLoaded } = useAuth();
+  const router = useRouter(); 
 
   if (!isLoaded) {
     return (
@@ -14,6 +17,10 @@ export default function AuthLayout() {
     );
   }
 
+  const handleHomePress = () => {
+    router.push({ pathname: "/(tabs)/groups" });
+  };
+
   return (
     <Stack
       screenOptions={{
@@ -21,7 +28,12 @@ export default function AuthLayout() {
         headerShadowVisible: false,
         headerStyle: { backgroundColor: "#fff" },
         headerTitleStyle: { fontWeight: "bold", fontSize: 20, color: '#4A3DE3' },
-        headerLeft: () => <BackButton />, // your custom back button
+        headerLeft: () => <BackButton />, 
+        headerRight: () => (
+          <TouchableOpacity onPress={handleHomePress} style={{ marginRight: 10 }}>
+            <Ionicons name="home" size={24} color="#4A3DE3" />
+          </TouchableOpacity>
+        ),
       }}
     >
       <Stack.Screen
