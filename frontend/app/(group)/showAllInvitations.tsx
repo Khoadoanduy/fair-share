@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View, Pressable } from 'react-native';
+import { StyleSheet, Text, View, Pressable, ScrollView } from 'react-native';
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useUser } from '@clerk/clerk-expo';
@@ -192,91 +192,98 @@ export default function AllInvitations() {
         ))}
       </View>
 
-      {/* Invitations Section */}
-      {(selectedFilter === "All" || selectedFilter === "Invitations") && (
-        <>
-          <Text style={styles.subtitle}>Invitations</Text>
-          <Text style={styles.normal}>Review and respond to group invitations</Text>
-          {filteredInvitations.length > 0 ? (
-            filteredInvitations.map((invite, index) => {
-              const groupId = invite.group.id;
-              const groupLeader = leaders[groupId]
-                ? `${leaders[groupId].firstName} ${leaders[groupId].lastName}`
-                : 'Unknown Leader';
-              const status = responseStatus[groupId];
-              const isDisabled = status === 'accepted' || status === 'declined';
+      <ScrollView
+        style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
 
-          return (
-            <View key={index} style={styles.card}>
-              <Text style={styles.text}>
-                {groupLeader} has invited you to join {invite.groupName}!
-              </Text>
-              <SubscriptionCard
-                logo={{ uri: invite.group.subscription?.logo }}
-                subscriptionName={invite.group.subscriptionName}
-                cycle={invite.group.cycle}
-                isShared={true}
-                category={invite.group.category}
-              />
-              <View style={styles.buttonContainer}>
-                {status !== 'declined' && (
-                  <AcceptInvitationButton
-                    userId={userId!}
-                    groupId={groupId}
-                    disabled={status !== undefined}
-                    onResponse={() => handleInvitationResponse(groupId, 'accepted')}
+        {/* Invitations Section */}
+        {(selectedFilter === "All" || selectedFilter === "Invitations") && (
+          <>
+            <Text style={styles.subtitle}>Invitations</Text>
+            <Text style={styles.normal}>Review and respond to group invitations</Text>
+            {filteredInvitations.length > 0 ? (
+              filteredInvitations.map((invite, index) => {
+                const groupId = invite.group.id;
+                const groupLeader = leaders[groupId]
+                  ? `${leaders[groupId].firstName} ${leaders[groupId].lastName}`
+                  : 'Unknown Leader';
+                const status = responseStatus[groupId];
+                const isDisabled = status === 'accepted' || status === 'declined';
+
+                return (
+                  <View key={index} style={styles.card}>
+                    <Text style={styles.text}>
+                      {groupLeader} has invited you to join {invite.groupName}!
+                    </Text>
+                    <SubscriptionCard
+                      logo={{ uri: invite.group.subscription?.logo }}
+                      subscriptionName={invite.group.subscriptionName}
+                      cycle={invite.group.cycle}
+                      isShared={true}
+                      category={invite.group.category}
+                    />
+                    <View style={styles.buttonContainer}>
+                      {status !== 'declined' && (
+                        <AcceptInvitationButton
+                          userId={userId!}
+                          groupId={groupId}
+                          disabled={status !== undefined}
+                          onResponse={() => handleInvitationResponse(groupId, 'accepted')}
+                        />
+                      )}
+
+                      {status !== 'accepted' && (
+                        <DeclineInvitationButton
+                          userId={userId!}
+                          groupId={groupId}
+                          onResponse={() => handleInvitationResponse(groupId, 'declined')}
+                        />
+                      )}
+                    </View>
+                  </View>
+                );
+              })
+            ) : (
+              <Text style={styles.emptyText}>No invitations found.</Text>
+            )}
+          </>
+        )}
+
+        {/* Requested Section */}
+        {(selectedFilter === "All" || selectedFilter === "Requested") && filteredRequests.length > 0 && (
+          <>
+            <Text style={styles.subtitle}>Requested</Text>
+            <Text style={styles.normal}>Track groups you requested to join</Text>
+            {filteredRequests.map((request, index) => {
+              const timeAgo = new Date(request.createdAt).toLocaleString();
+              return (
+                <View key={index} style={styles.card}>
+                  <Text style={styles.text}>
+                    You requested to join {request.group.groupName}.
+                  </Text>
+                  <Text style={styles.timeText}>{timeAgo}</Text>
+                  <Text style={styles.senderText}>{user?.firstName} {user?.lastName}</Text>
+                  <SubscriptionCard
+                    logo={{ uri: request.group.subscription?.logo }}
+                    subscriptionName={request.group.subscriptionName}
+                    cycle={request.group.cycle}
+                    isShared={true}
+                    category={request.group.category}
                   />
-                )}
-
-                    {status !== 'accepted' && (
-                      <DeclineInvitationButton
-                        userId={userId!}
-                        groupId={groupId}
-                        onResponse={() => handleInvitationResponse(groupId, 'declined')}
-                      />
-                    )}
+                  <View style={styles.statusContainer}>
+                    <Text style={styles.statusText}>Waiting for approval</Text>
+                    <Pressable onPress={() => handleCancelRequest(request.group.id)}>
+                      <Text style={styles.cancelText}>Cancel Request</Text>
+                    </Pressable>
                   </View>
                 </View>
               );
-            })
-          ) : (
-            <Text style={styles.emptyText}>No invitations found.</Text>
-          )}
-        </>
-      )}
-
-      {/* Requested Section */}
-      {(selectedFilter === "All" || selectedFilter === "Requested") && filteredRequests.length > 0 && (
-        <>
-          <Text style={styles.subtitle}>Requested</Text>
-          <Text style={styles.normal}>Track groups you requested to join</Text>
-          {filteredRequests.map((request, index) => {
-            const timeAgo = new Date(request.createdAt).toLocaleString();
-            return (
-              <View key={index} style={styles.card}>
-                <Text style={styles.text}>
-                  You requested to join {request.group.groupName}.
-                </Text>
-                <Text style={styles.timeText}>{timeAgo}</Text>
-                <Text style={styles.senderText}>{user?.firstName} {user?.lastName}</Text>
-                <SubscriptionCard
-                  logo={{ uri: request.group.subscription?.logo }}
-                  subscriptionName={request.group.subscriptionName}
-                  cycle={request.group.cycle}
-                  isShared={true}
-                  category={request.group.category}
-                />
-                <View style={styles.statusContainer}>
-                  <Text style={styles.statusText}>Waiting for approval</Text>
-                  <Pressable onPress={() => handleCancelRequest(request.group.id)}>
-                    <Text style={styles.cancelText}>Cancel Request</Text>
-                  </Pressable>
-                </View>
-              </View>
-            );
-          })}
-        </>
-      )}
+            })}
+          </>
+        )}
+      </ScrollView>
       <Pressable style={styles.fab} onPress={handleCreateGroup}>
         <Ionicons name="add" size={24} color="white" />
       </Pressable>
@@ -288,6 +295,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FFFFFF',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 100, // Extra space for FAB
   },
   header: {
     paddingHorizontal: 20,

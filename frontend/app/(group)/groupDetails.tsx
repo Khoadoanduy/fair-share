@@ -132,7 +132,7 @@ export default function GroupDetailsScreen() {
   // Add this near the other handler functions, before the return statement
   const handleSubscriptionDetails = () => {
     router.push({
-      pathname: "/(group)/SubscriptionDetails",
+      pathname: "/(group)/subscriptionDetails",
       params: { groupId },
     });
   };

@@ -53,6 +53,11 @@ router.get('/subscriptions/:userId', async (req: Request, res: Response) => {
                 groupId: {
                     notIn: userGroupIds,
                     in: existingGroupIds
+                },
+                group: {
+                    subscriptionType: {
+                        not: 'personal'
+                    }
                 }
             },
             include: {
