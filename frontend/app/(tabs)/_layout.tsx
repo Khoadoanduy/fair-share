@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Tabs } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons, MaterialCommunityIcons, Octicons, Feather } from "@expo/vector-icons";
 import { StripeProvider } from '@stripe/stripe-react-native';
 
 export default function TabLayout() {
@@ -25,7 +25,7 @@ export default function TabLayout() {
           options={{
             title: "Home",
             tabBarIcon: ({ color, size }) => (
-              <Ionicons name="home" size={size} color={color} />
+              <Feather name="home" size={size} color={color} />
             ),
           }}
         />
@@ -35,17 +35,17 @@ export default function TabLayout() {
             title: "Manage",
             headerShown: false,
             tabBarIcon: ({ color, size }) => (
-              <Ionicons name="people" size={size} color={color} />
+              <MaterialCommunityIcons name="piggy-bank-outline" size={size} color={color} />
             ),
           }}
         />
         <Tabs.Screen
           name="friends"
           options={{
-            title: "Friends",
+            title: "Feed",
             headerShown: false,
             tabBarIcon: ({ color, size }) => (
-              <Ionicons name="people" size={size} color={color} />
+              <Ionicons name="menu-outline" size={size * 1.2} color={color} />
             ),
           }}
         />
@@ -55,7 +55,7 @@ export default function TabLayout() {
             title: "History",
             headerShown: false,
             tabBarIcon: ({ color, size }) => (
-              <Ionicons name="time" size={size} color={color} />
+              <Octicons name="history" size={size*0.8} color={color} />
             ),
           }}
         />
@@ -64,11 +64,11 @@ export default function TabLayout() {
           options={{
             title: "Profile",
             tabBarIcon: ({ color, size }) => (
-              <Ionicons name="person" size={size} color={color} />
+              <Ionicons name="person-outline" size={size} color={color} />
             ),
           }}
         />
-        
+
       </Tabs>
     </StripeProvider>
   );

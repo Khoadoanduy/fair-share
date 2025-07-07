@@ -11,7 +11,7 @@ import {
   TextInput,
   Modal,
 } from "react-native";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter, useNavigation } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useUser } from "@clerk/clerk-expo";
 import axios from "axios";
@@ -61,6 +61,7 @@ type VirtualCard = {
 export default function SubscriptionDetailsScreen() {
   const API_URL = process.env.EXPO_PUBLIC_API_URL;
   const router = useRouter();
+  const navigation = useNavigation();
   const { user } = useUser();
   const { groupId } = useLocalSearchParams();
   const { userId } = useUserState();
@@ -80,6 +81,18 @@ export default function SubscriptionDetailsScreen() {
       initializeData();
     }
   }, [groupId, user?.id]);
+
+  // Update header options when user role changes
+  useEffect(() => {
+    navigation.setOptions({
+      headerRight: () =>
+        userRole === "leader" ? (
+          <Pressable onPress={handleEditToggle} style={{ marginRight: 15 }}>
+            <Ionicons name="create-outline" size={24} color="#4A3DE3" />
+          </Pressable>
+        ) : null,
+    });
+  }, [userRole, isEditing, navigation]);
 
   const initializeData = async () => {
     try {
@@ -101,7 +114,7 @@ export default function SubscriptionDetailsScreen() {
       if (detailsResponse.data.virtualCardId) {
         try {
           const cardResponse = await axios.get(
-            `${API_URL}/api/virtualCard/group/${groupId}`
+            `${API_URL}/api/virtualCard/${groupId}`
           );
           setVirtualCard(cardResponse.data);
         } catch (cardErr) {
@@ -117,7 +130,7 @@ export default function SubscriptionDetailsScreen() {
     }
   };
 
-  const handleToggleEdit = async () => {
+  const handleSaveCredentials = async () => {
     if (userRole !== "leader") {
       Alert.alert(
         "Permission Denied",
@@ -126,49 +139,58 @@ export default function SubscriptionDetailsScreen() {
       return;
     }
 
-    if (isEditing) {
-      // Save action
-      if (!editUsername.trim() || !editPassword.trim()) {
-        Alert.alert("Error", "Please fill in both username and password");
+    if (!editUsername.trim() || !editPassword.trim()) {
+      Alert.alert("Error", "Please fill in both username and password");
+      return;
+    }
+
+    try {
+      if (!mongoUserId) {
+        Alert.alert("Error", "User not found");
         return;
       }
 
-      try {
-        if (!mongoUserId) {
-          Alert.alert("Error", "User not found");
-          return;
-        }
+      await axios.put(`${API_URL}/api/group/${groupId}/credentials`, {
+        credentialUsername: editUsername.trim(),
+        credentialPassword: editPassword.trim(),
+        userId: mongoUserId,
+      });
 
-        await axios.put(`${API_URL}/api/group/${groupId}/credentials`, {
-          credentialUsername: editUsername.trim(),
-          credentialPassword: editPassword.trim(),
-          userId: mongoUserId,
-        });
+      const response = await axios.get(
+        `${API_URL}/api/group/${groupId}`
+      );
+      setDetails(response.data);
 
-        const response = await axios.get(
-          `${API_URL}/api/group/${groupId}`
+      setIsEditing(false);
+      Alert.alert("Success", "Credentials updated successfully");
+    } catch (error) {
+      console.error("Failed to update credentials:", error);
+      if (axios.isAxiosError(error) && error.response?.status === 403) {
+        Alert.alert(
+          "Permission Denied",
+          "Only group leaders can update credentials"
         );
-        setDetails(response.data);
-
-        setIsEditing(false);
-        Alert.alert("Success", "Credentials updated successfully");
-      } catch (error) {
-        console.error("Failed to update credentials:", error);
-        if (axios.isAxiosError(error) && error.response?.status === 403) {
-          Alert.alert(
-            "Permission Denied",
-            "Only group leaders can update credentials"
-          );
-        } else {
-          Alert.alert("Error", "Failed to update credentials");
-        }
+      } else {
+        Alert.alert("Error", "Failed to update credentials");
       }
-    } else {
-      // Edit action
+    }
+  };
+
+  const handleEditToggle = () => {
+    if (!isEditing) {
+      // Check permissions before entering edit mode
+      if (userRole !== "leader") {
+        Alert.alert(
+          "Permission Denied",
+          "Only group leaders can edit credentials"
+        );
+        return;
+      }
+      // Entering edit mode - load current credentials
       setEditUsername(details?.credentials?.username || "");
       setEditPassword(details?.credentials?.password || "");
-      setIsEditing(true);
     }
+    setIsEditing(!isEditing);
   };
 
   if (loading) {
@@ -196,6 +218,7 @@ export default function SubscriptionDetailsScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      
       <ScrollView style={styles.content}>
         {/* Subscription Card */}
         <View style={styles.subscriptionCard}>
@@ -277,7 +300,7 @@ export default function SubscriptionDetailsScreen() {
                 </View>
               </View>
 
-              <Pressable style={styles.saveButton} onPress={handleToggleEdit}>
+              <Pressable style={styles.saveButton} onPress={handleSaveCredentials}>
                 <Text style={styles.saveButtonText}>Save</Text>
               </Pressable>
             </View>
@@ -377,7 +400,7 @@ export default function SubscriptionDetailsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#fff" },
-  content: { flex: 1 },
+  content: { flex: 1, paddingTop: 20 },
   loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
   errorContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
   retryButton: {

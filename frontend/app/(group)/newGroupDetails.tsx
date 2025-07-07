@@ -9,7 +9,8 @@ import {
   Alert,
   TouchableOpacity,
   Image,
-  RefreshControl
+  RefreshControl,
+  Pressable
 } from "react-native";
 import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
 import axios from "axios";
@@ -247,6 +248,7 @@ export default function GroupDetailsScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+
       <ScrollView
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
@@ -469,14 +471,14 @@ export default function GroupDetailsScreen() {
                 </View>
               </View>
 
-                <TouchableOpacity 
-                  style={styles.stepItem} 
-                  onPress={() => {
-                    toggleSubscribeModal();
+              <TouchableOpacity
+                style={styles.stepItem}
+                onPress={() => {
+                  toggleSubscribeModal();
                     router.push({pathname: '/(group)/createGroupVirtualCard', params: {groupId: groupId}});
-                  }}>
-                  <Ionicons name="card" size={24} color="black" style={styles.stepIcon} />
-                  <View style={styles.stepTextContainer}>
+                }}>
+                <Ionicons name="card" size={24} color="black" style={styles.stepIcon} />
+                <View style={styles.stepTextContainer}>
                     <Text style={[styles.stepTitle, {color: 'black'}]}>Pull funds & generate virtual card</Text>
                     <Text style={[styles.stepSub, {color: '#64748B'}]}>Pull funds from members and generate a virtual card</Text>
                 </View>
@@ -549,10 +551,16 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 16,
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 20,
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: "600",
+    color: "#4A3DE3",
   },
   backButton: {
     padding: 4,

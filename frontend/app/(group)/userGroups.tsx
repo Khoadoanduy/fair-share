@@ -34,7 +34,7 @@ export default function UserGroupsScreen() {
     const fetchUserId = async () => {
       try {
         if (!clerkId) return;
-        
+
         const response = await axios.get(`${API_URL}/api/user/`, {
           params: { clerkID: clerkId },
         });
@@ -54,10 +54,10 @@ export default function UserGroupsScreen() {
     const fetchUserGroups = async () => {
       try {
         if (!userId) return;
-        
+
         const response = await axios.get(`${API_URL}/api/user/groups/${userId}`);
         console.log('User groups:', response.data);
-        
+
         if (response.data.message === 'No group found') {
           setGroups([]);
         } else {
@@ -78,7 +78,7 @@ export default function UserGroupsScreen() {
 
   const handleGroupPress = (groupId: string) => {
     router.push({
-      pathname: '/(group)/SubscriptionDetails',
+      pathname: '/(group)/subscriptionDetails',
       params: { groupId }
     });
   };
@@ -113,13 +113,13 @@ export default function UserGroupsScreen() {
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
         <Text style={styles.title}>My Groups</Text>
-        
+
         {groups.length > 0 ? (
           <>
             <Text style={styles.subtitle}>
               You're a member of {groups.length} group{groups.length !== 1 ? 's' : ''}
             </Text>
-            
+
             <FlatList
               data={groups}
               keyExtractor={(item) => item.group.id}
@@ -134,15 +134,15 @@ export default function UserGroupsScreen() {
                       {getRoleBadge(item.userRole)}
                     </Text>
                   </View>
-                  
+
                   <Text style={styles.subscriptionName}>
                     {item.group.subscriptionName}
                   </Text>
-                  
+
                   <Text style={styles.planName}>
                     {item.group.planName}
                   </Text>
-                  
+
                   <View style={styles.groupFooter}>
                     <Text style={styles.amount}>
                       {formatAmount(item.group.amount)} / {item.group.cycle}

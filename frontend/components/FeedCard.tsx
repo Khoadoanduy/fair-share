@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import DeleteModal from './DeleteModal';
 
 interface FeedCardProps {
-    mode: 'feed' | 'postings'; 
+    mode: 'feed' | 'postings';
     friend: {
         id: string;
         firstName: string;
@@ -79,7 +79,7 @@ export default function FeedCard({
                 </View>
                 <View style={styles.headerText}>
                     <Text style={styles.name}>
-                        {friend.firstName} {friend.lastName}
+                        {`${friend.firstName} ${friend.lastName}`.trim()}
                     </Text>
                     {group.timeAgo && (
                         <Text style={styles.timeAgo}>{group.timeAgo}</Text>
@@ -125,10 +125,6 @@ export default function FeedCard({
 
             {/* Subscription Card */}
             <View style={styles.subscriptionCard}>
-@LinhNguyen2901 LinhNguyen2901 5 days ago
-Use my subscription component instead
-
-@Kienfuzzy	Reply...
                 <View style={styles.subscriptionHeader}>
                     {group.subscription?.logo && (
                         <Image
