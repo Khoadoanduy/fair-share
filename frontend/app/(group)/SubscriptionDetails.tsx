@@ -193,11 +193,6 @@ export default function SubscriptionDetailsScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-              <Pressable onPress={() => router.back()}>
-                <Ionicons name="chevron-back" size={24} color="#4A3DE3" />
-              </Pressable>
-      </View>
       <ScrollView style={styles.content}>
         {/* Subscription Card */}
         <View style={styles.subscriptionCard}>

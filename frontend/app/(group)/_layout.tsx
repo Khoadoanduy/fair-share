@@ -53,11 +53,10 @@ export default function AuthLayout() {
         }}
       />
       <Stack.Screen
-        name="SubscriptionDetails"
+        name="subscriptionDetails"
         options={{
-          title: "",
+          title: "Edit Subscription Details",
           headerTitle: () => null,
-          headerShown: false, // This removes the duplicate header
         }}
       />
       <Stack.Screen
