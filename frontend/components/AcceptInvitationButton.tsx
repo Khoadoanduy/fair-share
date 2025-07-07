@@ -1,11 +1,10 @@
 import axios from 'axios';
 import CustomButton from './CustomButton';
 import { useState } from 'react';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, Modal, View, Text, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useUserState } from "@/hooks/useUserState";
 import { useRouter } from 'expo-router';
-
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
@@ -17,16 +16,19 @@ type AcceptButtonProps = {
   onResponse?: () => void;
 };
 
-const router = useRouter();
 const AcceptInvitationButton = ({ userId, groupId, disabled, hasPayment, onResponse }: AcceptButtonProps) => {
   const [accepted, setAccepted] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);  // State for showing the payment modal
+  const router = useRouter();
+
+  // Handle Accept Invitation
   const handleAccept = async () => {
     if (!hasPayment) {
-      router.push('/(group)/promptUserToAddPaymentMethod')
+      setShowPaymentModal(true);  // Show the payment modal if the user has no payment method
     } else {
       try {
         await axios.put(`${API_URL}/api/invite/${groupId}/${userId}`);
-        await axios.post(`${API_URL}/api/groupMember/${groupId}/${userId}`, {userRole: "member"});
+        await axios.post(`${API_URL}/api/groupMember/${groupId}/${userId}`, { userRole: "member" });
         setAccepted(true);
         onResponse?.();
         console.log('Accept invitation successfully');
@@ -36,13 +38,46 @@ const AcceptInvitationButton = ({ userId, groupId, disabled, hasPayment, onRespo
     }
   };
 
-  return <CustomButton 
-            text={accepted ? "Accepted" : "Accept"} 
-            rightIcon={ accepted ? <Ionicons name="checkmark" size={18} color="#94A3B8" /> : undefined }
-            onPress={handleAccept}
-            disabled={disabled} 
-            style={[accepted ? styles.buttonAccepted : styles.buttonActive, styles.button]}
-            textStyle={accepted ? styles.textAccepted : styles.buttonText}/>;
+  const handleLinkPayment = () => {
+    setShowPaymentModal(false);  // Close the payment modal
+    router.push('/(collectpayment)/CollectPayment');  // Navigate to the payment screen
+  };
+
+  const handleClosePaymentModal = () => {
+    setShowPaymentModal(false);  // Close the payment modal without any action
+  };
+
+  return (
+    <>
+      {/* Accept Invitation Button */}
+      <CustomButton 
+        text={accepted ? "Accepted" : "Accept"} 
+        rightIcon={ accepted ? <Ionicons name="checkmark" size={18} color="#94A3B8" /> : undefined }
+        onPress={handleAccept}
+        disabled={disabled} 
+        style={[accepted ? styles.buttonAccepted : styles.buttonActive, styles.button]}
+        textStyle={accepted ? styles.textAccepted : styles.buttonText}
+      />
+
+      {/* Payment Prompt Modal */}
+      <Modal transparent={true} visible={showPaymentModal} animationType="fade">
+        <View style={styles.modalBackground}>
+          <View style={styles.modalContainer}>
+            <Text style={styles.modalTitle}>Payment Method Required</Text>
+            <Text style={styles.modalMessage}>
+              You need to link a payment method before you can accept this invitation.
+            </Text>
+            <Pressable style={styles.modalButton} onPress={handleLinkPayment}>
+              <Text style={styles.buttonText}>Link Payment Method</Text>
+            </Pressable>
+            <Pressable style={styles.modalButton} onPress={handleClosePaymentModal}>
+              <Text style={styles.buttonText}>Cancel</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
+    </>
+  );
 };
 
 const styles = StyleSheet.create({
@@ -55,10 +90,10 @@ const styles = StyleSheet.create({
     minWidth: '48%',
   },
   buttonActive: {
-    backgroundColor: '#4A3DE3', 
+    backgroundColor: '#4A3DE3',
   },
   buttonAccepted: {
-    backgroundColor: '#E2E8F0', 
+    backgroundColor: '#E2E8F0',
   },
   textAccepted: {
     color: '#94A3B8',
@@ -69,6 +104,37 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 14,
     fontWeight: '600',
+  },
+  // Modal Styles
+  modalBackground: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+  },
+  modalContainer: {
+    width: 300,
+    padding: 20,
+    backgroundColor: "white",
+    borderRadius: 10,
+    alignItems: "center",
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 10,
+  },
+  modalMessage: {
+    fontSize: 14,
+    marginBottom: 20,
+    textAlign: "center",
+  },
+  modalButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    backgroundColor: "#4A3DE3",
+    borderRadius: 5,
+    marginVertical: 5,
   },
 });
 

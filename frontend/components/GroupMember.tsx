@@ -14,7 +14,6 @@ import { useRouter } from "expo-router";
 import CustomButton from "./CustomButton";
 import AcceptInvitationButton from "./AcceptInvitationButton";
 import DeclineInvitationButton from "./DeclineInvitationButton";
-import { totalmem } from "os";
 
 // Types
 type GroupMember = {
