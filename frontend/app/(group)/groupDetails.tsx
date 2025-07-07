@@ -252,35 +252,48 @@ export default function GroupDetailsScreen() {
             />
           )}
         </ScrollView>
-        <Modal
-          animationType="slide"
-          transparent={true}
-          visible={isModalVisible}
-          onRequestClose={() => setIsModalVisible(false)} // Close modal on back press
-        >
-          <View style={styles.modalBackground}>
-            <View style={styles.modalContainer}>
-              <Text style={styles.modalTitle}>Are you sure you want to leave the group?</Text>
-              <View style={styles.modalActions}>
-                <CustomButton
-                  text="Cancel"
-                  onPress={() => setIsModalVisible(false)}
-                  style={styles.cancelButton}
-                  textStyle={{color: "#4A3DE3"}}
-                />
-                <CustomButton
-                  text="Leave"
-                  onPress={async () => {
-                    await handleLeaveGroup(); 
-                    setIsModalVisible(false); 
-                    router.push('/(tabs)/groups');
-                  }}
-                  style={styles.leaveButton}
-                />
-              </View>
-            </View>
-          </View>
-        </Modal>
+                {!leader && (
+                  <TouchableOpacity
+                    style={[styles.leaveButton, {backgroundColor: 'white'}]}
+                    onPress={() => setIsModalVisible(true)}
+                  >
+                    <Feather name="log-out" size={24} color="red" />
+                    <Text style={[styles.leaveButtonText, {color: 'red'}]}>Leave Group</Text>
+                  </TouchableOpacity>
+                )}
+              <Modal
+                animationType="slide"
+                transparent={true}
+                visible={isModalVisible}
+                onRequestClose={() => setIsModalVisible(false)} // Close modal on back press
+              >
+                <View style={styles.modalBackground}>
+                  <View style={styles.modalContainer}>
+                    <Text style={styles.modalTitle}>Leave {group.groupName}?</Text>
+                    <Text style={{color: '#64748B'}}>
+                      If you leave, you’ll lose your spot and future payments will stop. 
+                      This action can’t be undone.
+                      </Text>
+                    <View style={styles.modalActions}>
+                      <CustomButton
+                        text="Leave"
+                        onPress={async () => {
+                          await handleLeaveGroup(); 
+                          setIsModalVisible(false); 
+                          router.push('/(tabs)/groups');
+                        }}
+                        textStyle={{color: '#4A3DE3'}}
+                        style={styles.confirmLeave}
+                      />
+                      <CustomButton
+                        text="Cancel"
+                        onPress={() => setIsModalVisible(false)}
+                        style={styles.cancelButton}
+                      />
+                    </View>
+                  </View>
+                </View>
+              </Modal>
 
     </SafeAreaView>
   );
@@ -662,12 +675,28 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#FFF",
   },
-    leaveButton: {
+  leaveButton: {
     marginHorizontal: 20, 
-    alignSelf: "center", 
-    width: "90%"
+    alignItems: "center", 
+    width: "90%",
+    backgroundColor: 'white',
+    borderWidth: 1,
+    borderRadius: 10,
+    borderColor: '#E2E8F0',
+    padding: 10,
+    flexDirection: 'row',
+    gap: 10
+  },
+  leaveButtonText: {
+    alignSelf: 'center'
   },
   cancelButton: {
+    marginHorizontal: 20, 
+    alignSelf: "center", 
+    width: "90%",
+    backgroundColor: "#4A3DE3"
+  }, 
+  confirmLeave: {
     marginHorizontal: 20, 
     alignSelf: "center", 
     width: "90%",
@@ -696,6 +725,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     width: '100%',
+    marginTop: 20
   },
-
 });
