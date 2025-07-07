@@ -46,7 +46,7 @@ export default function AuthLayout() {
         }}
       />
       <Stack.Screen
-        name="InviteMember"
+        name="inviteMember"
         options={{
           title: "",
           headerTitle: () => null,
