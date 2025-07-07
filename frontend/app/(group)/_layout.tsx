@@ -58,18 +58,17 @@ export default function AuthLayout() {
         }}
       />
       <Stack.Screen
-        name="InviteMember"
+        name="inviteMember"
         options={{
           title: "",
           headerTitle: () => null,
         }}
       />
       <Stack.Screen
-        name="SubscriptionDetails"
+        name="subscriptionDetails"
         options={{
-          title: "",
+          title: "Edit Subscription Details",
           headerTitle: () => null,
-          headerShown: false, // This removes the duplicate header
         }}
       />
       <Stack.Screen
@@ -126,6 +125,12 @@ export default function AuthLayout() {
             title: "",
             headerTitle: () => null,
           }}
+      />
+      <Stack.Screen
+        name="confirmInfo"
+        options={{
+          headerShown: false,
+        }}
       />
     </Stack>
 

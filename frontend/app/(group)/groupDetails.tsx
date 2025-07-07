@@ -228,6 +228,7 @@ export default function GroupDetailsScreen() {
             showInvitations={true}
             showHeader={true}
             requestConfirmSent={false}
+            startCycle={true}
           />
         )}
 

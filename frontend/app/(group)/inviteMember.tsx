@@ -101,7 +101,7 @@ export default function InviteMemberScreen() {
         </View>
         ) :<Text style={styles.emptyText}>No users found.</Text> }
       </View>
-      <ProgressDots totalSteps={3} currentStep={3}/>      
+      <ProgressDots totalSteps={4} currentStep={4}/>      
       <CustomButton text="Next" onPress={() => router.push({pathname: '/(group)/newGroupDetails', params: { groupId: groupId }})} style={styles.button} />
     </SafeAreaView>
   );
@@ -118,7 +118,6 @@ const styles = StyleSheet.create({
   content: {
     marginLeft: 20,
     marginRight: 20,
-    marginTop: 40,
     flex: 1,
   },
   title: {

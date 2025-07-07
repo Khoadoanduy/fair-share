@@ -98,6 +98,44 @@ router.get('/search-user/:username', async (request: Request, response: Response
   }
 });
 
+//Update group details
+router.put('/:groupId', async (request, response) => {
+  try {
+    const groupId = request.params.groupId;
+    const { groupName, maxMember, visibility, cycle, amount, planName } = request.body;
+    if (!groupId) {
+      return response.status(400).json({ message: 'groupId is required' });
+    }
+    const group = await prisma.group.findUnique({
+      where: { id: groupId },
+      include: {
+        members: {
+          include: { user: true }
+        },
+        subscription: true
+      }
+    });
+    if (!group) {
+      return response.status(404).json({ message: 'Group not found' });
+    };
+    await prisma.group.update({
+      where: { id: groupId},
+      data: {
+        groupName: groupName, 
+        maxMember: maxMember, 
+        visibility: visibility, 
+        cycle: cycle, 
+        amount: amount, 
+        planName: planName
+      }
+    })
+    return response.status(200).json(group);
+  } catch (error) {
+    console.error(error);
+    response.status(500).json({ message: 'Error editing group details' });
+  }
+});
+
 // Get group details 
 router.get('/:groupId', async (request: Request, response: Response) => {
   try {
@@ -154,6 +192,7 @@ router.get('/:groupId', async (request: Request, response: Response) => {
       cycleDays: group.cycleDays,
       category: group.category,
       maxMember: group.maxMember,
+      visbility: group.visibility,
       amountEach: group.amountEach,
       virtualCardId: group.virtualCardId,
       subscription: group.subscription ? {

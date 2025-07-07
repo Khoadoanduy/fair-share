@@ -18,6 +18,7 @@ import SubscriptionCard from "@/components/SubscriptionCard";
 import AddSubscriptionModal from "@/components/AddSubscriptionModal";
 import PersonalSubscriptionModal from "@/components/PersonalSubscriptionModal";
 import { useUserState } from "@/hooks/useUserState";
+import PaymentPromptModal from "@/components/AddPaymentMethodModal";
 
 interface Group {
   id: string;
@@ -45,22 +46,22 @@ interface Group {
 export default function GroupsScreen() {
   const router = useRouter();
   const API_URL = process.env.EXPO_PUBLIC_API_URL;
-  const { user } = useUser();
-  const { userId } = useUserState();
+  const { userId, hasPayment } = useUserState();
   // const [userId, setUserId] = useState<string | null>(null);
   const [groups, setGroups] = useState<Group[]>([]);
   const [selectedFilter, setSelectedFilter] = useState("All");
   const [showAddModal, setShowAddModal] = useState(false);
   const [showPersonalModal, setShowPersonalModal] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [buttonPosition, setButtonPosition] = useState<{
-    x: number;
+    x: number;  
     y: number;
     width: number;
     height: number;
   } | null>(null);
   const buttonRef = useRef<any>(null);
   const [personalSubscriptions, setPersonalSubscriptions] = useState<Group[]>([]);
-
+  
   const handleCreateGroup = () => {
     router.push("/(group)/createGroupName");
   };
@@ -81,7 +82,20 @@ export default function GroupsScreen() {
 
   const handleGroupPress = () => {
     setShowAddModal(false);
-    router.push('/(group)/createGroupName');
+    if (hasPayment) {
+      router.push('/(group)/createGroupName');
+    } else {
+      setShowPaymentModal(true);
+    }
+  };
+
+  const handleLinkPayment = () => {
+    setShowPaymentModal(false);
+    router.push("/(collectpayment)/CollectPayment"); // Navigate to the payment method linking screen
+  };
+
+  const handleClosePaymentModal = () => {
+    setShowPaymentModal(false);
   };
 
   const handleExistingSubscription = () => {
@@ -208,7 +222,7 @@ const fetchAllSubscriptions = async () => {
               } else {
                 router.push({
                   pathname:
-                    item.endDate === null
+                    item.startDate === null
                       ? "/(group)/newGroupDetails"
                       : "/(group)/groupDetails",
                   params: { groupId: item.id },
@@ -238,6 +252,12 @@ const fetchAllSubscriptions = async () => {
         onClose={() => setShowPersonalModal(false)}
         onExistingPress={handleExistingSubscription}
         onVirtualCardPress={handleVirtualCardSubscription}
+      />
+
+      <PaymentPromptModal
+        visible={showPaymentModal}
+        onClose={handleClosePaymentModal}
+        onLinkPayment={handleLinkPayment}
       />
     </SafeAreaView>
   );
