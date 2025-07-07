@@ -17,6 +17,8 @@ interface SubscriptionCardProps {
     endDate?: string; 
     showNegativeAmount?: boolean;
     timestamp?: string;
+    virtualCardId?: string;
+    status?: 'Active' | 'Inactive' | 'Pending';
   };
   logo?: any; // fallback for simple usage
   subscriptionName?: string;
@@ -37,7 +39,7 @@ const formatRelativeDate = (dateString: string) => {
   if (days < 0) return "now";
   if (days === 0) return "today";
   if (days === 1) return "tomorrow";
-  return `in ${days} days`;
+  return `In ${days} days`;
 };
 
 const SubscriptionCard: React.FC<SubscriptionCardProps> = (props) => {
@@ -51,11 +53,14 @@ const SubscriptionCard: React.FC<SubscriptionCardProps> = (props) => {
   const isPersonal = group?.isPersonal ?? false;
   const totalMem = group?.totalMem;
   const endDate = group?.endDate;
+  const virtualCardId = group?.virtualCardId;
+  const status = group?.status || 'Active';
   const onPress = props.onPress;
 
   const CardContent = (
     <View style={styles.subscriptionCard}>
-      {/* Logo or fallback */}
+      {/* Left section */}
+      <View style={styles.leftSection}>
       {logo ? (
         typeof logo === 'string' ? (
           <Image source={{ uri: logo }} style={styles.subscriptionLogo} />
@@ -67,44 +72,74 @@ const SubscriptionCard: React.FC<SubscriptionCardProps> = (props) => {
           <Text style={styles.logoText}>{subscriptionName ? subscriptionName.charAt(0) : '?'}</Text>
         </View>
       )}
-      <View style={styles.subscriptionDetails}>
-        {subscriptionName && <Text style={styles.subscriptionName}>{subscriptionName}</Text>}
-        {planName && <Text style={styles.planName}>{planName}</Text>}
-        <View style={styles.tagsContainer}>
-          {/* Type tag */}
-          {isPersonal !== undefined && (
-            <View style={[styles.tag, { backgroundColor: '#F6AE2D80' }]}>
-              <Text style={[styles.tagText, { color: 'black' }]}>
-                {isPersonal ? 'Personal' : 'Shared'}
-              </Text>
+      </View>
+       {/* Middle section */}
+       <View style={styles.middleSection}>
+        <View style={styles.topRow}>
+          {/* Due date */}
+          {endDate && (
+            <Text style={styles.dueDate}>{formatRelativeDate(endDate)}</Text>
+          )}
+        </View>
+        <View style={styles.middleRow}>
+        {/* Subscription name */}
+        {subscriptionName && (
+          <Text style={styles.subscriptionName}>{subscriptionName}</Text>
+        )}
+        </View>
+
+        <View style={styles.bottomRow}>
+        {/* Tags row */}
+        <View style={styles.tagsRow}>
+          {/* Personal/Shared indicator */}
+          <View style={styles.personalTag}>
+            <Ionicons 
+              name={isPersonal ? "person-outline" : "people-outline"} 
+              size={16} 
+              color="#6366F1" 
+            />
+          </View>
+
+          {/* Virtual card indicator */}
+          {group?.virtualCardId && (
+            <View style={styles.virtualCardTag}>
+              <Ionicons name="card-outline" size={16} color="#6366F1" />
             </View>
           )}
+          
+          {/* Category tag */}
           {category && (
-            <View style={[styles.tag, { backgroundColor: '#3BCEAC80' }]}>
-              <Text style={[styles.tagText, { color: 'black' }]}>{category}</Text>
+            <View style={styles.categoryTag}>
+              <Text style={styles.categoryText}>{category}</Text>
             </View>
           )}
         </View>
+        </View>
       </View>
-      <View style={styles.subscriptionRight}>
-        {amountEach !== undefined && amountEach !== null ? (
-          <Text style={styles.price}>${amountEach.toFixed(2)}</Text>
-        ) : null}
+      {/* Right section */}
+      <View style={styles.rightSection}>
+      <View style={styles.topRow}>
+        {/* Billing cycle */}
         {cycle && (
-          <View style={styles.cycleContainer}>
-            <Ionicons name="refresh-outline" size={14} color="#6B7280" />
-            <Text style={styles.billingCycle}>{cycle}</Text>
-          </View>
-        )}
-        {/* Show member count for shared subscriptions */}
-        {isPersonal === false && totalMem && (
-          <Text style={styles.memberCount}>{totalMem} members</Text>
-        )}
-        {/* Show next payment for groups with endDate */}
-        {isPersonal === false && endDate && (
-          <Text style={styles.nextPaymentText}>Due {formatRelativeDate(endDate)}</Text>
+          <Text style={styles.cycleText}>{cycle}</Text>
         )}
       </View>
+      <View style={styles.middleRow}>
+        {/* Price */}
+        {amountEach !== undefined && amountEach !== null && (
+          <Text style={styles.price}>${amountEach.toFixed(2)}</Text>
+        )}
+       </View>
+       <View style={styles.bottomRow}>
+        {/* Status */}
+        <View style={[styles.statusTag, status === 'Active' ? styles.statusTagActive : styles.statusTagInactive]}>
+            <Text style={[styles.statusText, status === 'Active' ? styles.statusTextActive : styles.statusTextInactive]}>
+              {status}
+            </Text>
+          </View>
+          </View>
+      </View>
+
     </View>
   );
 
@@ -121,89 +156,133 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: 'white',
     borderRadius: 16,
-    padding: 16,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    padding: 10,
+    marginBottom: 12,
+  },
+  leftSection: {
+    marginRight: 16,
   },
   subscriptionLogo: {
-    width: 40,
-    height: 40,
-    marginRight: 16,
-    borderRadius: 8,
+    width: 64,
+    height: 64,
+    borderRadius: 12,
+    backgroundColor: '#F3F4F6',
   },
   logoPlaceholder: {
-    width: 40,
-    height: 40,
-    marginRight: 16,
-    borderRadius: 8,
-    backgroundColor: '#4A3DE3',
+    width: 56,
+    height: 56,
+    borderRadius: 12,
+    backgroundColor: '#6366F1',
     justifyContent: 'center',
     alignItems: 'center',
   },
   logoText: {
     color: 'white',
-    fontSize: 18,
+    fontSize: 22,
     fontWeight: '600',
   },
-  subscriptionDetails: {
+  middleSection: {
     flex: 1,
   },
-  subscriptionName: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 4,
-    color: '#111827',
+  topRow: {
+    height: 20,
+    justifyContent: 'center',
   },
-  planName: {
+  middleRow: {
+    height: 28,
+    justifyContent: 'center',
+  },
+  bottomRow: {
+    height: 28,
+    justifyContent: 'center',
+  },
+  dueDate: {
     fontSize: 14,
-    color: '#666',
+    color: '#64748B',
     marginBottom: 4,
   },
-  tagsContainer: {
-    flexDirection: 'row',
-    gap: 8,
+  subscriptionName: {
+    fontSize: 18,
+    fontWeight: '400',
+    color: '#000',
+    marginBottom: 8,
+    fontStyle: 'normal',
   },
-  tag: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  tagText: {
-    fontSize: 12,
-    color: 'black',
-    fontWeight: '600',
-  },
-  subscriptionRight: {
-    alignItems: 'flex-end',
-  },
-  price: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#111827',
-    marginBottom: 4,
-  },
-  cycleContainer: {
+  tagsRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
   },
-  billingCycle: {
-    fontSize: 12,
-    color: '#6B7280',
+  personalTag: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#EEF2FF',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  memberCount: {
-    fontSize: 12,
-    color: '#6B7280',
-    marginTop: 2,
+  virtualCardTag: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#EEF2FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 4,
   },
-  nextPaymentText: {
-    fontSize: 12,
-    color: '#EF4444',
-    marginTop: 2,
+  categoryTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#EEF2FF',
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 20,
+    gap: 6,
+  },
+  categoryText: {
+    fontSize: 14,
+    color: '#6366F1',
+    fontWeight: '500',
+    textTransform: 'capitalize',
+  },
+  rightSection: {
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+  },
+  cycleText: {
+    fontSize: 14,
+    color: '#64748B',
+    marginBottom: 4,
+    textTransform: 'capitalize',
+  },
+  price: {
+    fontSize: 18,
+    fontWeight: '400',
+    color: '#111827',
+    marginBottom: 4,
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+  },
+  statusTag: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  statusTagActive: {
+    backgroundColor: '#D1FAE5',
+  },
+  statusTagInactive: {
+    backgroundColor: '#E9F9F3',
+  },
+  statusText: {
+    fontSize: 14,
+    fontWeight: '400',
+  },
+  statusTextActive: {
+    color: '#027A48',
+  },
+  statusTextInactive: {
+    color: '#991B1B',
   },
 });
 
