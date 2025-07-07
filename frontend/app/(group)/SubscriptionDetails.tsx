@@ -11,7 +11,7 @@ import {
   TextInput,
   Modal,
 } from "react-native";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter, useNavigation } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useUser } from "@clerk/clerk-expo";
 import axios from "axios";
@@ -59,6 +59,7 @@ type VirtualCard = {
 export default function SubscriptionDetailsScreen() {
   const API_URL = process.env.EXPO_PUBLIC_API_URL;
   const router = useRouter();
+  const navigation = useNavigation();
   const { user } = useUser();
   const { groupId } = useLocalSearchParams();
   const [details, setDetails] = useState<SubscriptionDetailsData | null>(null);
@@ -77,6 +78,18 @@ export default function SubscriptionDetailsScreen() {
       initializeData();
     }
   }, [groupId, user?.id]);
+
+  // Update header options when user role changes
+  useEffect(() => {
+    navigation.setOptions({
+      headerRight: () =>
+        userRole === "leader" ? (
+          <Pressable onPress={handleEditToggle} style={{ marginRight: 15 }}>
+            <Ionicons name="create-outline" size={24} color="#4A3DE3" />
+          </Pressable>
+        ) : null,
+    });
+  }, [userRole, isEditing, navigation]);
 
   const initializeData = async () => {
     try {
@@ -98,7 +111,7 @@ export default function SubscriptionDetailsScreen() {
       if (detailsResponse.data.virtualCardId) {
         try {
           const cardResponse = await axios.get(
-            `${API_URL}/api/virtualCard/group/${groupId}`
+            `${API_URL}/api/virtualCard/${groupId}`
           );
           setVirtualCard(cardResponse.data);
         } catch (cardErr) {
@@ -202,15 +215,7 @@ export default function SubscriptionDetailsScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Pressable onPress={() => router.back()}>
-          <Ionicons name="chevron-back" size={24} color="#4A3DE3" />
-        </Pressable>
-        <Text style={styles.title}>Subscription details</Text>
-        <Pressable style={styles.editButton} onPress={handleEditToggle}>
-          <Ionicons name="create-outline" size={24} color="#4A3DE3" />
-        </Pressable>
-      </View>
+
       <ScrollView style={styles.content}>
         {/* Subscription Card */}
         <View style={styles.subscriptionCard}>
@@ -392,7 +397,7 @@ export default function SubscriptionDetailsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#fff" },
-  content: { flex: 1 },
+  content: { flex: 1, paddingTop: 20 },
   loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
   errorContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
   retryButton: {

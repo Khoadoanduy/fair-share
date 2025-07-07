@@ -237,13 +237,6 @@ export default function GroupDetailsScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Pressable onPress={() => router.back()}>
-          <Ionicons name="chevron-back" size={24} color="#4A3DE3" />
-        </Pressable>
-        <Text style={styles.title}>Group Details</Text>
-        <View style={{ width: 24 }} />
-      </View>
 
       <ScrollView
         style={styles.scrollView}

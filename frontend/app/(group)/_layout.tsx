@@ -20,7 +20,7 @@ export default function AuthLayout() {
         headerShown: true,
         headerShadowVisible: false,
         headerStyle: { backgroundColor: "#fff" },
-        headerTitleStyle: { fontWeight: "bold", fontSize: 20, color: '#4A3DE3' },
+        headerTitleStyle: { fontSize: 20, color: '#4A3DE3' },
         headerLeft: () => <BackButton />, // your custom back button
       }}
     >
@@ -55,17 +55,13 @@ export default function AuthLayout() {
       <Stack.Screen
         name="subscriptionDetails"
         options={{
-          title: "",
-          headerTitle: () => null,
-          headerShown: false, // This removes the duplicate header
+          title: "Subscription Details",
         }}
       />
       <Stack.Screen
         name="newGroupDetails"
         options={{
-          title: "",
-          headerTitle: () => null,
-          headerShown: false,
+          title: "Group Details",
         }}
       />
       <Stack.Screen
@@ -91,7 +87,7 @@ export default function AuthLayout() {
       <Stack.Screen
         name="groupDetails"
         options={{
-          headerShown: false, // This removes the duplicate header
+          title: "Group Details",
         }}
       />
       <Stack.Screen
