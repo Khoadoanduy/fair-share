@@ -102,7 +102,7 @@ export default function GroupDetailsScreen() {
         if (groupResponse.data.virtualCardId) {
           try {
             const cardResponse = await axios.get(
-              `${API_URL}/api/virtualCard/group/${groupId}`
+              `${API_URL}/api/virtualCard/${groupId}`
             );
             setVirtualCard(cardResponse.data);
           } catch (cardErr) {
@@ -141,7 +141,7 @@ export default function GroupDetailsScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#4353FD" />
+          <ActivityIndicator size="large" color="#4A3DE3" />
           <Text style={styles.loadingText}>Loading group details...</Text>
         </View>
       </SafeAreaView>
@@ -224,7 +224,8 @@ export default function GroupDetailsScreen() {
           <Text style={styles.sectionTitle}>Virtual Card</Text>
           <VirtualCardDisplay
             cardBrand={virtualCard?.brand}
-            last4={virtualCard?.last4}
+            number={virtualCard?.number}
+            cvc={virtualCard?.cvc}
             expMonth={virtualCard?.expMonth}
             expYear={virtualCard?.expYear}
             cardholderName={virtualCard?.cardholderName}

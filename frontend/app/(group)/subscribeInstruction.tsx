@@ -18,6 +18,7 @@ interface VirtualCard {
   currency: string;
   cardholderName: string;
   cvc: string;
+  number: string;
 }
 
 interface Group {
@@ -80,7 +81,8 @@ export default function CreateVirtualCardScreen() {
             status: latestCard.status,
             type: latestCard.type,
             currency: latestCard.currency,
-            cvc: latestCard.cvc
+            cvc: latestCard.cvc,
+            number: latestCard.number
           });
         }
       } catch (error) {
@@ -148,7 +150,7 @@ export default function CreateVirtualCardScreen() {
                 <Text style={styles.cardNumberLabel}>Card number</Text>
                 <View style={styles.cardNumberRow}>
                   <Text style={styles.cardNumber}>
-                    {`${virtualCard.last4.slice(0, 4)} ${virtualCard.last4.slice(0, 4)} ${virtualCard.last4.slice(0, 4)} ${virtualCard.last4}`}
+                    {`${virtualCard.number}`}
                   </Text>
                   <Pressable onPress={handleCopyCardNumber} style={styles.copyButton}>
                     <Ionicons name="copy-outline" size={20} color="white" />

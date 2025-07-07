@@ -70,7 +70,7 @@ export default function setMemberShares() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#4353FD" />
+          <ActivityIndicator size="large" color="#4A3DE3" />
           <Text style={styles.loadingText}>Loading group details...</Text>
         </View>
       </SafeAreaView>

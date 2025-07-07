@@ -107,7 +107,7 @@ export default function CustomButton({
 
 const styles = StyleSheet.create({
   button: {
-    backgroundColor: '#4353FD', 
+    backgroundColor: '#4A3DE3', 
     borderRadius: 8,
     paddingVertical: 16,
     alignItems: 'center',

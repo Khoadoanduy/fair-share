@@ -212,7 +212,7 @@ export default function PersonalInfoScreen() {
         <ScrollView contentContainerStyle={styles.scrollContent}>
           {isLoading && (
             <View style={styles.loadingOverlay}>
-              <ActivityIndicator size="large" color="#4353FD" />
+              <ActivityIndicator size="large" color="#4A3DE3" />
             </View>
           )}
 
@@ -452,7 +452,7 @@ const styles = StyleSheet.create({
     alignItems: "flex-end", // Align text to the right
   },
   editButtonText: {
-    color: "#4353FD",
+    color: "#4A3DE3",
     fontWeight: "500",
     fontSize: 16,
   },
@@ -467,7 +467,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: "600",
-    color: "#4353FD",
+    color: "#4A3DE3",
     marginBottom: 20,
   },
   label: {
@@ -517,7 +517,7 @@ const styles = StyleSheet.create({
     color: "#6B7280",
   },
   saveButton: {
-    backgroundColor: "#4353FD",
+    backgroundColor: "#4A3DE3",
     marginBottom: 24,
   },
   signOutCard: {

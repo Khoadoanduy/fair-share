@@ -56,6 +56,7 @@ model Group {
   amount             Float
   virtualCardId      String?           @unique
   cycle              String
+  intervalCount      Int?
   cycleDays          Int?
   members            GroupMember[]
   category           String
@@ -70,7 +71,7 @@ model Group {
   maxMember          Int?
   subscriptionType   String            @default("shared") // "shared" or "personal"
   personalType       String?           @default("existing") // "existing" or "virtual" (only for personal)
-  visibility         String            @default("friends"
+  visibility         String            @default("friends")
 }
 
 model GroupMember {
