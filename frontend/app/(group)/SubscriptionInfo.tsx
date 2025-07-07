@@ -167,7 +167,7 @@ export default function SubscriptionScreen() {
       const groupId = response.data.groupId;
 
       router.push({
-        pathname: '/(group)/inviteMember',
+        pathname: '/(group)/confirmInfo',
         params: { groupId: response.data.groupId },
       });
     } catch (error) {

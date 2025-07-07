@@ -126,7 +126,7 @@ export default function CustomSubscriptionScreen() {
       const groupId = response.data.groupId;
       await axios.post(`${API_URL}/api/groupMember/${groupId}/${userId}`, { userRole: "leader" });
       router.push({
-        pathname: '/(group)/inviteMember',
+        pathname: '/(group)/confirmInfo',
         params: { groupId: response.data.groupId },
       });
     } catch (error) {
