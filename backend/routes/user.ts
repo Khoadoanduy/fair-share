@@ -131,7 +131,48 @@ router.get('/groups/:userId', async (request: Request, response: Response) => {
     }
 });
 
-// Get all join requests sent by a specific user
+router.get('/find-subs-by-category/:userId/:category', async (request: Request, response: Response) => {
+    try {
+        const { userId, category } = request.params;
+
+        if (!userId || !category) {
+            return response.status(400).json({ message: 'userId and category are required' });
+        }
+
+        const allGroups = await prisma.groupMember.findMany({
+            where: {
+                userId: userId,
+            },
+            include: { 
+                group :{
+                    include: {
+                        subscription : {
+                            select: {
+                                logo: true
+                            }
+                        }
+                    }
+                }
+              }
+        });
+        const formattedGroups = allGroups.map(member => ({
+            ...member.group, 
+            logo: member.group.subscription?.logo,
+            subscription: undefined
+          }));
+        
+        const categorySubscriptions = formattedGroups
+            .filter(member => member.category === category)
+
+        response.status(200).json(categorySubscriptions);
+
+    } catch (error) {
+        console.error('Error finding subscriptions by category:', error);
+        response.status(500).json({ message: 'Error finding subscriptions by category' });
+    }
+});
+
+
 router.get('/requests-sent/:userId', async (request: Request, response: Response) => {
     try {
         const { userId } = request.params;

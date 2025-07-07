@@ -46,7 +46,7 @@ export default function AuthLayout() {
         }}
       />
       <Stack.Screen
-        name="InviteMember"
+        name="inviteMember"
         options={{
           title: "",
           headerTitle: () => null,
@@ -113,6 +113,12 @@ export default function AuthLayout() {
             title: "",
             headerTitle: () => null,
           }}
+      />
+      <Stack.Screen
+        name="confirmInfo"
+        options={{
+          headerShown: false,
+        }}
       />
     </Stack>
 
