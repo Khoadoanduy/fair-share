@@ -6,7 +6,8 @@ import {
   ActivityIndicator,
   Alert,
   TouchableOpacity,
-  ScrollView
+  ScrollView,
+  Modal
 } from "react-native";
 import axios from "axios";
 import { Ionicons } from "@expo/vector-icons";
@@ -93,6 +94,10 @@ const GroupMembers: React.FC<Props> = ({
   const [isLeader, setIsLeader] = useState(false);
   const [group, setGroup] = useState<Group | null>(null);
   const [confirmationStatus, setConfirmationStatus] = useState<Record<string, boolean>>({});
+  const [deleteMode, setDeleteMode] = useState(false);
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [memberToDelete, setMemberToDelete] = useState<string | null>(null);
+
 
   useEffect(() => {
     const fetchData = async () => {
@@ -139,6 +144,29 @@ const GroupMembers: React.FC<Props> = ({
       fetchData();
     }
   }, [groupId, userId]);
+  const handleToggleDeleteMode = () => {
+    setDeleteMode(!deleteMode);
+  };
+
+  const handleDeleteMember = async (memberId: string) => {
+    try {
+      console.log(groupId);
+      await axios.delete(`${API_URL}/api/groupMember/${memberId}`);
+      setMembers(members.filter((member) => member.id !== memberId));
+      handleCloseModal();
+    } catch (error) {
+      console.error("Failed to delete member", error);
+    }
+  };
+
+  const handleOpenDeleteModal = (memberId: string) => {
+    setIsModalVisible(true); // Show the modal
+    setMemberToDelete(memberId); // Store the member id to delete
+  };
+
+  const handleCloseModal = () => {
+    setIsModalVisible(false); // Hide the modal
+  };
 
   const handleInvite = () => {
     router.push({
@@ -170,9 +198,14 @@ const GroupMembers: React.FC<Props> = ({
         <View style={styles.header}>
           <Text style={styles.title}>Members ({group?.totalMem}/{group?.maxMember})</Text>
           {isLeader && (
-            <TouchableOpacity style={styles.addButton} onPress={handleInvite}>
-              <Ionicons name="add" size={20} color="black" />
-            </TouchableOpacity>
+            <View style={styles.headerIcon}>
+              <TouchableOpacity style={styles.trashButton} onPress={handleToggleDeleteMode}>
+                <Ionicons name="trash" size={20} color="black" />
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.addButton} onPress={handleInvite}>
+                <Ionicons name="add" size={20} color="black" />
+              </TouchableOpacity>
+            </View>
           )}
         </View>
       }
@@ -198,13 +231,18 @@ const GroupMembers: React.FC<Props> = ({
                   </View>
                 )}
               </View>
-              {showEstimatedText && <Text style={styles.estimate}>Estimated</Text>}
-              {requestConfirmSent && group && <Text style={styles.price}>${`${group.amountEach.toFixed(2)}`}</Text>}
+              {!deleteMode && showEstimatedText && <Text style={styles.estimate}>Estimated</Text>}
+              {!deleteMode && requestConfirmSent && group && <Text style={styles.price}>${`${group.amountEach.toFixed(2)}`}</Text>}
+              {deleteMode && member.userRole !== "leader" && (
+                <TouchableOpacity onPress={() => handleOpenDeleteModal(member.id)}>
+                  <Text style={{color: "red"}}>Remove</Text>
+                </TouchableOpacity>
+              )}
             </View>
             <View style={styles.amountEach}>
               <Text style={styles.username}>{member.user.username}</Text>
-              {showAmountEach && group && <Text style={styles.price}>${`${group.amountEach.toFixed(2)}`}</Text>}
-              {requestConfirmSent && (
+              {!deleteMode && showAmountEach && group && <Text style={styles.price}>${`${group.amountEach.toFixed(2)}`}</Text>}
+              {!deleteMode && requestConfirmSent && (
                 <Text
                   style={[
                     styles.estimate,
@@ -300,7 +338,44 @@ const GroupMembers: React.FC<Props> = ({
           )}
         </>
       )}
+      {/* Modal for Deletion Confirmation */}
+      <Modal
+        visible={isModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={handleCloseModal}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Remove this member?</Text>
+            <Text style={styles.subtitle}>
+              Removing this member will stop their 
+              future payments and free up their spot. 
+              All remaining members will need to confirm the updated share amount before the subscription continues
+            </Text>
+            <View style={styles.modalButtons}>
+              <TouchableOpacity 
+                style={styles.deleteButton}                 
+                onPress={() => {
+                    if (memberToDelete) {
+                      handleDeleteMember(memberToDelete); // Delete the member using memberToDelete
+                    }
+                  }}>
+                <Text style={styles.buttonText}>Remove</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.cancelButton}
+                onPress={handleCloseModal}
+              >
+                <Text style={{color: 'white'}}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
     </ScrollView>
+    
   );
 };
 
@@ -331,6 +406,9 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "600",
     color: "#000",
+  },
+  headerIcon: {
+    flexDirection: 'row',
   },
   addButton: {
     width: 24,
@@ -481,4 +559,52 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
+  modalBackdrop: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.5)", // semi-transparent black backdrop
+  },
+  modalContent: {
+    backgroundColor: "white",
+    padding: 20,
+    borderRadius: 10,
+    width: "80%",
+    alignItems: "center",
+  },
+  modalTitle: {
+    fontSize: 18,
+    marginBottom: 20,
+    fontWeight: "bold",
+    textAlign: "center",
+  },
+  modalButtons: {
+    marginTop: 20,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    width: "100%",
+  },
+  deleteButton: {
+    backgroundColor: "#FEF2F2",
+    padding: 10,
+    borderRadius: 8,
+    flex: 1,
+    marginRight: 10,
+    alignItems: "center",
+  },
+  cancelButton: {
+    backgroundColor: "#4A3DE3",
+    padding: 10,
+    borderRadius: 8,
+    flex: 1,
+    alignItems: "center",
+  },
+  buttonText: {
+    color: "red",
+    fontSize: 16,
+  },
+  subtitle: {
+    color: '#64748B',
+
+  }
 });
