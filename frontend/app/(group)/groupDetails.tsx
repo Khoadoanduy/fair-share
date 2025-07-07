@@ -10,6 +10,7 @@ import {
   TouchableOpacity,
   Pressable,
   Image, // Add this import
+  Modal,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import axios from "axios";
@@ -85,6 +86,7 @@ export default function GroupDetailsScreen() {
   const [error, setError] = useState<string | null>(null);
   const [leader, setIsLeader] = useState<boolean>(false);
   const { userId } = useUserState();
+  const [isModalVisible, setIsModalVisible] = useState(false);
 
   useEffect(() => {
     const fetchGroupDetails = async () => {
@@ -137,6 +139,15 @@ export default function GroupDetailsScreen() {
     });
   };
 
+  const handleLeaveGroup = async () => {
+    try {
+      await axios.delete( `${API_URL}/api/groupMember/${groupId}/${userId}`);
+    } catch (cardErr) {
+      console.error("Error deleting member from group", cardErr);
+    }
+  }
+
+
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
@@ -163,7 +174,6 @@ export default function GroupDetailsScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-
       <ScrollView
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
@@ -209,6 +219,7 @@ export default function GroupDetailsScreen() {
             showInvitations={true}
             showHeader={true}
             requestConfirmSent={false}
+            startCycle={true}
           />
         )}
 
@@ -223,7 +234,59 @@ export default function GroupDetailsScreen() {
             cardholderName={virtualCard?.cardholderName}
           />
         </View>
-      </ScrollView>
+                
+          {!leader && (
+            <CustomButton
+              text="Leave Group"
+              onPress={() => setIsModalVisible(true)}
+              size="large"
+              style={styles.leaveButton}
+            />
+          )}
+        </ScrollView>
+                {!leader && (
+                  <TouchableOpacity
+                    style={[styles.leaveButton, {backgroundColor: 'white'}]}
+                    onPress={() => setIsModalVisible(true)}
+                  >
+                    <Feather name="log-out" size={24} color="red" />
+                    <Text style={[styles.leaveButtonText, {color: 'red'}]}>Leave Group</Text>
+                  </TouchableOpacity>
+                )}
+              <Modal
+                animationType="slide"
+                transparent={true}
+                visible={isModalVisible}
+                onRequestClose={() => setIsModalVisible(false)} // Close modal on back press
+              >
+                <View style={styles.modalBackground}>
+                  <View style={styles.modalContainer}>
+                    <Text style={styles.modalTitle}>Leave {group.groupName}?</Text>
+                    <Text style={{color: '#64748B'}}>
+                      If you leave, you’ll lose your spot and future payments will stop. 
+                      This action can’t be undone.
+                      </Text>
+                    <View style={styles.modalActions}>
+                      <CustomButton
+                        text="Leave"
+                        onPress={async () => {
+                          await handleLeaveGroup(); 
+                          setIsModalVisible(false); 
+                          router.push('/(tabs)/groups');
+                        }}
+                        textStyle={{color: '#4A3DE3'}}
+                        style={styles.confirmLeave}
+                      />
+                      <CustomButton
+                        text="Cancel"
+                        onPress={() => setIsModalVisible(false)}
+                        style={styles.cancelButton}
+                      />
+                    </View>
+                  </View>
+                </View>
+              </Modal>
+
     </SafeAreaView>
   );
 }
@@ -603,5 +666,57 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "bold",
     color: "#FFF",
+  },
+  leaveButton: {
+    marginHorizontal: 20, 
+    alignItems: "center", 
+    width: "90%",
+    backgroundColor: 'white',
+    borderWidth: 1,
+    borderRadius: 10,
+    borderColor: '#E2E8F0',
+    padding: 10,
+    flexDirection: 'row',
+    gap: 10
+  },
+  leaveButtonText: {
+    alignSelf: 'center'
+  },
+  cancelButton: {
+    marginHorizontal: 20, 
+    alignSelf: "center", 
+    width: "90%",
+    backgroundColor: "#4A3DE3"
+  }, 
+  confirmLeave: {
+    marginHorizontal: 20, 
+    alignSelf: "center", 
+    width: "90%",
+    backgroundColor: "#4A3DE31A"
+  }, 
+  modalBackground: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)', // Dark background
+  },
+  modalContainer: {
+    backgroundColor: 'white',
+    padding: 20,
+    borderRadius: 10,
+    width: '80%',
+    alignItems: 'center',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 20,
+    justifyContent: 'center'
+  },
+  modalActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+    marginTop: 20
   },
 });

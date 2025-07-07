@@ -19,6 +19,8 @@ import CredentialsContainer from "@/components/CredentialsContainer";
 import CredentialItem from "@/components/CredentialItem";
 import CredentialsVisibilityToggle from "@/components/CredentialsVisibilityToggle";
 import VirtualCardDisplay from "@/components/VirtualCardDisplay";
+import CustomButton from "@/components/CustomButton";
+import { useUserState } from "@/hooks/useUserState";
 
 type SubscriptionDetailsData = {
   id: string;
@@ -62,6 +64,7 @@ export default function SubscriptionDetailsScreen() {
   const navigation = useNavigation();
   const { user } = useUser();
   const { groupId } = useLocalSearchParams();
+  const { userId } = useUserState();
   const [details, setDetails] = useState<SubscriptionDetailsData | null>(null);
   const [virtualCard, setVirtualCard] = useState<VirtualCard | null>(null);
   const [loading, setLoading] = useState(true);
@@ -215,7 +218,7 @@ export default function SubscriptionDetailsScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-
+      
       <ScrollView style={styles.content}>
         {/* Subscription Card */}
         <View style={styles.subscriptionCard}>
@@ -389,7 +392,7 @@ export default function SubscriptionDetailsScreen() {
               />
             </View>
           </View>
-        )}
+        )}    
       </ScrollView>
     </SafeAreaView>
   );

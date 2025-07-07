@@ -1,6 +1,7 @@
 import express, { Request, Response, Router } from 'express';
 import dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
+import { group } from 'console';
 
 dotenv.config();
 
@@ -44,11 +45,11 @@ router.post('/:groupId/:userId', async function (request, response) {
 });
 
 // Delete user from a group
-router.delete('/:groupId/:userId', async function (request, response) {
+router.delete('/:groupMemberId', async function (request, response) {
     try {
-        const { groupId, userId } = request.params;
+        const { groupMemberId } = request.params;
         const deleteMember = await prisma.groupMember.findFirst({
-            where: { userId, groupId }
+            where: { id: groupMemberId }
             });
         if (!deleteMember) {
             return response.status(400).json({ message: 'Member not in group' });
@@ -57,17 +58,48 @@ router.delete('/:groupId/:userId', async function (request, response) {
             where: { id: deleteMember.id}
         });
         const updateTotalMem = await prisma.group.update({
-            where: { id: groupId },
+            where: { id: deleteMember.groupId },
             data: {
                 totalMem: { decrement: 1 }
             }
         });
         const newAmountEach = updateTotalMem.amount/updateTotalMem.totalMem;
         await prisma.group.update({
-            where: { id: groupId},
+            where: { id: deleteMember.groupId},
             data: {amountEach: newAmountEach}
         })
-        response.status(201).json({ message: 'Member deleted', deleteMember});
+        response.status(200).json(deleteMember);
+    } catch (error) {
+        console.error("Error deleting member from group:", error);
+        response.status(500).send("Internal server error");
+    }
+});
+
+// Delete user from a group
+router.delete('/:groupId/:userId', async function (request, response) {
+    try {
+        const { groupId, userId } = request.params;
+        const deleteMember = await prisma.groupMember.findFirst({
+            where: { groupId: groupId, userId: userId }
+            });
+        if (!deleteMember) {
+            return response.status(400).json({ message: 'Member not in group' });
+        }
+        await prisma.groupMember.delete({
+            where: { id: deleteMember.id}
+        });
+        const updateTotalMem = await prisma.group.update({
+            where: { id: deleteMember.groupId },
+            data: {
+                totalMem: { decrement: 1 }
+            }
+        });
+        const newAmountEach = updateTotalMem.amount/updateTotalMem.totalMem;
+        await prisma.group.update({
+            where: { id: deleteMember.groupId},
+            data: {amountEach: newAmountEach}
+        })
+        response.status(200).json(deleteMember);
     } catch (error) {
         console.error("Error deleting member from group:", error);
         response.status(500).send("Internal server error");

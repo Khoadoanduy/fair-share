@@ -9,6 +9,7 @@ import { Ionicons } from '@expo/vector-icons';
 import AcceptInvitationButton from '@/components/AcceptInvitationButton';
 import DeclineInvitationButton from '@/components/DeclineInvitationButton';
 import SubscriptionCard from '@/components/SubscriptionCard';
+import { useUserState } from "@/hooks/useUserState";
 
 interface Subscription {
   id: string;
@@ -43,6 +44,7 @@ export default function AllInvitations() {
   const router = useRouter();
   const { user } = useUser();
   const clerkId = user?.id;
+  const { hasPayment } = useUserState();
   const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [sentRequests, setSentRequests] = useState<Invitation[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
@@ -157,11 +159,6 @@ export default function AllInvitations() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <BackButton></BackButton>
-        <Text style={styles.headerTitle}>Manage Subscriptions</Text>
-        <Ionicons name="search" size={20} color="#4A3DE3" />
-      </View>
       <View style={styles.toggleContainer}>
         <Pressable style={styles.toggleBtnInactive} onPress={mySubscriptionsRoute}>
           <Text style={styles.toggleTextInactive}>My Subscriptions</Text>
@@ -229,6 +226,7 @@ export default function AllInvitations() {
                         <AcceptInvitationButton
                           userId={userId!}
                           groupId={groupId}
+                          hasPayment = {hasPayment}
                           disabled={status !== undefined}
                           onResponse={() => handleInvitationResponse(groupId, 'accepted')}
                         />
@@ -338,6 +336,7 @@ const styles = StyleSheet.create({
     padding: 8,
     marginHorizontal: 16,
     marginVertical: 16,
+    marginTop: -20
   },
   toggleBtnActive: {
     flex: 1,
