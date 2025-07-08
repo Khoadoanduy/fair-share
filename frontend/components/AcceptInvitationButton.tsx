@@ -101,7 +101,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    minWidth: '48%',
   },
   buttonActive: {
     backgroundColor: '#4A3DE3',
