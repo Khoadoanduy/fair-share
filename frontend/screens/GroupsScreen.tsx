@@ -154,14 +154,14 @@ const fetchAllSubscriptions = async () => {
     const allItems = [...groups, ...personalSubscriptions].map(item => ({
       ...item,
       logo: item.subscription?.logo ?? item.logo ?? undefined,
-      isPersonal: item.subscriptionType === 'personal'
+      isShared: item.subscriptionType === 'shared'
     }));
 
     if (selectedFilter === "Personal") {
-      return allItems.filter(item => item.isPersonal);
+      return allItems.filter(item => !item.isShared);
     }
     if (selectedFilter === "Shared") {
-      return allItems.filter(item => !item.isPersonal);
+      return allItems.filter(item => item.isShared);
     }
     return allItems; 
   };
