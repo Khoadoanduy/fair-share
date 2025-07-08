@@ -47,7 +47,7 @@ interface EnrichedTransaction extends Transaction {
   subscriptionName?: string;
   category?: string;
   logo?: string | null;
-  isShared?: boolean;
+  isPersonal?: boolean;
 }
 
 interface GroupedTransactions {
@@ -129,7 +129,7 @@ const HistoryScreen = () => {
               subscriptionName: group.subscriptionName,
               category: group.subscription?.category || group.category,
               logo: group.subscription?.logo || group.logo || null,
-              isShared: group.subscriptionType == "shared",
+              isPersonal: group.subscriptionType == "personal",
               amount: group.amountEach
             };
           }
@@ -199,7 +199,7 @@ const HistoryScreen = () => {
           logo={transaction.logo ? { uri: transaction.logo } : null}
           subscriptionName={name}
           amountEach={amount}
-          isShared={transaction.isShared}
+          isPersonal={transaction.isPersonal}
           category={transaction.category}
           showNegativeAmount={true}
           timestamp={formattedTime}
