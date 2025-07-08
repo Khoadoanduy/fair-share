@@ -194,6 +194,7 @@ router.get('/:groupId', async (request: Request, response: Response) => {
       maxMember: group.maxMember,
       visbility: group.visibility,
       amountEach: group.amountEach,
+      subscriptionType: group.subscriptionType,
       virtualCardId: group.virtualCardId,
       subscription: group.subscription ? {
         id: group.subscription.id,

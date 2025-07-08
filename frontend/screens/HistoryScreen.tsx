@@ -37,7 +37,7 @@ interface Group {
     logo?: string;
     category?: string;
   };
-  subscriptionType: 'shared' | 'personal';
+  subscriptionType: "shared" | "personal";
   totalMem: number;
   amountEach: number;
 }
@@ -120,6 +120,8 @@ const HistoryScreen = () => {
             // Fetch group data including subscription relation
             const res = await axios.get(`${API_URL}/api/group/${transaction.metadata.groupId}`);
             const group: Group = res.data;
+            console.log(group);
+            console.log(group.subscriptionType);
             
             return {
               ...transaction,
