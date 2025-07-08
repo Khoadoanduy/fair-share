@@ -335,6 +335,7 @@ const GroupMembers: React.FC<Props> = ({
                     <AcceptInvitationButton
                       userId={request.userId}
                       groupId={groupId}
+                      hasPayment={true}
                       onResponse={onJoinRequestResponse}
                     />
                   </View>
