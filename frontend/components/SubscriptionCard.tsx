@@ -12,7 +12,7 @@ interface SubscriptionCardProps {
     cycle?: string;
     category?: string;
     logo?: string;
-    isPersonal?: boolean;
+    isShared?: boolean;
     totalMem?: number;
     endDate?: string; 
     showNegativeAmount?: boolean;
@@ -28,7 +28,7 @@ interface SubscriptionCardProps {
   amount?: number;
   status?: string;
   endDate?: string;
-  isPersonal?: boolean;
+  isShared?: boolean;
   showNegativeAmount?: boolean;
   timestamp?: string;
   onPress?: () => void;
@@ -54,7 +54,7 @@ const SubscriptionCard: React.FC<SubscriptionCardProps> = (props) => {
   const amountEach = group?.amountEach !== undefined ? group.amountEach : props.amountEach;
   const cycle = group?.cycle || props.cycle;
   const category = group?.category || props.category;
-  const isPersonal = group?.isPersonal ?? props.isPersonal ?? true;
+  const isShared = group?.isShared ?? props.isShared ?? true;
   const endDate = group?.endDate || props.endDate;
   const status = group?.status || props.status || 'Active';
   const showNegativeAmount = group?.showNegativeAmount ?? props.showNegativeAmount ?? false;
@@ -100,7 +100,7 @@ const SubscriptionCard: React.FC<SubscriptionCardProps> = (props) => {
             {/* Personal/Shared indicator */}
             <View style={styles.personalTag}>
               <Ionicons 
-                name={isPersonal ? "person-outline" : "people-outline"} 
+                name={isShared ? "people-outline" : "person-outline"} 
                 size={16} 
                 color="#6366F1" 
               />
