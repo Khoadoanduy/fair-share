@@ -189,7 +189,7 @@ export default function HomeScreen() {
                     {getUpcomingRenewals().map((subscription, index) => (
                       <SubscriptionCard
                         key={`renewal-${index}`}
-                        logo={{ uri: subscription.logo }}
+                        logo={{ uri: subscription.subscription.logo }}
                         subscriptionName={subscription.groupName}
                         cycle={subscription.cycle}
                         amountEach={subscription.amountEach}
@@ -217,7 +217,7 @@ export default function HomeScreen() {
                   {getNonUpcomingSubscriptions().map((subscription, index) => (
                     <SubscriptionCard
                       key={`subscription-${index}`}
-                      logo={{ uri: subscription.logo }}
+                      logo={{ uri: subscription.subscription.logo }}
                       subscriptionName={subscription.groupName}
                       cycle={subscription.cycle}
                       amountEach={subscription.amountEach}
@@ -264,10 +264,7 @@ const styles = StyleSheet.create({
     color: "#6B7280",
     fontSize: 14,
   },
-  subscriptionsList: {
-    paddingHorizontal: 20,
-    gap: 9,
-  },
+  subscriptionsList: {},
   emptyStateContainer: {
     padding: 20,
     alignItems: "center",

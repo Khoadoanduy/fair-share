@@ -78,7 +78,6 @@ export default function Visualization() {
           );
         });
       } else {
-        // Yearly view
         filtered = mockPaymentData.filter((payment) => {
           const paymentDate = new Date(payment.created * 1000);
           return paymentDate.getFullYear() === selectedYear;
@@ -156,6 +155,7 @@ export default function Visualization() {
             cycle: group.cycle
           }))
       }));
+      console.log(categories)
 
       // Round percentages
       const roundedCategories = categories.map(item => ({
