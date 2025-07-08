@@ -172,8 +172,8 @@ const HistoryScreen = () => {
     return transactions.filter(transaction => {
       // Filter by type (personal/shared)
       if (filterType !== 'all') {
-        if (filterType === 'shared' && !transaction.isShared) return false;
-        if (filterType === 'personal' && transaction.isShared) return false;
+        if (filterType === 'shared' && transaction.isPersonal) return false;
+        if (filterType === 'personal' && !transaction.isPersonal) return false;
       }
 
       // Filter by category
