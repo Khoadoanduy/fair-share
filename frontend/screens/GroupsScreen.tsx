@@ -214,7 +214,7 @@ const fetchAllSubscriptions = async () => {
           <SubscriptionCard
             group={item}
             onPress={() => {
-              if (item.isPersonal) {
+              if (!item.isShared) {
                 router.push({
                   pathname: "/(personal)/personalSubscriptionDetails",
                   params: { groupId: item.id, fromManage: "true" },
