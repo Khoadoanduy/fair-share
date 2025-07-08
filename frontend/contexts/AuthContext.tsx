@@ -33,7 +33,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           // Once we have MongoDB data, set complete user info
           dispatch(
             setUserInfo({
-              id: mongoUser._id || mongoUser.id, // MongoDB ID
+              id: mongoUser.id, // MongoDB ID
               clerkId: user.id, // Clerk ID
               email: user.primaryEmailAddress?.emailAddress || "",
               name: user.fullName || undefined,

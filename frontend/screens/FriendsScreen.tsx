@@ -23,6 +23,7 @@ interface BaseGroup {
   cycleDays: number;
   category: string;
   totalMem: number;
+  maxMember: number;
   amountEach: number;
   subscription?: {
     id: string;
@@ -143,8 +144,12 @@ export default function FriendsScreen() {
 
       if (activeTab === 'feed') {
         const response = await axios.get(`${API_URL}/api/feed/subscriptions/${userId}`);
-        setActivities(Array.isArray(response.data) ? response.data : []);
-      } else {
+        const allActivities = Array.isArray(response.data) ? response.data : [];
+        // Filter out full groups - only show groups with available slots
+        const availableActivities = allActivities.filter((activity: FriendActivity) => 
+          activity.group.totalMem < activity.group.maxMember
+        );
+        setActivities(availableActivities);      } else {
         const response = await axios.get(`${API_URL}/api/user/groups/${userId}`);
         const allGroups = Array.isArray(response.data) ? response.data : [];
         // Filter out hidden postings

@@ -6,6 +6,7 @@ import CustomButton from '@/components/CustomButton';
 import ProgressDots from '@/components/ProgressDots';
 import axios from 'axios';
 import { useUser } from '@clerk/clerk-expo';
+import VirtualCardDisplay from '@/components/VirtualCardDisplay';
 
 interface VirtualCard {
   id: string;
@@ -137,46 +138,22 @@ export default function CreateVirtualCardScreen() {
         <Text style={styles.title}>Subscribe with virtual card</Text>
 
         {/* Virtual Card Display */}
+        
         {virtualCard && (
-          <View style={styles.cardContainer}>
-            <View style={styles.cardHeader}>
-              <View style={styles.virtualBadge}>
-                <Text style={styles.virtualBadgeText}>Virtual</Text>
-              </View>
-            </View>
-
-            <View style={styles.cardBody}>
-              <View style={styles.cardNumberSection}>
-                <Text style={styles.cardNumberLabel}>Card number</Text>
-                <View style={styles.cardNumberRow}>
-                  <Text style={styles.cardNumber}>
-                    {`${virtualCard.number}`}
-                  </Text>
-                  <Pressable onPress={handleCopyCardNumber} style={styles.copyButton}>
-                    <Ionicons name="copy-outline" size={20} color="white" />
-                  </Pressable>
-                </View>
-              </View>
-
-              <View style={styles.cardDetailsRow}>
-                <View style={styles.cardDetailItem}>
-                  <Text style={styles.cardDetailLabel}>Expiration date</Text>
-                  <Text style={styles.cardDetailValue}>
-                    {virtualCard.expMonth}/{virtualCard.expYear.toString().slice(-2)}
-                  </Text>
-                </View>
-                <View style={styles.cardDetailItem}>
-                  <Text style={styles.cardDetailLabel}>Security code</Text>
-                  <View style={styles.securityCodeRow}>
-                    <Text style={styles.cardDetailValue}>{virtualCard.cvc}</Text>
-                    <Pressable onPress={handleCopySecurityCode} style={styles.copyButton}>
-                      <Ionicons name="copy-outline" size={16} color="white" />
-                    </Pressable>
-                  </View>
-                </View>
-              </View>
-            </View>
-          </View>
+          <>
+            <VirtualCardDisplay
+              cardBrand={virtualCard?.brand}
+              number={virtualCard?.number}
+              cvc={virtualCard?.cvc}
+              expMonth={virtualCard?.expMonth}
+              expYear={virtualCard?.expYear}
+              cardholderName={virtualCard?.cardholderName}
+            />
+            <Text style={styles.instructionsTitle}>
+              Tap the copy button next to your virtual card number and security
+              code to use them.
+            </Text>
+          </>
         )}
 
         {/* Instructions */}

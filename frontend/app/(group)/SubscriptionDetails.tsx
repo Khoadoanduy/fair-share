@@ -379,20 +379,20 @@ export default function SubscriptionDetailsScreen() {
         </View>
 
         {/* Virtual Card Section */}
-        {virtualCard && (
-          <View style={styles.section}>
+        {virtualCard && userRole === "leader" && (
+          <>
             <View style={styles.virtualCardContainer}>
-              <Text style={styles.sectionTitle}>Virtual Card</Text>
               <VirtualCardDisplay
-                cardBrand={virtualCard.brand}
-                last4={virtualCard.last4}
-                expMonth={virtualCard.expMonth}
-                expYear={virtualCard.expYear}
-                cardholderName={virtualCard.cardholderName}
+                cardBrand={virtualCard?.brand}
+                number={virtualCard?.number}
+                cvc={virtualCard?.cvc}
+                expMonth={virtualCard?.expMonth}
+                expYear={virtualCard?.expYear}
+                cardholderName={virtualCard?.cardholderName}
               />
             </View>
-          </View>
-        )}    
+          </>
+        )}
       </ScrollView>
     </SafeAreaView>
   );

@@ -100,7 +100,7 @@ export default function VerifyScreen() {
       style={styles.container}
     >
       <Text style={styles.title}>Verify your email</Text>
-      <Text style={styles.subtitle}>Enter the 6-digit code we just sent to example@gmail.com</Text>
+      <Text style={styles.subtitle}>Enter the 6-digit code we just sent to your email</Text>
 
       <CustomInput
         control={control}

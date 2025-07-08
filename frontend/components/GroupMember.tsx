@@ -203,9 +203,10 @@ const GroupMembers: React.FC<Props> = ({
               <TouchableOpacity style={styles.trashButton} onPress={handleToggleDeleteMode}>
                 <Ionicons name="trash" size={20} color="black" />
               </TouchableOpacity>
+              {!(group?.totalMem >= group?.maxMember) &&
               <TouchableOpacity style={styles.addButton} onPress={handleInvite}>
                 <Ionicons name="add" size={20} color="black" />
-              </TouchableOpacity>
+              </TouchableOpacity>}
             </View>
           )}
         </View>

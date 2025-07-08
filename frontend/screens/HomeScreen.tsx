@@ -36,7 +36,7 @@ export default function HomeScreen() {
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
-  usePushNotifications();
+  usePushNotifications(userId);
 
   useEffect(() => {
     const fetchGroups = async () => {

@@ -125,6 +125,7 @@ export default function AuthLayout() {
           options={{
             title: "",
             headerTitle: () => null,
+            headerRight: () => null,
           }}
       />
       <Stack.Screen

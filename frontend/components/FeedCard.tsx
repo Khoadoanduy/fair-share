@@ -17,6 +17,7 @@ interface FeedCardProps {
         amount: number;
         cycleDays: number;
         totalMem: number;
+        maxMember: number;
         amountEach: number;
         subscription?: {
             logo: string;
@@ -58,6 +59,9 @@ export default function FeedCard({
 }: FeedCardProps) {
     const [showDropdown, setShowDropdown] = useState(false);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
+
+    // Calculate maximum potential savings when group is full
+    const maxPotentialSavings = group.amount - (group.amount / group.maxMember);
 
     const handleDeletePosting = () => {
         setShowDropdown(false);
@@ -140,13 +144,13 @@ export default function FeedCard({
                     </View>
                     <View style={styles.priceSection}>
                         <Text style={styles.estimatedText}>Estimated</Text>
-                        <Text style={styles.priceText}>${group.amountEach?.toFixed(2) || group.amount.toFixed(2)}</Text>
-                        <Text style={styles.savingText}>Saving from ${group.amount.toFixed(2)}!</Text>
+                        <Text style={styles.priceText}>${(group.amount / group.maxMember).toFixed(2)}</Text>
                     </View>
                 </View>
 
                 <View style={styles.slotsInfo}>
-                    <Text style={styles.slotsText}>{group.totalMem} members</Text>
+                    <Text style={styles.slotsText}>{group.totalMem}/{group.maxMember} slots filled</Text>
+                    <Text style={styles.savingsAmount}>Save up to ${maxPotentialSavings.toFixed(2)}!</Text>
                 </View>
             </View>
 
@@ -324,6 +328,12 @@ const styles = StyleSheet.create({
         color: '#4A3DE3',
         marginTop: 2,
     },
+    maxSavingText: {
+        fontSize: 10,
+        color: '#28a745',
+        marginTop: 2,
+        fontWeight: 'bold',
+    },
     slotsInfo: {
         flexDirection: 'row',
         justifyContent: 'space-between',
@@ -332,6 +342,11 @@ const styles = StyleSheet.create({
     slotsText: {
         fontSize: 12,
         color: '#666',
+    },
+    savingsAmount: {
+        fontSize: 12,
+        color: '#4A3DE3',
+        fontWeight: '600',
     },
     joinButton: {
         backgroundColor: '#4A3DE3',

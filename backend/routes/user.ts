@@ -14,7 +14,7 @@ router.get('/', async function (request, response) {
             },
         });
         if (!user) {
-            return response.status(430).send("User not found");
+            return response.status(404).send("User not found");
         }
         return response.json(user);
     } catch (error) {

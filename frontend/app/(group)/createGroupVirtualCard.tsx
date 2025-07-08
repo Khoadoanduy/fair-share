@@ -158,9 +158,8 @@ export default function CreateGroupVirtualCard() {
           button below after subscribing to notify your group and start the
           cycle.
         </Text>
-        {/* Virtual Card Display */}
-  
-
+        {virtualCard && (
+          <>
             <VirtualCardDisplay
               cardBrand={virtualCard?.brand}
               number={virtualCard?.number}
@@ -169,6 +168,12 @@ export default function CreateGroupVirtualCard() {
               expYear={virtualCard?.expYear}
               cardholderName={virtualCard?.cardholderName}
             />
+            <Text style={styles.instructionsTitle}>
+              Tap the copy button next to your virtual card number and security
+              code to use them.
+            </Text>
+          </>
+        )}
         <Text style={styles.instructionsTitle}>
           Tap the copy button next to your virtual card number and security code
           to use them.
