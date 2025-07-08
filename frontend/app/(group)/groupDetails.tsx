@@ -22,6 +22,7 @@ import { useUserState } from "@/hooks/useUserState";
 import GroupMembers from "@/components/GroupMember";
 import SubscriptionCard from "@/components/SubscriptionCard";
 import GroupHeader from "@/components/GroupHeader";
+import { Feather } from "@expo/vector-icons";
 
 // Define the Group type
 type GroupMember = {
@@ -224,37 +225,38 @@ export default function GroupDetailsScreen() {
             startCycle={true}
           />
         )}
-
-        <View style={styles.virtualCardSection}>
-          <Text style={styles.sectionTitle}>Virtual Card</Text>
-          <VirtualCardDisplay
-            cardBrand={virtualCard?.brand}
-            number={virtualCard?.number}
-            cvc={virtualCard?.cvc}
-            expMonth={virtualCard?.expMonth}
-            expYear={virtualCard?.expYear}
-            cardholderName={virtualCard?.cardholderName}
-          />
-        </View>
+        {leader && virtualCard && (
+          <View style={styles.virtualCardSection}>
+            <Text style={styles.sectionTitle}>Virtual Card</Text>
+            <VirtualCardDisplay
+              cardBrand={virtualCard?.brand}
+              number={virtualCard?.number}
+              cvc={virtualCard?.cvc}
+              expMonth={virtualCard?.expMonth}
+              expYear={virtualCard?.expYear}
+              cardholderName={virtualCard?.cardholderName}
+            />
+          </View>
+          )} 
                 
-          {!leader && (
+          {/* {!leader && (
             <CustomButton
               text="Leave Group"
               onPress={() => setIsModalVisible(true)}
               size="large"
               style={styles.leaveButton}
             />
-          )}
+          )} */}
+            {!leader && (
+              <TouchableOpacity
+                style={[styles.leaveButton, {backgroundColor: 'white'}]}
+                onPress={() => setIsModalVisible(true)}
+              >
+              <Feather name="log-out" size={24} color="red" />
+              <Text style={[styles.leaveButtonText, {color: 'red'}]}>Leave Group</Text>
+              </TouchableOpacity>
+            )}
         </ScrollView>
-                {!leader && (
-                  <TouchableOpacity
-                    style={[styles.leaveButton, {backgroundColor: 'white'}]}
-                    onPress={() => setIsModalVisible(true)}
-                  >
-                    <Feather name="log-out" size={24} color="red" />
-                    <Text style={[styles.leaveButtonText, {color: 'red'}]}>Leave Group</Text>
-                  </TouchableOpacity>
-                )}
               <Modal
                 animationType="slide"
                 transparent={true}

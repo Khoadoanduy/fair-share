@@ -31,18 +31,18 @@ const AcceptInvitationButton = ({ userId, groupId, disabled, hasPayment, usernam
         await axios.put(`${API_URL}/api/invite/${groupId}/${userId}`);
         await axios.post(`${API_URL}/api/groupMember/${groupId}/${userId}`, { userRole: "member" });
         const response = await axios.get(`${API_URL}/api/group/leader/${groupId}`);
-      await axios.post(
-        `${API_URL}/api/notifications/send`,
-        {
-          mongoIds: [response.data.id],
-          title: "Invitation Accepted",
-          body: username? `${username} has accepted your invitation to join the group.` : "The user has been accepted to the group.",
-          data: {
-            type: "group_accepted",
-            groupId,
-          },
-        }
-      );
+        await axios.post(
+          `${API_URL}/api/notifications/send`,
+          {
+            mongoIds: [response.data.id],
+            title: "Invitation Accepted",
+            body: username? `${username} has accepted your invitation to join the group.` : "The user has been accepted to the group.",
+            data: {
+              type: "group_accepted",
+              groupId,
+            },
+          }
+        );
       setAccepted(true);
         onResponse?.();
         console.log('Accept invitation successfully');

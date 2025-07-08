@@ -23,13 +23,18 @@ export default function VirtualCardDisplay({
   cvc,
 }: VirtualCardDisplayProps) {
   const handleCopyCardNumber = (number: number) => {
+    if(number){
     Clipboard.setStringAsync(number.toString());
     alert("Copied card number");
+    }
   };
 
   const handleCopySecurityCode = (cvc: number) => {
-    Clipboard.setStringAsync(cvc.toString());
-    alert("Copied security number");
+    if(cvc){
+      Clipboard.setStringAsync(cvc.toString());
+      alert("Copied security number");
+
+    }
   };
 
 

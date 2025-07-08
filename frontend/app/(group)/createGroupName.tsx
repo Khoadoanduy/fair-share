@@ -1,12 +1,13 @@
-import { StyleSheet, Text, View, Alert, TouchableOpacity } from "react-native";
+import { StyleSheet, Text, View, Alert, TouchableOpacity, TextInput, Keyboard } from "react-native";
 import { useRouter } from "expo-router";
 import CustomButton from "../../components/CustomButton";
 import { SafeAreaView } from "react-native-safe-area-context";
 import CustomInput from "@/components/CustomInput";
-import { SubmitHandler, useForm } from "react-hook-form";
+import { SubmitHandler, useForm, Controller } from "react-hook-form";
 import ProgressDots from "@/components/ProgressDots";
 import { useUserState } from "@/hooks/useUserState";
 import { useState, useMemo } from "react";
+
 
 type FormatData = {
   groupName: string;
@@ -105,13 +106,22 @@ export default function CreateGroupName() {
         />
 
         <Text style={styles.groupname}>Max members</Text>
-        <CustomInput
-          control={control}
-          name="maxMember"
-          placeholder="Enter max members number"
-          keyboardType="decimal-pad"
-          style={styles.input}
-        />
+            <Controller
+              control={control}
+              name="maxMember"
+              render={({ field: { value, onChange } }) => (
+                <TextInput
+                  style={styles.input}
+                  placeholder="Enter max members number"
+                  value={value} 
+                  onChangeText={onChange}
+                  keyboardType="number-pad"
+                  blurOnSubmit={true}
+                  returnKeyType="done"
+                  onSubmitEditing={() => Keyboard.dismiss()}
+                />
+              )}
+            />
         <Text style={{fontSize: 15, color: "#64748B"}}>We’ll update the estimated price as people join.</Text>
 
         <Text style={styles.visibilityLabel}>Visibility</Text>

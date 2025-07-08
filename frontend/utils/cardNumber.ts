@@ -1,5 +1,5 @@
 export function parseBankNumber(bankNumber: number): [number, number, number, number] {
-
+    console.log(bankNumber)
     const bankStr = bankNumber.toString();
 
     const group1 = parseInt(bankStr.substring(0, 4), 10);
