@@ -26,6 +26,7 @@ type GroupData = {
     category: string;
     logo: string;
     nextPaymentDate: string;
+    virtualCardId: string;
   };
 };
 
@@ -152,7 +153,7 @@ export default function HomeScreen() {
                     </View>
                     <View style={styles.statValueContainer}>
                       <Text style={styles.statValue}>
-                        {subscriptions.length}
+                        {getUpcomingRenewals().length + getNonUpcomingSubscriptions().length}
                       </Text>
                     </View>
                   </View>
@@ -194,6 +195,7 @@ export default function HomeScreen() {
                         cycle={subscription.cycle}
                         amountEach={subscription.amountEach}
                         isShared
+                        virtualCardId={subscription.virtualCardId}
                         category={formatCategoryName(subscription.category)}
                       />
                     ))}
@@ -210,7 +212,7 @@ export default function HomeScreen() {
               <View style={styles.allSubscriptionsSection}>
                 <View style={styles.headerContainer}>
                   <View style={styles.titleGroup}>
-                    <Text style={styles.sectionTitle}>All Subscriptions</Text>
+                    <Text style={styles.sectionTitle}>Other Subscriptions</Text>
                   </View>
                 </View>
                 <View style={styles.subscriptionsList}>

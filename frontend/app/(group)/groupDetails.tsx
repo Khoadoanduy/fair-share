@@ -137,19 +137,18 @@ export default function GroupDetailsScreen() {
   // Add this near the other handler functions, before the return statement
   const handleSubscriptionDetails = () => {
     router.push({
-      pathname: "/(group)/subscriptionDetails",
+      pathname: "/(group)/SubscriptionDetails",
       params: { groupId },
     });
   };
 
   const handleLeaveGroup = async () => {
     try {
-      await axios.delete( `${API_URL}/api/groupMember/${groupId}/${userId}`);
+      await axios.delete(`${API_URL}/api/groupMember/${groupId}/${userId}`);
     } catch (cardErr) {
       console.error("Error deleting member from group", cardErr);
     }
-  }
-
+  };
 
   if (loading) {
     return (
@@ -237,9 +236,9 @@ export default function GroupDetailsScreen() {
               cardholderName={virtualCard?.cardholderName}
             />
           </View>
-          )} 
-                
-          {/* {!leader && (
+        )}
+
+        {/* {!leader && (
             <CustomButton
               text="Leave Group"
               onPress={() => setIsModalVisible(true)}
@@ -247,50 +246,51 @@ export default function GroupDetailsScreen() {
               style={styles.leaveButton}
             />
           )} */}
-            {!leader && (
-              <TouchableOpacity
-                style={[styles.leaveButton, {backgroundColor: 'white'}]}
-                onPress={() => setIsModalVisible(true)}
-              >
-              <Feather name="log-out" size={24} color="red" />
-              <Text style={[styles.leaveButtonText, {color: 'red'}]}>Leave Group</Text>
-              </TouchableOpacity>
-            )}
-        </ScrollView>
-              <Modal
-                animationType="slide"
-                transparent={true}
-                visible={isModalVisible}
-                onRequestClose={() => setIsModalVisible(false)} // Close modal on back press
-              >
-                <View style={styles.modalBackground}>
-                  <View style={styles.modalContainer}>
-                    <Text style={styles.modalTitle}>Leave {group.groupName}?</Text>
-                    <Text style={{color: '#64748B'}}>
-                      If you leave, you’ll lose your spot and future payments will stop. 
-                      This action can’t be undone.
-                      </Text>
-                    <View style={styles.modalActions}>
-                      <CustomButton
-                        text="Leave"
-                        onPress={async () => {
-                          await handleLeaveGroup(); 
-                          setIsModalVisible(false); 
-                          router.push('/(tabs)/groups');
-                        }}
-                        textStyle={{color: '#4A3DE3'}}
-                        style={styles.confirmLeave}
-                      />
-                      <CustomButton
-                        text="Cancel"
-                        onPress={() => setIsModalVisible(false)}
-                        style={styles.cancelButton}
-                      />
-                    </View>
-                  </View>
-                </View>
-              </Modal>
-
+        {!leader && (
+          <TouchableOpacity
+            style={[styles.leaveButton, { backgroundColor: "white" }]}
+            onPress={() => setIsModalVisible(true)}
+          >
+            <Feather name="log-out" size={24} color="red" />
+            <Text style={[styles.leaveButtonText, { color: "red" }]}>
+              Leave Group
+            </Text>
+          </TouchableOpacity>
+        )}
+      </ScrollView>
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={isModalVisible}
+        onRequestClose={() => setIsModalVisible(false)} // Close modal on back press
+      >
+        <View style={styles.modalBackground}>
+          <View style={styles.modalContainer}>
+            <Text style={styles.modalTitle}>Leave {group.groupName}?</Text>
+            <Text style={{ color: "#64748B" }}>
+              If you leave, you’ll lose your spot and future payments will stop.
+              This action can’t be undone.
+            </Text>
+            <View style={styles.modalActions}>
+              <CustomButton
+                text="Leave"
+                onPress={async () => {
+                  await handleLeaveGroup();
+                  setIsModalVisible(false);
+                  router.push("/(tabs)/groups");
+                }}
+                textStyle={{ color: "#4A3DE3" }}
+                style={styles.confirmLeave}
+              />
+              <CustomButton
+                text="Cancel"
+                onPress={() => setIsModalVisible(false)}
+                style={styles.cancelButton}
+              />
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -672,55 +672,55 @@ const styles = StyleSheet.create({
     color: "#FFF",
   },
   leaveButton: {
-    marginHorizontal: 20, 
-    alignItems: "center", 
+    marginHorizontal: 20,
+    alignItems: "center",
     width: "90%",
-    backgroundColor: 'white',
+    backgroundColor: "white",
     borderWidth: 1,
     borderRadius: 10,
-    borderColor: '#E2E8F0',
+    borderColor: "#E2E8F0",
     padding: 10,
-    flexDirection: 'row',
-    gap: 10
+    flexDirection: "row",
+    gap: 10,
   },
   leaveButtonText: {
-    alignSelf: 'center'
+    alignSelf: "center",
   },
   cancelButton: {
-    marginHorizontal: 20, 
-    alignSelf: "center", 
+    marginHorizontal: 20,
+    alignSelf: "center",
     width: "90%",
-    backgroundColor: "#4A3DE3"
-  }, 
+    backgroundColor: "#4A3DE3",
+  },
   confirmLeave: {
-    marginHorizontal: 20, 
-    alignSelf: "center", 
+    marginHorizontal: 20,
+    alignSelf: "center",
     width: "90%",
-    backgroundColor: "#4A3DE31A"
-  }, 
+    backgroundColor: "#4A3DE31A",
+  },
   modalBackground: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)', // Dark background
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.5)", // Dark background
   },
   modalContainer: {
-    backgroundColor: 'white',
+    backgroundColor: "white",
     padding: 20,
     borderRadius: 10,
-    width: '80%',
-    alignItems: 'center',
+    width: "80%",
+    alignItems: "center",
   },
   modalTitle: {
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: "600",
     marginBottom: 20,
-    justifyContent: 'center'
+    justifyContent: "center",
   },
   modalActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '100%',
-    marginTop: 20
+    flexDirection: "row",
+    justifyContent: "space-between",
+    width: "100%",
+    marginTop: 20,
   },
 });

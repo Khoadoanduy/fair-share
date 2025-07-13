@@ -4,30 +4,30 @@ import {
   KeyboardAvoidingView,
   Platform,
   View,
-} from 'react-native';
-import CustomInput from '../../components/CustomInput';
-import CustomButton from '../../components/CustomButton';
+} from "react-native";
+import CustomInput from "../../components/CustomInput";
+import CustomButton from "../../components/CustomButton";
 
-import { useForm } from 'react-hook-form';
-import { z } from 'zod';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { Link, router } from 'expo-router';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Link, router } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
-import { isClerkAPIResponseError, useSignUp } from '@clerk/clerk-expo';
+import { isClerkAPIResponseError, useSignUp } from "@clerk/clerk-expo";
 
 const verifySchema = z.object({
-  code: z.string({ message: 'Code is required' }).length(6, 'Invalid code'),
+  code: z.string({ message: "Code is required" }).length(6, "Invalid code"),
 });
 
 type VerifyFields = z.infer<typeof verifySchema>;
 
 const mapClerkErrorToFormField = (error: any) => {
   switch (error.meta?.paramName) {
-    case 'code':
-      return 'code';
+    case "code":
+      return "code";
     default:
-      return 'root';
+      return "root";
   }
 };
 
@@ -35,7 +35,6 @@ export default function VerifyScreen() {
   const {
     control,
     handleSubmit,
-    setError,
     formState: { errors },
   } = useForm<VerifyFields>({
     resolver: zodResolver(verifySchema),
@@ -51,12 +50,12 @@ export default function VerifyScreen() {
         code,
       });
 
-      if (signUpAttempt.status === 'complete') {
+      if (signUpAttempt.status === "complete") {
         try {
           // Set BOTH flags to create proper flow
           await Promise.all([
-            AsyncStorage.setItem('needsUserOnboarding', 'true'),
-            AsyncStorage.setItem('onboardingComplete', 'true') // This is the critical addition
+            AsyncStorage.setItem("needsUserOnboarding", "true"),
+            AsyncStorage.setItem("onboardingComplete", "true"), // This is the critical addition
           ]);
           // Then activate the session
           await setActive({ session: signUpAttempt.createdSessionId });
@@ -66,19 +65,19 @@ export default function VerifyScreen() {
           console.error("Error:", err);
         }
       } else {
-        console.log('Verification failed');
-        setError('root', { message: 'Could not complete the sign up' });
+        console.log("Verification failed");
+        // Removed: setError('root', { message: 'Could not complete the sign up' });
       }
     } catch (err) {
       if (isClerkAPIResponseError(err)) {
         err.errors.forEach((error) => {
           const fieldName = mapClerkErrorToFormField(error);
-          setError(fieldName, {
-            message: error.longMessage,
-          });
+          // Removed setting form error:
+          console.log(`Error in field ${fieldName}: ${error.longMessage}`);
         });
       } else {
-        setError('root', { message: 'Unknown error' });
+        // Removed: setError('root', { message: 'Unknown error' });
+        console.log("Unknown error");
       }
     }
   };
@@ -87,35 +86,37 @@ export default function VerifyScreen() {
     if (!isLoaded || !signUp) return;
 
     try {
-      await signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
-      console.log('Verification code resent!');
+      await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
+      console.log("Verification code resent!");
     } catch (err) {
-      console.error('Failed to resend code:', err);
+      console.error("Failed to resend code:", err);
     }
   };
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
       style={styles.container}
     >
       <Text style={styles.title}>Verify your email</Text>
-      <Text style={styles.subtitle}>Enter the 6-digit code we just sent to your email</Text>
+      <Text style={styles.subtitle}>
+        Enter the 6-digit code we just sent to your email
+      </Text>
 
       <CustomInput
         control={control}
-        name='code'
-        placeholder='123456'
+        name="code"
+        placeholder="123456"
         autoFocus
-        autoCapitalize='none'
-        keyboardType='number-pad'
-        autoComplete='one-time-code'
+        autoCapitalize="none"
+        keyboardType="number-pad"
+        autoComplete="one-time-code"
         style={styles.codeInput}
       />
 
-      <CustomButton text='Verify' onPress={handleSubmit(onVerify)} />
+      <CustomButton text="Verify" onPress={handleSubmit(onVerify)} />
       <Text style={styles.resend}>
-        Didn’t receive the code?{' '}
+        Didn’t receive the code?{" "}
         <Text onPress={handleResend} style={styles.resendText}>
           Resend
         </Text>
@@ -127,9 +128,9 @@ export default function VerifyScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-    justifyContent: 'center',
-    alignContent: 'center',
+    backgroundColor: "#fff",
+    justifyContent: "center",
+    alignContent: "center",
     padding: 20,
     gap: 20,
   },
@@ -138,36 +139,36 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 30,
-    fontWeight: '600',
-    color: '#4A3DE3',
-    textAlign: 'center'
+    fontWeight: "600",
+    color: "#4A3DE3",
+    textAlign: "center",
   },
   subtitle: {
     fontSize: 16,
-    textAlign: 'center'
+    textAlign: "center",
   },
   link: {
-    color: '#4A3DE3',
-    fontWeight: '600',
+    color: "#4A3DE3",
+    fontWeight: "600",
   },
   resend: {
-    textAlign: 'center',
-    fontWeight: '600',
-    fontSize: 16
+    textAlign: "center",
+    fontWeight: "600",
+    fontSize: 16,
   },
   resendText: {
-    color: '#4A3DE3',
-    fontWeight: '600',
-    fontSize: 16
+    color: "#4A3DE3",
+    fontWeight: "600",
+    fontSize: 16,
   },
   codeInput: {
     fontSize: 28,
     letterSpacing: 12,
-    fontFamily: Platform.select({ ios: 'Menlo', android: 'monospace' }),
-    textAlign: 'center',
+    fontFamily: Platform.select({ ios: "Menlo", android: "monospace" }),
+    textAlign: "center",
     paddingVertical: 12,
     borderBottomWidth: 2,
-    borderColor: '#4A3DE3',
-    color: '#000',
-  }
+    borderColor: "#4A3DE3",
+    color: "#000",
+  },
 });

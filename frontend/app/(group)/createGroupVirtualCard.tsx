@@ -60,15 +60,15 @@ export default function CreateGroupVirtualCard() {
             });
             console.log('charge user successfully')
 
-            // await axios.post(`${API_URL}/api/notifications/send`, {
-            //   mongoIds: [member.user.id],
-            //   title: "Charge Successful",
-            //   body: `You have been charged $${groupDetails.data.amountEach} for the subscription ${groupDetails.data.subscriptionName}.`,
-            //   data: {
-            //     type: "charge_success",
-            //     groupId,
-            //   },
-            // });
+            await axios.post(`${API_URL}/api/notifications/send`, {
+              mongoIds: [member.user.id],
+              title: "Charge Successful",
+              body: `You have been charged $${groupDetails.data.amountEach} for the subscription ${groupDetails.data.subscriptionName}.`,
+              data: {
+                type: "charge_success",
+                groupId,
+              },
+            });
             console.log("noti sent");
           })
         );
@@ -168,10 +168,6 @@ export default function CreateGroupVirtualCard() {
               expYear={virtualCard?.expYear}
               cardholderName={virtualCard?.cardholderName}
             />
-            <Text style={styles.instructionsTitle}>
-              Tap the copy button next to your virtual card number and security
-              code to use them.
-            </Text>
           </>
         )}
         <Text style={styles.instructionsTitle}>

@@ -41,9 +41,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             })
           );
         })
-        .catch((error) => {
-          console.error("Failed to fetch MongoDB user data:", error);
-        });
     }
   }, [isLoaded, isSignedIn, user]);
 

@@ -149,10 +149,6 @@ export default function CreateVirtualCardScreen() {
               expYear={virtualCard?.expYear}
               cardholderName={virtualCard?.cardholderName}
             />
-            <Text style={styles.instructionsTitle}>
-              Tap the copy button next to your virtual card number and security
-              code to use them.
-            </Text>
           </>
         )}
 

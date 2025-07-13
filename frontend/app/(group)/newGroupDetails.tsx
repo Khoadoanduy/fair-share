@@ -189,7 +189,7 @@ export default function GroupDetailsScreen() {
   // Add this near the other handler functions, before the return statement
   const handleSubscriptionDetails = () => {
     router.push({
-      pathname: "/(group)/subscriptionDetails",
+      pathname: "/(group)/SubscriptionDetails",
       params: { groupId },
     });
   };
@@ -488,7 +488,7 @@ export default function GroupDetailsScreen() {
               <View style={styles.stepItem}>
                 <Ionicons name="wallet-outline" size={24} color="#C7C7CC" style={styles.stepIcon} />
                 <View style={styles.stepTextContainer}>
-                  <Text style={styles.stepTitle}>Subscribe to Netflix</Text>
+                  <Text style={styles.stepTitle}>Subscribe to your {group.subscriptionName}</Text>
                   <Text style={styles.stepSub}>Use the card to subscribe to the service</Text>
                 </View>
               </View>

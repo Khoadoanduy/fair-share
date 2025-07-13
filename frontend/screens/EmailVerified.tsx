@@ -32,7 +32,7 @@ export default function EmailVerified() {
               <Text style={styles.subtitle}>You’re one step closer to managing your subscriptions with ease.</Text>
             <Image source={require('../assets/placeholderFrame.png')} style={styles.logoBox}></Image>
             <CustomButton
-                text="Next - Create personal card"
+                text="Next - Add payment method"
                 style={styles.nextButton}
                 onPress={handleNext}
             />

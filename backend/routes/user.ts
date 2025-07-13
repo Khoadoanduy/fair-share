@@ -6,21 +6,14 @@ import { getTimeAgoFromObjectId } from '../utils/timeUtils';
 const router: Router = express.Router();
 
 router.get('/', async function (request, response) {
-    try {
+
         const clerkID = request.query.clerkID as string;
         const user = await prisma.user.findUnique({
             where: {
                 clerkId: clerkID,
             },
         });
-        if (!user) {
-            return response.status(404).send("User not found");
-        }
         return response.json(user);
-    } catch (error) {
-        console.error("Error retrieving user:", error);
-        response.status(500).send("Internal Server Error");
-    }
 });
 
 router.put('/:clerkID', async function (request, response) {

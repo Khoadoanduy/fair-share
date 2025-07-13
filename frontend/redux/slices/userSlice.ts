@@ -50,16 +50,12 @@ export const fetchUserData = createAsyncThunk(
       return rejectWithValue('No clerk ID provided');
     }
     
-    try {
       const response = await axios.get(`${API_URL}/api/user/`, {
         params: {
           clerkID: clerkId
         }
       });
       
-      if (!response.data) {
-        return rejectWithValue('No user data returned');
-      }
       
       const userData = response.data;
       return {
@@ -67,10 +63,6 @@ export const fetchUserData = createAsyncThunk(
         id: userData.id, // Ensure MongoDB _id is included as id
         hasPaymentMethod: Boolean(userData.customerId)
       };
-    } catch (error: any) {
-      console.error('Error fetching user data:', error);
-      return rejectWithValue(error.message || 'Failed to fetch user data');
-    }
   }
 );
 

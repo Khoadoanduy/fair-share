@@ -408,6 +408,7 @@ const styles = StyleSheet.create({
   },
   buttonContainer: {
     flexDirection: 'row',
+    flex: 1,
     justifyContent: 'flex-end',
     gap: 10,
   },

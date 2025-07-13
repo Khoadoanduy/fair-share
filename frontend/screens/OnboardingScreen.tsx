@@ -33,7 +33,7 @@ type Feature = {
 };
 
 export default function OnboardingScreen() {
-  const { onboardingComplete,isSignedIn } = useUserState();
+  const { onboardingComplete, isSignedIn } = useUserState();
   const flatListRef = useRef<FlatList<Feature>>(null);
   const [currentFeature, setCurrentFeature] = useState(0);
   const dispatch = useAppDispatch();
@@ -56,8 +56,7 @@ export default function OnboardingScreen() {
   if (isSignedIn) {
     return <Redirect href="/(tabs)" />;
   }
-  if (onboardingComplete && !isSignedIn){
-
+  if (onboardingComplete && !isSignedIn) {
   }
   const handleComplete = async () => {
     try {
@@ -72,7 +71,7 @@ export default function OnboardingScreen() {
       router.replace("/(tabs)");
       return;
     }
-    
+
     router.push("/(auth)/sign-up");
     await handleComplete();
   };
@@ -98,7 +97,7 @@ export default function OnboardingScreen() {
             />
             <Text style={welcomeStyles.title}>Fair Share</Text>
             <Text style={welcomeStyles.subtitle}>
-              Shared subscriptions, simplified.
+              United we subscribe, Divided we thrived.
             </Text>
           </View>
         </View>
@@ -266,7 +265,6 @@ export default function OnboardingScreen() {
           scrollEventThrottle={30}
         />
 
-        
         <Animated.View
           style={[styles.footer, { opacity: footerOpacity }]}
           // set pointerEvents to auto as conditional check with Animated value is unsupported
@@ -285,7 +283,6 @@ export default function OnboardingScreen() {
             textStyle={styles.logInText}
           />
         </Animated.View>
-        
       </SafeAreaView>
     </Animated.View>
   );
